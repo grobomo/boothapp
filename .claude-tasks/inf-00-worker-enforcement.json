@@ -1,0 +1,77 @@
+{
+  "id": "inf-00-worker-enforcement",
+  "workstream": "infra",
+  "title": "Build enforcement hooks and scripts for ephemeral worker rules",
+  "description": "Create automated enforcement so workers CANNOT skip documentation. This is infrastructure that protects the entire project.",
+  "priority": 0,
+  "status": "pending",
+  "assigned_worker": null,
+  "substeps": [],
+  "depends_on": [],
+  "enforcement_requirements": {
+    "pre_commit_hook": {
+      "description": "Git pre-commit hook that runs on every commit in the boothapp repo",
+      "rules": [
+        "If a task file (.claude-tasks/*.json) is being worked on, its substeps array must be non-empty",
+        "If code files changed, at least one .claude-tasks/*.json or README.md must also be updated",
+        "No files in /tmp, /local, or any gitignored path can be referenced in code",
+        "No hardcoded paths outside the repo (enforce relative paths)",
+        "No TODO/FIXME/HACK comments without a matching task file reference"
+      ]
+    },
+    "worker_startup_script": {
+      "description": "Runs when a CCC worker pod starts, before Claude Code launches",
+      "steps": [
+        "git pull --ff-only (get latest main)",
+        "Verify CLAUDE.md exists and is readable",
+        "Verify .claude-tasks/ has task files",
+        "Scan for any stale in_progress tasks (assigned_worker with no heartbeat > 10 min)",
+        "Reclaim stale tasks (set status back to pending, clear assigned_worker)",
+        "Write worker heartbeat file to repo: .claude-workers/<worker-id>.json with timestamp",
+        "Set up heartbeat cron (update timestamp every 5 min, commit+push)"
+      ]
+    },
+    "worker_shutdown_hook": {
+      "description": "Runs when a CCC worker is about to stop (SIGTERM, idle timeout, crash)",
+      "steps": [
+        "Commit any uncommitted changes to current branch",
+        "Push branch",
+        "Update task file: if substep in_progress, add notes about where you stopped",
+        "Push task file update to main",
+        "Remove heartbeat file .claude-workers/<worker-id>.json"
+      ]
+    },
+    "periodic_audit": {
+      "description": "Runs every 15 min as a separate CronJob on RONE",
+      "checks": [
+        "Any task in_progress with no heartbeat from assigned_worker > 10 min -> reclaim",
+        "Any branch with no commits in 30 min while task is in_progress -> alert",
+        "Any task file with empty substeps while status is in_progress -> alert",
+        "Count open PRs per workstream -> alert if > 5 (backlog building up)",
+        "Verify all workstream READMEs were updated in last 24h (stale = no one documenting)"
+      ]
+    },
+    "claude_code_settings": {
+      "description": "settings.json overrides injected into every worker's Claude Code instance",
+      "hooks": [
+        {
+          "event": "Stop",
+          "command": "bash /opt/worker/on-stop.sh",
+          "description": "On session end: commit progress, update task file, push everything"
+        },
+        {
+          "event": "PreToolUse",
+          "command": "bash /opt/worker/check-local-state.sh",
+          "description": "Before any file write: verify path is inside /workspace (repo), reject writes to /tmp or HOME"
+        }
+      ]
+    }
+  },
+  "tests": [
+    "Worker commits code without updating task file -> pre-commit hook rejects",
+    "Worker dies mid-task -> next worker sees stale heartbeat, reclaims task within 15 min",
+    "Worker tries to write to /tmp -> hook blocks it",
+    "Worker shutdown -> all progress committed and pushed, task file updated",
+    "Audit catches task with empty substeps -> alert generated"
+  ]
+}
