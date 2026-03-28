@@ -23,30 +23,23 @@
 
 ---
 
-### 2. v1ego → Chrome Extension Base
-**Source:** `ProjectsCL1/v1ego/`
-**Reuse:**
-- `manifest.json` — MV3 Chrome extension manifest (already targets V1 domains)
-- `src/` — Extension source with DOM interaction, overlay UI, keyboard shortcuts
-- Hover/click event listeners already built for V1 UI elements
-- Dark mode support
+### 2. V1-Helper Chrome Extension (consolidated)
+**Source:** Consolidated from 3 projects into `grobomo/v1-helper` branch `feature/chrome-extension`
+- **Blueprint Extra MCP** (`extensions/`) — Extension architecture, popup, MCP relay (all 30 tools)
+- **V1EGO** (`src/`) — Click interception, DOM path capture
+- **V1-Helper** (`scripts/`) — Analysis/summary generation
 
-**BoothApp use:** Fork V1EGO into a "BoothApp Tracker" extension that:
-- Intercepts all clicks in the V1 console
-- Captures DOM path + element info on each click
-- Takes a screenshot on each click
-- Timestamps everything
-- Uploads click data to S3 session folder
-- Shows "Session tracked" banner at top of page
+**BoothApp use:** Single extension "V1-Helper" that:
+- Keeps full Blueprint MCP browser automation (all 30 tools work)
+- Intercepts all clicks, logs DOM path + timestamp + element info
+- **Silent screenshot on every click** — `captureVisibleTab()`, no flash, no delay
+- Periodic screenshot fallback (every N seconds)
+- Session management via S3 polling (start/stop from Android app)
+- Batch upload to S3 when session ends
+- "Session tracked" banner at top of page
+- TrendAI branding (logo, colors), no "Upgrade to Pro"
 
-**Key adaptations:**
-- Strip email alert overlay features (not needed)
-- Add click interceptor (capture before V1 gets the event)
-- **Silent screenshot on every click** — use `chrome.tabs.captureVisibleTab()` triggered by click listener. Must be invisible to user — no flash, no delay, no UI indication. Screenshot saved with timestamp + DOM path of what was clicked.
-- Add periodic screenshot capture (every N seconds as fallback)
-- Add S3 upload module (batch upload, not per-click — avoid network overhead during demo)
-- Add session start/stop triggered by polling system
-- Video analysis with screenshots is a future enhancement (post-hackathon)
+**See:** `v1-helper/PLAN-chrome-extension.md` for full implementation plan
 
 ---
 
