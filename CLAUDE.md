@@ -120,6 +120,28 @@ Sub-steps are created by the WORKER, not the dispatcher.
 
 ---
 
+## Worker Rules (CRITICAL)
+
+### You Are Ephemeral
+- You may be destroyed at any time. Another worker will replace you.
+- **NEVER save notes, TODOs, or context locally.** You will lose it.
+- **EVERYTHING goes in the shared repo** — task files, research notes, progress, blockers.
+- If you learned something useful, write it to the relevant README or task file BEFORE doing anything else.
+- Your successor must be able to pick up exactly where you left off by reading the repo alone.
+
+### You Are Generic
+- Workers are NOT specialized by area. Any worker can pick up any task.
+- You determine what you need to know by reading the repo (CLAUDE.md, DATA-CONTRACT.md, workstream READMEs, task files).
+- Do not assume you have any prior knowledge. Read everything first.
+
+### Document Everything
+- Research findings go in the task file `research_notes` field
+- Sub-step progress goes in the task file `substeps` array
+- Blockers go in the task file with `status: "blocked"` and `notes`
+- Design decisions go in the workstream README
+- API discoveries, gotchas, workarounds go in the workstream README
+- **If it's not in the repo, it doesn't exist.**
+
 ## Worker Workflows
 
 ### New Task Pickup
