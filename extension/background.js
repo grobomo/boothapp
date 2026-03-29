@@ -252,6 +252,89 @@ async function s3Put(bucket, key, region, body, contentType, credentials) {
   return response;
 }
 
+// ─── Signed S3 GET ───────────────────────────────────────────────────────────
+
+async function s3GetJson(bucket, key, region, credentials) {
+  const body = new Uint8Array(0);
+  const { url, headers } = await signS3Request(
+    'GET', bucket, key, region, body, 'application/json', credentials
+  );
+  const response = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+// ─── S3 Session Polling (signed) ─────────────────────────────────────────────
+
+let pollingSessionId = null;
+
+async function pollActiveSession() {
+  const config = await chrome.storage.local.get([
+    's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
+  ]);
+  const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
+  if (!s3Bucket || !s3Region || !awsAccessKeyId || !awsSecretAccessKey) return;
+
+  const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
+
+  try {
+    const data = await s3GetJson(s3Bucket, 'active-session.json', s3Region, credentials);
+
+    if (data && data.status === 'active') {
+      if (!pollingSessionId) {
+        pollingSessionId = data.session_id;
+        // Notify all content scripts
+        chrome.tabs.query({}, (tabs) => {
+          for (const tab of tabs) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'session_state_changed',
+              active: true,
+              session_id: data.session_id,
+              stop_audio: data.stop_audio || false,
+            }).catch(() => {});
+          }
+        });
+        // Update local storage
+        chrome.storage.local.set({
+          v1helper_session: { active: true, session_id: data.session_id, stop_audio: data.stop_audio || false }
+        });
+      } else if (data.stop_audio !== undefined) {
+        // Update stop_audio flag if session is ongoing
+        const { v1helper_session } = await chrome.storage.local.get(['v1helper_session']);
+        if (v1helper_session && v1helper_session.active) {
+          chrome.storage.local.set({
+            v1helper_session: { ...v1helper_session, stop_audio: data.stop_audio }
+          });
+        }
+      }
+    } else {
+      if (pollingSessionId) {
+        const endedSessionId = pollingSessionId;
+        pollingSessionId = null;
+        // Notify all content scripts
+        chrome.tabs.query({}, (tabs) => {
+          for (const tab of tabs) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: 'session_state_changed',
+              active: false,
+              session_id: endedSessionId,
+            }).catch(() => {});
+          }
+        });
+        chrome.storage.local.set({ v1helper_session: { active: false } });
+      }
+    }
+  } catch (_err) {
+    // Network error — if tracking, end session
+    if (pollingSessionId) {
+      pollingSessionId = null;
+      chrome.storage.local.set({ v1helper_session: { active: false } });
+    }
+  }
+}
+
+setInterval(pollActiveSession, 2000);
+
 // ─── Session Upload ───────────────────────────────────────────────────────────
 
 async function uploadSessionData(sessionId, clickBuffer) {
@@ -367,6 +450,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'session_end') {
     chrome.storage.local.set({ v1helper_session: { active: false } }).then(() => {
       sendResponse({ status: 'ok' });
+    });
+    return true;
+  }
+
+  if (message.type === 'get_clicks') {
+    chrome.storage.local.get(['v1helper_clicks'], (result) => {
+      const buffer = result.v1helper_clicks || { session_id: '', events: [] };
+      sendResponse({ status: 'ok', buffer });
     });
     return true;
   }

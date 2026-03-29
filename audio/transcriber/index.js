@@ -8,7 +8,7 @@
  *   SESSION_ID=<id> node index.js
  *
  * Environment:
- *   BOOTHAPP_BUCKET    - S3 bucket name (required)
+ *   S3_BUCKET          - S3 bucket name (required)
  *   SESSION_ID         - Session ID (or pass as CLI arg)
  *   SE_SPEAKER_LABEL   - AWS Transcribe label for SE speaker (default: spk_0)
  *   AWS_REGION         - AWS region (default: us-east-1)
@@ -26,9 +26,9 @@ const { uploadTranscript } = require('./upload');
  * @returns {{ bucket: string, sessionId: string, seSpeakerLabel: string, region: string }}
  */
 function getConfig() {
-  const bucket = process.env.BOOTHAPP_BUCKET;
+  const bucket = process.env.S3_BUCKET;
   if (!bucket) {
-    throw new Error('BOOTHAPP_BUCKET environment variable is required');
+    throw new Error('S3_BUCKET environment variable is required');
   }
 
   const sessionId = process.argv[2] || process.env.SESSION_ID;

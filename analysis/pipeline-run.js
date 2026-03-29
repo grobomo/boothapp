@@ -11,6 +11,9 @@
 
 'use strict';
 
+const { execFileSync } = require('child_process');
+const path = require('path');
+
 const { correlate } = require('./lib/correlator');
 const { getJson } = require('./lib/s3');
 const {
@@ -67,9 +70,20 @@ async function run() {
 
   log('Done — timeline.json written to S3');
 
-  // ana-03 (Claude analysis) will read timeline.json and produce summary.json
-  // ana-04 (HTML report) will produce summary.html
-  // Both will be invoked here once implemented.
+  // --- Step 4: Run Claude analysis (ana-03) ---
+  log('Starting Claude analysis (analyze.py)...');
+  const analyzeScript = path.join(__dirname, 'analyze.py');
+  const sessionS3Path = `s3://${bucket}/sessions/${sessionId}`;
+  try {
+    execFileSync('python3', [analyzeScript, sessionS3Path], {
+      stdio: 'inherit',
+      timeout: 300_000, // 5 minute timeout
+    });
+    log('Claude analysis complete — summary.json and follow-up.json written to S3');
+  } catch (err) {
+    // Log but don't fail the pipeline — timeline is already written
+    log(`WARNING: Claude analysis failed: ${err.message}`);
+  }
 }
 
 run().catch((err) => {

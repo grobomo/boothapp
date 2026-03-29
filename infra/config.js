@@ -17,7 +17,7 @@ const AWS_ACCOUNT_ID = "752266476357";
 
 // ── S3 Buckets ────────────────────────────────────────────────────────────────
 
-const SESSION_BUCKET = "boothapp-sessions";       // Demo session data (per DATA-CONTRACT.md)
+const SESSION_BUCKET = "boothapp-sessions-752266476357";  // Demo session data (per DATA-CONTRACT.md)
 const SHARED_ENV_BUCKET = "boothapp-shared-env";  // Sample files/logs for demo scenarios
 
 // ── IAM Role ARNs ─────────────────────────────────────────────────────────────

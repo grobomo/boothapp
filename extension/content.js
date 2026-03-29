@@ -149,7 +149,12 @@ function handleClick(event) {
 
 document.addEventListener('click', handleClick, true);
 
-// ─── Top-frame only: Banner, S3 Polling, Session Lifecycle ───────────────────
+// ─── Session lifecycle callbacks (set by top-frame block, called by message handler) ──
+
+let _onSessionStart = null;
+let _onSessionEnd = null;
+
+// ─── Top-frame only: Banner, Session Lifecycle ───────────────────────────────
 
 if (window === window.top) {
 
@@ -225,10 +230,11 @@ if (window === window.top) {
 
   function onSessionStart(sessionId) {
     trackingSessionId = sessionId;
-    dismissedBanner = false; // reset dismiss flag for new session
+    dismissedBanner = false;
     showBanner();
     chrome.runtime.sendMessage({ type: 'session_start', session_id: sessionId }).catch(() => {});
   }
+  _onSessionStart = onSessionStart;
 
   function onSessionEnd() {
     if (uploadInProgress) return; // guard against double-call
@@ -257,64 +263,11 @@ if (window === window.top) {
     // Signal background that session is over (stops periodic screenshots)
     chrome.runtime.sendMessage({ type: 'session_end' }).catch(() => {});
   }
+  _onSessionEnd = onSessionEnd;
 
-  // ─── S3 Session Polling ──────────────────────────────────────────────────────
-
-  async function pollForSession() {
-    const config = await new Promise(resolve =>
-      chrome.storage.local.get(['s3Bucket', 's3Region'], resolve)
-    );
-    const { s3Bucket, s3Region } = config;
-
-    // No-op if S3 not configured
-    if (!s3Bucket || !s3Region) return;
-
-    const url = `https://${s3Bucket}.s3.${s3Region}.amazonaws.com/active-session.json`;
-
-    try {
-      const resp = await fetch(url, { cache: 'no-store' });
-
-      if (resp.ok) {
-        const data = await resp.json();
-
-        // Store stop_audio in session state if present
-        if (trackingSessionId && data.stop_audio !== undefined) {
-          const { v1helper_session } = await new Promise(resolve =>
-            chrome.storage.local.get(['v1helper_session'], resolve)
-          );
-          if (v1helper_session && v1helper_session.active) {
-            await new Promise(resolve =>
-              chrome.storage.local.set({
-                v1helper_session: { ...v1helper_session, stop_audio: data.stop_audio }
-              }, resolve)
-            );
-          }
-        }
-
-        if (data.status === 'active') {
-          if (!trackingSessionId) {
-            onSessionStart(data.session_id);
-          }
-        } else {
-          if (trackingSessionId) {
-            onSessionEnd();
-          }
-        }
-      } else {
-        // Non-200 while tracking: end session
-        if (trackingSessionId) {
-          onSessionEnd();
-        }
-      }
-    } catch (_err) {
-      // Network error while tracking: end session
-      if (trackingSessionId) {
-        onSessionEnd();
-      }
-    }
-  }
-
-  setInterval(pollForSession, 2000);
+  // ─── Session polling is handled by background.js (signed S3 requests) ──────
+  // Background broadcasts session_state_changed messages to all tabs.
+  // The message handler below (outside this if-block) routes to onSessionStart/onSessionEnd.
 
   // ─── Background keepalive port ────────────────────────────────────────────────
 
@@ -361,9 +314,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'session_state_changed') {
-    // Iframes receive this to update their awareness of session state
-    // The actual tracking gate reads from chrome.storage.local via getSessionState()
-    // so no local variable update needed — just acknowledge
+    // Background.js broadcasts this when S3 active-session.json changes.
+    // Top-frame triggers session start/end; iframes just acknowledge.
+    if (window === window.top) {
+      if (message.active && _onSessionStart) {
+        _onSessionStart(message.session_id);
+      } else if (!message.active && _onSessionEnd) {
+        _onSessionEnd();
+      }
+    }
     sendResponse({ status: 'ok' });
     return true;
   }
