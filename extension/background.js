@@ -280,7 +280,7 @@ async function pollActiveSession() {
   try {
     const data = await s3GetJson(s3Bucket, 'active-session.json', s3Region, credentials);
 
-    if (data && data.status === 'active') {
+    if (data && data.active === true) {
       if (!pollingSessionId) {
         pollingSessionId = data.session_id;
         // Notify all content scripts

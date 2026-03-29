@@ -12,7 +12,7 @@
  *   commands/<demo_pc>/start.json  — presence = start signal (PC polls every 1s)
  *   commands/<demo_pc>/end.json    — presence = end signal   (PC polls every 5s)
  */
-const { putObject, getObject, objectExists } = require('./s3');
+const { putObject, getObject, objectExists, deleteObject } = require('./s3');
 const { claimTenant } = require('./tenant-pool');
 
 function generateSessionId() {
@@ -69,6 +69,15 @@ async function createSession({ visitor_name, badge_photo, demo_pc, se_name, audi
     tenant_available: !!tenant,
   });
 
+  // 4. Publish active-session.json at bucket root (polled by Chrome extension every 2s)
+  await putObject('active-session.json', {
+    session_id,
+    active: true,
+    started_at: now,
+    visitor_name: visitor_name || 'Unknown',
+    stop_audio: false,
+  });
+
   return { session_id, metadata, tenant_available: !!tenant };
 }
 
@@ -90,6 +99,13 @@ async function endSession(session_id, opts = {}) {
   const now = new Date().toISOString();
   const demo_pc = opts.demo_pc || metadata.demo_pc;
 
+  // Signal Chrome extension to stop audio before ending session
+  await putObject('active-session.json', {
+    session_id,
+    active: true,
+    stop_audio: true,
+  });
+
   // Update metadata status
   await putObject(`sessions/${session_id}/metadata.json`, {
     ...metadata,
@@ -104,6 +120,9 @@ async function endSession(session_id, opts = {}) {
     demo_pc,
     ended_at: now,
   });
+
+  // Remove active-session.json so Chrome extension detects session end
+  await deleteObject('active-session.json');
 
   return { session_id, status: 'ended', ended_at: now };
 }
