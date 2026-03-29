@@ -1,0 +1,17 @@
+{
+  "name": "session-orchestrator",
+  "version": "1.0.0",
+  "description": "Session lifecycle orchestrator for BoothApp — creates sessions, tracks state, signals demo PCs via S3",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test.js",
+    "lint": "node --check index.js orchestrator.js s3.js tenant-pool.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
