@@ -83,6 +83,20 @@ async function run() {
   } catch (err) {
     // Log but don't fail the pipeline — timeline is already written
     log(`WARNING: Claude analysis failed: ${err.message}`);
+    return;
+  }
+
+  // --- Step 5: Render HTML report ---
+  log('Rendering HTML report (render-report.js)...');
+  const renderScript = path.join(__dirname, 'render-report.js');
+  try {
+    execFileSync('node', [renderScript, sessionS3Path], {
+      stdio: 'inherit',
+      timeout: 60_000, // 1 minute timeout
+    });
+    log('HTML report complete — summary.html written to S3');
+  } catch (err) {
+    log(`WARNING: HTML report rendering failed: ${err.message}`);
   }
 }
 

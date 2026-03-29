@@ -12,7 +12,7 @@ from .prompts import (
     RECOMMENDATIONS_PROMPT,
 )
 
-MODEL = "claude-opus-4-6"
+MODEL = os.environ.get("ANALYSIS_MODEL", "claude-sonnet-4-6")
 MAX_TOKENS = 4096
 MAX_SCREENSHOTS = 10
 
