@@ -34,6 +34,30 @@ async function saveScreenshot(record) {
   });
 }
 
+// ─── IndexedDB Helpers (for upload) ──────────────────────────────────────────
+
+async function getAllScreenshots() {
+  const db = await openScreenshotDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function clearAllScreenshots() {
+  const db = await openScreenshotDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
 // ─── Image Resize ─────────────────────────────────────────────────────────────
 // Resize dataURL to fit within maxW x maxH using OffscreenCanvas.
 // Returns original dataURL unchanged if already within bounds.
@@ -101,10 +125,206 @@ let periodicTimer = null;
 
 function startPeriodicScreenshots() {
   if (periodicTimer !== null) return;
-  periodicTimer = setInterval(() => {
-    captureAndStore({ type: 'periodic' });
+  periodicTimer = setInterval(async () => {
+    // Only capture periodic screenshots when a session is active
+    const { v1helper_session } = await chrome.storage.local.get(['v1helper_session']);
+    if (v1helper_session && v1helper_session.active) {
+      captureAndStore({ type: 'periodic' });
+    }
   }, 10_000);
 }
+
+// ─── AWS SigV4 Signing ────────────────────────────────────────────────────────
+
+function toHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256Hex(data) {
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return toHex(new Uint8Array(hash));
+}
+
+async function hmacSHA256(key, data) {
+  const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : key;
+  const dataBytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, dataBytes);
+  return new Uint8Array(sig);
+}
+
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function signS3Request(method, bucket, key, region, body, contentType, credentials) {
+  const { awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = credentials;
+
+  const now = new Date();
+  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const amzDate = now.toISOString().replace(/[:-]/g, '').replace(/\.\d+/, '');
+
+  const host = `${bucket}.s3.${region}.amazonaws.com`;
+  const url = `https://${host}/${key}`;
+
+  const bodyBytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
+  const payloadHash = await sha256Hex(bodyBytes);
+
+  // Canonical headers (sorted, lowercase) — host is NOT sent in fetch headers
+  // but must be in canonical headers for signing
+  const canonicalHeadersMap = {
+    'content-type': contentType,
+    'host': host,
+    'x-amz-content-sha256': payloadHash,
+    'x-amz-date': amzDate,
+  };
+  if (awsSessionToken) {
+    canonicalHeadersMap['x-amz-security-token'] = awsSessionToken;
+  }
+
+  const sortedHeaderKeys = Object.keys(canonicalHeadersMap).sort();
+  const canonicalHeaders = sortedHeaderKeys.map(k => `${k}:${canonicalHeadersMap[k]}`).join('\n') + '\n';
+  const signedHeaders = sortedHeaderKeys.join(';');
+
+  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+  const canonicalRequest = [
+    method,
+    '/' + encodedKey,
+    '', // query string
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
+
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    await sha256Hex(canonicalRequest),
+  ].join('\n');
+
+  // Derive signing key
+  const kDate = await hmacSHA256('AWS4' + awsSecretAccessKey, dateStamp);
+  const kRegion = await hmacSHA256(kDate, region);
+  const kService = await hmacSHA256(kRegion, 's3');
+  const kSigning = await hmacSHA256(kService, 'aws4_request');
+  const signature = toHex(await hmacSHA256(kSigning, stringToSign));
+
+  const authorization = `AWS4-HMAC-SHA256 Credential=${awsAccessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  // Build fetch headers — omit 'host' (browser sets it automatically)
+  const fetchHeaders = {
+    'content-type': contentType,
+    'x-amz-content-sha256': payloadHash,
+    'x-amz-date': amzDate,
+    'authorization': authorization,
+  };
+  if (awsSessionToken) {
+    fetchHeaders['x-amz-security-token'] = awsSessionToken;
+  }
+
+  return { url, headers: fetchHeaders, bodyBytes };
+}
+
+async function s3Put(bucket, key, region, body, contentType, credentials) {
+  const { url, headers, bodyBytes } = await signS3Request(
+    'PUT', bucket, key, region, body, contentType, credentials
+  );
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers,
+    body: bodyBytes,
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`S3 PUT ${key} failed: ${response.status} ${text}`);
+  }
+  return response;
+}
+
+// ─── Session Upload ───────────────────────────────────────────────────────────
+
+async function uploadSessionData(sessionId, clickBuffer) {
+  const config = await chrome.storage.local.get([
+    's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
+  ]);
+
+  const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
+
+  if (!s3Bucket || !s3Region || !awsAccessKeyId || !awsSecretAccessKey) {
+    throw new Error('S3 credentials not configured');
+  }
+
+  const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
+
+  // 30-second timeout for the entire upload
+  const deadline = Date.now() + 30_000;
+
+  const screenshots = await getAllScreenshots();
+
+  // Build a map from filename -> data_url for quick lookup
+  const screenshotMap = {};
+  for (const s of screenshots) {
+    screenshotMap[s.filename] = s.data_url;
+  }
+
+  // Fix screenshot_file paths in clicks buffer (prepend 'screenshots/')
+  const buffer = clickBuffer || { session_id: sessionId, events: [] };
+  buffer.session_id = sessionId;
+  for (const evt of buffer.events) {
+    if (evt.screenshot_file && !evt.screenshot_file.startsWith('screenshots/')) {
+      evt.screenshot_file = 'screenshots/' + evt.screenshot_file;
+    }
+  }
+
+  // Upload clicks.json
+  const clicksKey = `sessions/${sessionId}/clicks/clicks.json`;
+  const clicksBody = JSON.stringify(buffer, null, 2);
+  await s3Put(s3Bucket, clicksKey, s3Region, clicksBody, 'application/json', credentials);
+
+  // Upload screenshots in batches of 10
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < screenshots.length; i += BATCH_SIZE) {
+    if (Date.now() > deadline) {
+      console.warn('V1-Helper: upload timeout reached, stopping at screenshot', i);
+      break;
+    }
+    const batch = screenshots.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(async (s) => {
+      const imgKey = `sessions/${sessionId}/screenshots/${s.filename}`;
+      const imgBytes = dataUrlToBytes(s.data_url);
+      await s3Put(s3Bucket, imgKey, s3Region, imgBytes, 'image/jpeg', credentials);
+    }));
+  }
+
+  // Clear local data after upload (success or partial)
+  await clearAllScreenshots();
+  await chrome.storage.local.remove(['v1helper_clicks']);
+}
+
+// ─── Keepalive Port ───────────────────────────────────────────────────────────
+
+let keepalivePort = null;
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'session-keepalive') {
+    keepalivePort = port;
+    port.onDisconnect.addListener(() => {
+      if (keepalivePort === port) keepalivePort = null;
+    });
+    // No-op: just accepting the connection keeps the service worker alive
+  }
+});
 
 // ─── Message Handler ──────────────────────────────────────────────────────────
 
@@ -125,6 +345,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     startPeriodicScreenshots();
 
     return true; // keep channel open for async sendResponse
+  }
+
+  if (message.type === 'session_start') {
+    const { session_id } = message;
+    // Clear previous session data
+    Promise.all([
+      clearAllScreenshots(),
+      chrome.storage.local.remove(['v1helper_clicks']),
+      chrome.storage.local.set({
+        v1helper_session: { active: true, session_id, stop_audio: false }
+      }),
+    ]).then(() => {
+      sendResponse({ status: 'ok' });
+    }).catch((err) => {
+      sendResponse({ status: 'error', error: err.message });
+    });
+    return true;
+  }
+
+  if (message.type === 'session_end') {
+    chrome.storage.local.set({ v1helper_session: { active: false } }).then(() => {
+      sendResponse({ status: 'ok' });
+    });
+    return true;
+  }
+
+  if (message.type === 'upload_session') {
+    const { session_id, click_buffer } = message;
+    uploadSessionData(session_id, click_buffer).then(() => {
+      sendResponse({ status: 'ok' });
+    }).catch((err) => {
+      console.error('V1-Helper upload failed:', err);
+      // Still clear local data even on error
+      clearAllScreenshots().catch(() => {});
+      chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});
+      sendResponse({ status: 'error', error: err.message });
+    });
+    return true;
   }
 
   // Default pass-through
