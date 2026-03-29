@@ -66,6 +66,7 @@
       height: 7px;
       border-radius: 50%;
       background: #6b7280;
+      flex-shrink: 0;
     }
 
     .status-dot.connected {
@@ -73,8 +74,17 @@
       box-shadow: 0 0 6px #34d39966;
     }
 
+    .status-dot.active {
+      background: #34d399;
+      box-shadow: 0 0 6px #34d39966;
+    }
+
     .status-text {
       color: #9ca3af;
+    }
+
+    .status-text.active {
+      color: #34d399;
     }
 
     .content {
@@ -111,6 +121,115 @@
       color: #a78bfa;
     }
 
+    /* ── S3 Config ── */
+
+    .s3-section {
+      margin-top: 20px;
+    }
+
+    .s3-section-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .s3-section-header:hover .section-title {
+      color: #9ca3af;
+    }
+
+    .s3-arrow {
+      font-size: 9px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+
+    .s3-configured-badge {
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .s3-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .s3-body.collapsed {
+      display: none;
+    }
+
+    .s3-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .s3-label {
+      font-size: 11px;
+      color: #6b7280;
+      letter-spacing: 0.3px;
+    }
+
+    .s3-input {
+      background: #12121c;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12px;
+      color: #e8e8f0;
+      outline: none;
+      width: 100%;
+      font-family: inherit;
+    }
+
+    .s3-input:focus {
+      border-color: #a78bfa;
+    }
+
+    .s3-input::placeholder {
+      color: #3d3d5c;
+    }
+
+    .s3-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .s3-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+
+    .s3-btn:hover {
+      opacity: 0.85;
+    }
+
+    .s3-btn-save {
+      background: #a78bfa;
+      color: #0f0f14;
+    }
+
+    .s3-btn-save.saved {
+      background: #34d399;
+    }
+
+    .s3-btn-demo {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      color: #9ca3af;
+    }
+
     .footer {
       padding: 12px 20px;
       border-top: 1px solid #1e1e30;
@@ -141,11 +260,51 @@
     <span class="status-text" id="statusText">Connecting to MCP relay...</span>
   </div>
 
+  <div class="status-bar">
+    <div class="status-dot" id="sessionDot"></div>
+    <span class="status-text" id="sessionText">No Active Session</span>
+  </div>
+
   <div class="content">
     <div class="section-title">MCP Tools</div>
     <div class="tool-count">
       <span class="tool-count-label">Available tools</span>
       <span class="tool-count-value" id="toolCount">--</span>
+    </div>
+
+    <div class="s3-section">
+      <div class="s3-section-header" id="s3ConfigToggle">
+        <span class="s3-arrow" id="s3Arrow">▶</span>
+        <div class="section-title">S3 Config</div>
+        <span class="s3-configured-badge" id="s3ConfiguredBadge">✓</span>
+      </div>
+
+      <div class="s3-body collapsed" id="s3ConfigBody">
+        <div class="s3-field">
+          <label class="s3-label" for="s3Bucket">S3 Bucket</label>
+          <input class="s3-input" id="s3Bucket" type="text" placeholder="my-bucket-name" />
+        </div>
+        <div class="s3-field">
+          <label class="s3-label" for="s3Region">AWS Region</label>
+          <input class="s3-input" id="s3Region" type="text" placeholder="us-east-1" />
+        </div>
+        <div class="s3-field">
+          <label class="s3-label" for="awsAccessKeyId">Access Key ID</label>
+          <input class="s3-input" id="awsAccessKeyId" type="text" placeholder="AKIA..." />
+        </div>
+        <div class="s3-field">
+          <label class="s3-label" for="awsSecretAccessKey">Secret Access Key</label>
+          <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="••••••••" />
+        </div>
+        <div class="s3-field">
+          <label class="s3-label" for="awsSessionToken">Session Token <em style="font-style:normal;color:#3d3d5c">(optional)</em></label>
+          <input class="s3-input" id="awsSessionToken" type="password" placeholder="••••••••" />
+        </div>
+        <div class="s3-actions">
+          <button class="s3-btn s3-btn-save" id="s3SaveBtn">Save</button>
+          <button class="s3-btn s3-btn-demo" id="s3DemoBtn">Pre-fill Demo</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -153,10 +312,6 @@
     <div class="footer-text">Powered by <span>TrendAI</span></div>
   </div>
 
-  <script>
-    // Placeholder: MCP relay connection logic goes here in Part 2
-    document.getElementById('statusText').textContent = 'MCP relay not configured';
-    document.getElementById('toolCount').textContent = '30';
-  </script>
+  <script src="popup.js"></script>
 </body>
 </html>
