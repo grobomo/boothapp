@@ -4,15 +4,59 @@
   "title": "Build shared AWS demo environment with generic sample data",
   "description": "Create persistent AWS infrastructure that any V1 demo tenant can connect to. Deploy via CloudFormation/Terraform: (1) EC2 instances with Trend agents installed (Windows Server + Linux), (2) EKS cluster with sample containerized workloads, (3) S3 bucket with sample files/logs, (4) VPC with proper network topology. Pre-stage sample threats/detections for demo scenarios. Document how to connect a new V1 tenant to this environment.",
   "priority": 2,
-  "status": "pending",
-  "assigned_worker": null,
-  "substeps": [],
+  "status": "in_progress",
+  "assigned_worker": "claude-sonnet-4-6",
   "depends_on": ["inf-01-s3-setup"],
+  "substeps": [
+    {
+      "id": "aws-config",
+      "title": "Create shared AWS config module — single source of truth for resource names/ARNs",
+      "status": "completed",
+      "pr": 10,
+      "notes": "infra/config.py (Python) + infra/config.js (JS/Chrome extension). Covers: region, account, S3 buckets, IAM role ARNs, Lambda names, CFN stack names, EKS cluster, EC2 names. Python module also supports `python infra/config.py > config.json` for other consumers."
+    },
+    {
+      "id": "cloudformation-vpc",
+      "title": "CloudFormation: VPC with public/private subnets, IGW, NAT",
+      "status": "pending",
+      "pr": null,
+      "notes": ""
+    },
+    {
+      "id": "cloudformation-ec2",
+      "title": "CloudFormation: EC2 instances (Windows Server + Linux) with Trend agents",
+      "status": "pending",
+      "pr": null,
+      "notes": ""
+    },
+    {
+      "id": "cloudformation-eks",
+      "title": "CloudFormation/eksctl: EKS cluster with sample vulnerable workloads",
+      "status": "pending",
+      "pr": null,
+      "notes": ""
+    },
+    {
+      "id": "sample-data",
+      "title": "Stage sample threat data and log files in shared S3 bucket",
+      "status": "pending",
+      "pr": null,
+      "notes": ""
+    },
+    {
+      "id": "v1-connect-guide",
+      "title": "Document how to connect a new V1 tenant to shared environment",
+      "status": "pending",
+      "pr": null,
+      "notes": ""
+    }
+  ],
   "tests": [
     "EC2 instances running with Trend agents reporting to a V1 tenant",
     "EKS cluster has sample pods with known vulnerabilities for Container Security demo",
     "A new V1 tenant can connect via Cloud Account and see the AWS resources within 5 minutes",
     "Sample detections/alerts appear in V1 within 10 minutes of connection",
     "Infrastructure survives instance stop/start (persistent, not ephemeral)"
-  ]
+  ],
+  "research_notes": "Account ID 752266476357, region us-east-1, profile hackathon (from infra/README.md). This substep (aws-config) is the config module only — full CFN stacks are subsequent substeps. Config covers all resource names so other workstreams never hardcode values."
 }
