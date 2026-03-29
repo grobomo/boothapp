@@ -1,0 +1,16 @@
+{
+  "name": "boothapp-analysis",
+  "version": "1.0.0",
+  "description": "Post-demo analysis pipeline for BoothApp",
+  "main": "watcher.js",
+  "scripts": {
+    "watch": "node watcher.js",
+    "test": "node test/watcher-test.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

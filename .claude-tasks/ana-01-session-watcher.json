@@ -4,9 +4,28 @@
   "title": "Build session completion watcher",
   "description": "Monitor S3 for completed sessions. A session is complete when metadata.json has status 'completed' AND clicks/clicks.json exists AND transcript/transcript.json exists. Poll every 30 seconds. When a complete session is found, trigger the analysis pipeline. Track which sessions have already been analyzed to avoid re-processing.",
   "priority": 1,
-  "status": "pending",
-  "assigned_worker": null,
-  "substeps": [],
+  "status": "completed",
+  "assigned_worker": "ccc-worker",
+  "substeps": [
+    {
+      "id": "s3-helpers",
+      "title": "S3 list/check/marker helpers",
+      "status": "completed",
+      "file": "analysis/lib/s3.js"
+    },
+    {
+      "id": "pipeline-stub",
+      "title": "Pipeline trigger (stub, extensible by ana-02+)",
+      "status": "completed",
+      "file": "analysis/lib/pipeline.js"
+    },
+    {
+      "id": "polling-loop",
+      "title": "Main 30s polling loop with deduplication",
+      "status": "completed",
+      "file": "analysis/watcher.js"
+    }
+  ],
   "depends_on": [],
   "tests": [
     "Incomplete session (no transcript yet) -> not triggered",
