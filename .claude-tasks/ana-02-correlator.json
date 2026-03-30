@@ -4,9 +4,32 @@
   "title": "Build timestamp correlator (audio + clicks + screenshots)",
   "description": "Given a session's transcript.json and clicks.json, correlate audio timestamps with click timestamps to create a unified timeline. For each click, find what was being said at that moment. For each transcript segment, find what was on screen. Output: a merged timeline JSON that the analysis engine can consume. Include screenshot references at each point.",
   "priority": 2,
-  "status": "pending",
+  "status": "completed",
   "assigned_worker": null,
-  "substeps": [],
+  "completed_at": "2026-03-29T00:00:00Z",
+  "substeps": [
+    {
+      "id": "correlator-lib",
+      "title": "Create lib/correlator.js with cross-referencing of clicks and transcript",
+      "status": "completed",
+      "pr": null,
+      "notes": "Pure function, handles clicks-only, transcript-only, both, null, and error cases"
+    },
+    {
+      "id": "pipeline-integration",
+      "title": "Integrate correlator into pipeline-run.js Step 2",
+      "status": "completed",
+      "pr": null,
+      "notes": "Fetches S3 data, calls correlate(), writes output/timeline.json"
+    },
+    {
+      "id": "unit-tests",
+      "title": "Unit tests covering all 5 spec tests (31 assertions)",
+      "status": "completed",
+      "pr": null,
+      "notes": "test/correlator-test.js -- all passing"
+    }
+  ],
   "depends_on": ["ana-01-session-watcher"],
   "tests": [
     "Click at 00:05:30 + transcript entry at 00:05:28 -> correctly correlated",
