@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Session Review</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  header {
+    max-width: 1100px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #58a6ff;
+    letter-spacing: 0.02em;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: #484f58;
+  }
+
+  .refresh-badge {
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    font-family: monospace;
+  }
+
+  .session-count {
+    color: #8b949e;
+  }
+
+  /* -- Setup screen -- */
+  .setup {
+    max-width: 440px;
+    margin: 6rem auto;
+    text-align: center;
+  }
+  .setup h2 {
+    font-size: 1.4rem;
+    color: #8b949e;
+    margin-bottom: 1.5rem;
+  }
+  .setup label {
+    display: block;
+    font-size: 0.95rem;
+    color: #8b949e;
+    margin-bottom: 0.4rem;
+    text-align: left;
+  }
+  .setup input {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #e6edf3;
+    font-family: monospace;
+    margin-bottom: 0.8rem;
+  }
+  .setup input:focus { outline: 2px solid #58a6ff; }
+  .setup button {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    padding: 0.6rem 2rem;
+    border-radius: 8px;
+    border: none;
+    background: #238636;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .setup button:hover { background: #2ea043; }
+  .setup .hint {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #484f58;
+  }
+
+  /* -- Table -- */
+  .table-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    border-bottom: 1px solid #30363d;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { color: #e6edf3; }
+  thead th .sort-arrow { margin-left: 0.3rem; font-size: 0.7rem; }
+
+  tbody tr {
+    border-bottom: 1px solid #21262d;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: #161b22; }
+  tbody tr.expanded { background: #161b22; border-bottom: none; }
+
+  td {
+    padding: 0.7rem 1rem;
+    font-size: 0.95rem;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  td.session-id-cell {
+    font-family: monospace;
+    color: #58a6ff;
+    font-weight: 600;
+  }
+
+  /* -- Status badges -- */
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .badge-recording   { background: #f8514933; color: #f85149; }
+  .badge-completed   { background: #23863633; color: #3fb950; }
+  .badge-ended       { background: #23863633; color: #3fb950; }
+  .badge-waiting     { background: #d2992233; color: #d29922; }
+  .badge-analyzing   { background: #58a6ff33; color: #58a6ff; }
+  .badge-unknown     { background: #30363d;   color: #8b949e; }
+
+  /* -- Engagement score bar -- */
+  .score-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .score-track {
+    width: 60px;
+    height: 6px;
+    background: #30363d;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .score-fill.low    { background: #f85149; }
+  .score-fill.mid    { background: #d29922; }
+  .score-fill.high   { background: #3fb950; }
+  .score-label {
+    font-size: 0.85rem;
+    font-family: monospace;
+    min-width: 2.5em;
+    text-align: right;
+  }
+
+  /* -- Expanded detail row -- */
+  .detail-row td {
+    padding: 0;
+    border-bottom: 1px solid #21262d;
+  }
+  .detail-row:hover { background: transparent; }
+
+  .detail-panel {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin: 0 0.5rem 0.5rem;
+    padding: 1.2rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .detail-item label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    margin-bottom: 0.2rem;
+  }
+  .detail-item span {
+    font-size: 0.95rem;
+    color: #e6edf3;
+  }
+  .detail-item span.mono { font-family: monospace; }
+
+  .detail-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .detail-actions a {
+    font-size: 0.85rem;
+    color: #58a6ff;
+    text-decoration: none;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    transition: border-color 0.15s;
+  }
+  .detail-actions a:hover { border-color: #58a6ff; }
+
+  /* -- Error / empty states -- */
+  .error-banner {
+    max-width: 1100px;
+    margin: 0 auto 1rem;
+    background: #f8514922;
+    border: 1px solid #f85149;
+    color: #f85149;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    display: none;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #484f58;
+    font-size: 1.1rem;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 4rem;
+    color: #8b949e;
+  }
+  .loading::after {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 0.6rem;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  /* -- Responsive -- */
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    h1 { font-size: 1.4rem; }
+    td, th { padding: 0.5rem 0.6rem; font-size: 0.85rem; }
+    .detail-panel { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 0.75rem; }
+    header { flex-direction: column; align-items: flex-start; }
+    .detail-panel { grid-template-columns: 1fr; }
+    .score-track { width: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Setup: AWS credentials -->
+<div id="setup" class="setup hidden">
+  <h1>BoothApp</h1>
+  <h2>Session Review Dashboard</h2>
+  <label for="access-key">AWS Access Key ID</label>
+  <input id="access-key" type="text" placeholder="AKIA...">
+  <label for="secret-key">AWS Secret Access Key</label>
+  <input id="secret-key" type="password" placeholder="wJalr...">
+  <button id="save-creds">Connect</button>
+  <div class="hint">Credentials are stored in localStorage only.</div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="hidden">
+  <header>
+    <h1>Session Review</h1>
+    <div class="header-right">
+      <span class="session-count" id="session-count"></span>
+      <span class="refresh-badge" id="refresh-badge">--s</span>
+      <a href="#" id="logout-link" style="color:#484f58;text-decoration:none;font-size:0.8rem;">[logout]</a>
+    </div>
+  </header>
+
+  <div class="error-banner" id="error-banner"></div>
+
+  <div class="table-wrap">
+    <div class="loading" id="loading">Loading sessions</div>
+    <table id="session-table" class="hidden">
+      <thead>
+        <tr>
+          <th data-col="id">Session ID <span class="sort-arrow"></span></th>
+          <th data-col="name">Visitor <span class="sort-arrow"></span></th>
+          <th data-col="date">Date <span class="sort-arrow"></span></th>
+          <th data-col="status">Status <span class="sort-arrow"></span></th>
+          <th data-col="score">Engagement <span class="sort-arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="session-body"></tbody>
+    </table>
+    <div class="empty-state hidden" id="empty-state">No sessions found in bucket.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+  var REFRESH_MS = 15000;
+  var LS_KEY_AK = "boothapp_aws_ak";
+  var LS_KEY_SK = "boothapp_aws_sk";
+
+  // ── Elements ────────────────────────────────────────────────────────────────
+  var setupEl      = document.getElementById("setup");
+  var dashboardEl  = document.getElementById("dashboard");
+  var errorBanner  = document.getElementById("error-banner");
+  var loadingEl    = document.getElementById("loading");
+  var tableEl      = document.getElementById("session-table");
+  var tbodyEl      = document.getElementById("session-body");
+  var emptyEl      = document.getElementById("empty-state");
+  var countEl      = document.getElementById("session-count");
+  var refreshBadge = document.getElementById("refresh-badge");
+  var saveBtn      = document.getElementById("save-creds");
+  var logoutLink   = document.getElementById("logout-link");
+  var akInput      = document.getElementById("access-key");
+  var skInput      = document.getElementById("secret-key");
+
+  // ── AWS client ──────────────────────────────────────────────────────────────
+  var s3 = null;
+
+  function initS3(ak, sk) {
+    AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
+    s3 = new AWS.S3({ params: { Bucket: BUCKET } });
+  }
+
+  // ── Credentials ─────────────────────────────────────────────────────────────
+  function loadCreds() {
+    var ak = localStorage.getItem(LS_KEY_AK);
+    var sk = localStorage.getItem(LS_KEY_SK);
+    if (ak && sk) {
+      initS3(ak, sk);
+      return true;
+    }
+    return false;
+  }
+
+  function saveCreds(ak, sk) {
+    localStorage.setItem(LS_KEY_AK, ak);
+    localStorage.setItem(LS_KEY_SK, sk);
+    initS3(ak, sk);
+  }
+
+  function clearCreds() {
+    localStorage.removeItem(LS_KEY_AK);
+    localStorage.removeItem(LS_KEY_SK);
+    s3 = null;
+  }
+
+  // ── Setup flow ──────────────────────────────────────────────────────────────
+  if (loadCreds()) {
+    showDashboard();
+  } else {
+    setupEl.classList.remove("hidden");
+  }
+
+  saveBtn.addEventListener("click", function () {
+    var ak = akInput.value.trim();
+    var sk = skInput.value.trim();
+    if (!ak || !sk) return;
+    saveCreds(ak, sk);
+    showDashboard();
+  });
+
+  logoutLink.addEventListener("click", function (e) {
+    e.preventDefault();
+    clearCreds();
+    dashboardEl.classList.add("hidden");
+    setupEl.classList.remove("hidden");
+    akInput.value = "";
+    skInput.value = "";
+    if (refreshTimer) clearInterval(refreshTimer);
+  });
+
+  // ── Dashboard ───────────────────────────────────────────────────────────────
+  var sessions = [];
+  var sortCol = "date";
+  var sortAsc = false;
+  var expandedId = null;
+  var refreshTimer = null;
+  var countdown = 0;
+  var countdownTimer = null;
+
+  function showDashboard() {
+    setupEl.classList.add("hidden");
+    dashboardEl.classList.remove("hidden");
+    loadSessions();
+    refreshTimer = setInterval(loadSessions, REFRESH_MS);
+    startCountdown();
+  }
+
+  function startCountdown() {
+    countdown = Math.floor(REFRESH_MS / 1000);
+    refreshBadge.textContent = countdown + "s";
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(function () {
+      countdown = Math.max(0, countdown - 1);
+      refreshBadge.textContent = countdown + "s";
+    }, 1000);
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = "block";
+  }
+  function clearError() {
+    errorBanner.style.display = "none";
+  }
+
+  // ── S3: list sessions ───────────────────────────────────────────────────────
+  function loadSessions() {
+    startCountdown();
+    s3.listObjectsV2({ Prefix: "sessions/", Delimiter: "/" }, function (err, data) {
+      if (err) {
+        showError("S3 error: " + (err.message || err.code));
+        loadingEl.classList.add("hidden");
+        return;
+      }
+      clearError();
+
+      var prefixes = (data.CommonPrefixes || []).map(function (p) {
+        return p.Prefix.replace("sessions/", "").replace("/", "");
+      }).filter(Boolean);
+
+      if (prefixes.length === 0) {
+        loadingEl.classList.add("hidden");
+        tableEl.classList.add("hidden");
+        emptyEl.classList.remove("hidden");
+        countEl.textContent = "0 sessions";
+        return;
+      }
+
+      var pending = prefixes.length;
+      var results = [];
+
+      prefixes.forEach(function (sid) {
+        fetchMetadata(sid, function (meta) {
+          results.push(buildSessionRow(sid, meta));
+          pending--;
+          if (pending === 0) {
+            sessions = results;
+            renderTable();
+          }
+        });
+      });
+    });
+  }
+
+  function fetchMetadata(sid, cb) {
+    s3.getObject({ Key: "sessions/" + sid + "/metadata.json" }, function (err, data) {
+      if (err) { cb(null); return; }
+      try {
+        cb(JSON.parse(data.Body.toString()));
+      } catch (e) {
+        cb(null);
+      }
+    });
+  }
+
+  // ── Build row data ──────────────────────────────────────────────────────────
+  function buildSessionRow(sid, meta) {
+    meta = meta || {};
+    var status = deriveStatus(meta);
+    var score = computeScore(meta);
+    return {
+      id: sid,
+      name: meta.visitor_name || "Unknown",
+      date: meta.started_at || meta.created_at || "",
+      status: status,
+      score: score,
+      se: meta.se_name || "",
+      duration: computeDuration(meta),
+      clicks: (meta.click_count != null) ? meta.click_count : "--",
+      company: meta.visitor_company || "",
+      endedAt: meta.ended_at || "",
+      raw: meta
+    };
+  }
+
+  function deriveStatus(meta) {
+    if (meta.status) return meta.status.toLowerCase();
+    if (meta.ended_at) return "completed";
+    if (meta.started_at) return "recording";
+    return "waiting";
+  }
+
+  function computeScore(meta) {
+    // Heuristic: clicks * duration_minutes, capped at 100
+    var clicks = meta.click_count || 0;
+    var dur = 0;
+    if (meta.started_at) {
+      var end = meta.ended_at ? new Date(meta.ended_at).getTime() : Date.now();
+      dur = Math.max(0, (end - new Date(meta.started_at).getTime()) / 60000);
+    }
+    // Score: sqrt(clicks * dur) scaled, capped at 100
+    var raw = Math.sqrt(clicks * dur) * 5;
+    return Math.min(100, Math.round(raw));
+  }
+
+  function computeDuration(meta) {
+    if (!meta.started_at) return "--";
+    var start = new Date(meta.started_at).getTime();
+    var end = meta.ended_at ? new Date(meta.ended_at).getTime() : Date.now();
+    var sec = Math.max(0, Math.floor((end - start) / 1000));
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // ── Sorting ─────────────────────────────────────────────────────────────────
+  document.querySelectorAll("thead th").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var col = th.getAttribute("data-col");
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      renderTable();
+    });
+  });
+
+  function sortSessions(list) {
+    var copy = list.slice();
+    copy.sort(function (a, b) {
+      var va, vb;
+      switch (sortCol) {
+        case "id":    va = a.id;    vb = b.id;    break;
+        case "name":  va = a.name;  vb = b.name;  break;
+        case "date":  va = a.date;  vb = b.date;  break;
+        case "status":va = a.status;vb = b.status;break;
+        case "score": va = a.score; vb = b.score; break;
+        default:      va = a.date;  vb = b.date;
+      }
+      if (typeof va === "number") return sortAsc ? va - vb : vb - va;
+      va = (va || "").toString().toLowerCase();
+      vb = (vb || "").toString().toLowerCase();
+      if (va < vb) return sortAsc ? -1 : 1;
+      if (va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+    return copy;
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function badgeClass(status) {
+    if (status === "recording" || status === "in_progress") return "badge-recording";
+    if (status === "completed" || status === "ended") return "badge-completed";
+    if (status === "analyzing") return "badge-analyzing";
+    if (status === "waiting") return "badge-waiting";
+    return "badge-unknown";
+  }
+
+  function scoreColor(s) {
+    if (s >= 60) return "high";
+    if (s >= 25) return "mid";
+    return "low";
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "--";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "--";
+    var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return mon[d.getMonth()] + " " + d.getDate() + ", " +
+      (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" +
+      (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+  }
+
+  function renderTable() {
+    var sorted = sortSessions(sessions);
+
+    loadingEl.classList.add("hidden");
+    emptyEl.classList.add("hidden");
+    tableEl.classList.remove("hidden");
+    countEl.textContent = sorted.length + " session" + (sorted.length !== 1 ? "s" : "");
+
+    // Update sort arrows
+    document.querySelectorAll("thead th").forEach(function (th) {
+      var arrow = th.querySelector(".sort-arrow");
+      if (th.getAttribute("data-col") === sortCol) {
+        arrow.textContent = sortAsc ? " ^" : " v";
+      } else {
+        arrow.textContent = "";
+      }
+    });
+
+    tbodyEl.innerHTML = "";
+    sorted.forEach(function (s) {
+      // Main row
+      var tr = document.createElement("tr");
+      tr.setAttribute("data-sid", s.id);
+      if (s.id === expandedId) tr.classList.add("expanded");
+
+      tr.innerHTML =
+        '<td class="session-id-cell">' + esc(s.id) + '</td>' +
+        '<td>' + esc(s.name) + '</td>' +
+        '<td>' + esc(formatDate(s.date)) + '</td>' +
+        '<td><span class="badge ' + badgeClass(s.status) + '">' + esc(s.status) + '</span></td>' +
+        '<td>' +
+          '<div class="score-bar">' +
+            '<div class="score-track"><div class="score-fill ' + scoreColor(s.score) + '" style="width:' + s.score + '%"></div></div>' +
+            '<span class="score-label">' + s.score + '</span>' +
+          '</div>' +
+        '</td>';
+
+      tr.addEventListener("click", function () {
+        toggleExpand(s.id);
+      });
+      tbodyEl.appendChild(tr);
+
+      // Detail row (expanded)
+      if (s.id === expandedId) {
+        var detailTr = document.createElement("tr");
+        detailTr.classList.add("detail-row");
+        var detailTd = document.createElement("td");
+        detailTd.setAttribute("colspan", "5");
+        detailTd.innerHTML =
+          '<div class="detail-panel">' +
+            '<div class="detail-item"><label>SE</label><span>' + esc(s.se || "--") + '</span></div>' +
+            '<div class="detail-item"><label>Company</label><span>' + esc(s.company || "--") + '</span></div>' +
+            '<div class="detail-item"><label>Duration</label><span class="mono">' + esc(s.duration) + '</span></div>' +
+            '<div class="detail-item"><label>Clicks</label><span class="mono">' + esc(String(s.clicks)) + '</span></div>' +
+            '<div class="detail-item"><label>Started</label><span class="mono">' + esc(formatDate(s.date)) + '</span></div>' +
+            '<div class="detail-item"><label>Ended</label><span class="mono">' + esc(formatDate(s.endedAt)) + '</span></div>' +
+            '<div class="detail-actions">' +
+              '<a href="index.html?session=' + encodeURIComponent(s.id) + '">Live View</a>' +
+            '</div>' +
+          '</div>';
+        detailTr.appendChild(detailTd);
+        tbodyEl.appendChild(detailTr);
+      }
+    });
+  }
+
+  function toggleExpand(sid) {
+    expandedId = (expandedId === sid) ? null : sid;
+    renderTable();
+  }
+
+})();
+</script>
+</body>
+</html>
