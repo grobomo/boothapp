@@ -97,6 +97,36 @@
     margin-top: 0.3rem;
   }
 
+  /* -- Screenshot thumbnail -- */
+  .screenshot-wrap {
+    width: 100%;
+    max-height: 340px;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+  }
+  .screenshot-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+  }
+  .screenshot-wrap .placeholder {
+    color: #484f58;
+    font-size: 1.1rem;
+    font-style: italic;
+  }
+  .screenshot-meta {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #484f58;
+  }
+
   .error-banner {
     background: #f8514922;
     border: 1px solid #f85149;
@@ -155,6 +185,34 @@
   .setup button:hover { background: #2ea043; }
 
   .hidden { display: none !important; }
+
+  /* -- Responsive: tablet (< 768px) -- */
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    h1 { font-size: 1.6rem; }
+    .grid { gap: 1rem; }
+    .card { padding: 1.2rem 1.5rem; }
+    .card-label { font-size: 1.1rem; }
+    .card-value { font-size: 3.5rem; }
+    .card-value.name { font-size: 2.5rem; }
+    .card-value.status { font-size: 2rem; }
+    .screenshot-wrap { max-height: 260px; min-height: 140px; }
+  }
+
+  /* -- Responsive: phone (< 480px) -- */
+  @media (max-width: 480px) {
+    body { padding: 0.75rem; }
+    h1 { font-size: 1.3rem; }
+    .session-id { font-size: 0.95rem; margin-bottom: 1rem; }
+    .grid { grid-template-columns: 1fr; gap: 0.75rem; }
+    .card { padding: 1rem; }
+    .card-label { font-size: 1rem; margin-bottom: 0.4rem; }
+    .card-value { font-size: 3rem; }
+    .card-value.name { font-size: 2rem; }
+    .card-value.status { font-size: 1.6rem; }
+    .setup input { width: 100%; font-size: 1.5rem; }
+    .screenshot-wrap { max-height: 200px; min-height: 120px; }
+  }
 </style>
 </head>
 <body>
@@ -193,6 +251,13 @@
         <span class="status-dot waiting"></span> Waiting
       </div>
     </div>
+    <div class="card full-width">
+      <div class="card-label">Last Screenshot</div>
+      <div class="screenshot-wrap" id="screenshot-wrap">
+        <span class="placeholder">No screenshots yet</span>
+      </div>
+      <div class="screenshot-meta" id="screenshot-meta"></div>
+    </div>
   </div>
 
   <div class="refresh-indicator" id="refresh-indicator">Auto-refresh: 5s</div>
@@ -200,14 +265,11 @@
 
 <script>
 (function () {
-  // ── Config ──────────────────────────────────────────────────────────────────
+  // ── Config (mirrors infra/config.js) ────────────────────────────────────────
   var BUCKET = "boothapp-sessions-752266476357";
   var REGION = "us-east-1";
   var REFRESH_MS = 5000;
 
-  // S3 public URL (requires bucket policy or pre-signed URLs in production)
-  // For the demo, we use the S3 REST endpoint with unsigned requests.
-  // If the bucket isn't public, swap this for a pre-signed URL generator or API Gateway.
   function s3Url(key) {
     return "https://" + BUCKET + ".s3." + REGION + ".amazonaws.com/" + key;
   }
@@ -216,17 +278,19 @@
   var params = new URLSearchParams(window.location.search);
   var sessionId = params.get("session") || "";
 
-  var setupEl     = document.getElementById("setup");
-  var dashboardEl = document.getElementById("dashboard");
-  var sidDisplay  = document.getElementById("sid-display");
-  var errorBanner = document.getElementById("error-banner");
-  var nameEl      = document.getElementById("visitor-name");
-  var seNameEl    = document.getElementById("se-name");
-  var durationEl  = document.getElementById("duration");
-  var clicksEl    = document.getElementById("click-count");
-  var statusEl    = document.getElementById("rec-status");
-  var sessionInput = document.getElementById("session-input");
-  var goBtn       = document.getElementById("go-btn");
+  var setupEl        = document.getElementById("setup");
+  var dashboardEl    = document.getElementById("dashboard");
+  var sidDisplay     = document.getElementById("sid-display");
+  var errorBanner    = document.getElementById("error-banner");
+  var nameEl         = document.getElementById("visitor-name");
+  var seNameEl       = document.getElementById("se-name");
+  var durationEl     = document.getElementById("duration");
+  var clicksEl       = document.getElementById("click-count");
+  var statusEl       = document.getElementById("rec-status");
+  var screenshotEl   = document.getElementById("screenshot-wrap");
+  var screenshotMeta = document.getElementById("screenshot-meta");
+  var sessionInput   = document.getElementById("session-input");
+  var goBtn          = document.getElementById("go-btn");
 
   function showError(msg) {
     errorBanner.textContent = msg;
@@ -234,6 +298,12 @@
   }
   function clearError() {
     errorBanner.style.display = "none";
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
   }
 
   // ── Setup screen ────────────────────────────────────────────────────────────
@@ -259,8 +329,9 @@
   }
 
   // ── State ───────────────────────────────────────────────────────────────────
-  var meta = null;     // metadata.json contents
-  var clickCount = 0;  // from clicks.json
+  var meta = null;
+  var clickCount = 0;
+  var lastScreenshot = null;
   var timerHandle = null;
 
   // ── Duration timer (ticks every second between refreshes) ───────────────────
@@ -291,8 +362,28 @@
     } else if (st === "in_progress" || st === "recording") {
       statusEl.innerHTML = '<span class="status-dot recording"></span> Recording';
     } else {
-      statusEl.innerHTML = '<span class="status-dot waiting"></span> ' + (meta.status || "Waiting");
+      statusEl.innerHTML = '<span class="status-dot waiting"></span> ' + esc(meta.status || "Waiting");
     }
+  }
+
+  // ── Screenshot rendering ────────────────────────────────────────────────────
+  function renderScreenshot() {
+    if (!lastScreenshot) {
+      screenshotEl.innerHTML = '<span class="placeholder">No screenshots yet</span>';
+      screenshotMeta.textContent = "";
+      return;
+    }
+    var imgUrl = s3Url("sessions/" + sessionId + "/screenshots/" + lastScreenshot.file);
+    // Build img element safely (src is from our own S3 bucket, not user input)
+    screenshotEl.innerHTML = "";
+    var img = document.createElement("img");
+    img.src = imgUrl;
+    img.alt = "Last screenshot";
+    screenshotEl.appendChild(img);
+
+    var label = lastScreenshot.file;
+    if (lastScreenshot.pageTitle) label += " — " + lastScreenshot.pageTitle;
+    screenshotMeta.textContent = label;
   }
 
   // ── Fetch helpers ───────────────────────────────────────────────────────────
@@ -328,15 +419,30 @@
       startTimer();
     });
 
-    // Fetch clicks
+    // Fetch clicks — also extracts last screenshot reference
     fetchJson("sessions/" + sessionId + "/clicks/clicks.json", function (err, data) {
       if (err) {
-        // clicks.json may not exist yet — that's fine
         clickCount = 0;
+        lastScreenshot = null;
       } else {
-        clickCount = (data && data.events) ? data.events.length : 0;
+        var events = (data && data.events) ? data.events : [];
+        clickCount = events.length;
+
+        // Find the most recent event with a screenshot_file
+        lastScreenshot = null;
+        for (var i = events.length - 1; i >= 0; i--) {
+          if (events[i].screenshot_file) {
+            var fname = events[i].screenshot_file.replace(/^screenshots\//, "");
+            lastScreenshot = {
+              file: fname,
+              pageTitle: events[i].page_title || ""
+            };
+            break;
+          }
+        }
       }
       clicksEl.textContent = clickCount;
+      renderScreenshot();
     });
   }
 })();
