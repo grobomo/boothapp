@@ -4,9 +4,13 @@
   "title": "Build HTML summary report generator",
   "description": "Generate a self-contained HTML report from summary.json. Must include: visitor name, demo duration, products shown (with screenshots), interest areas, recommended follow-up, V1 tenant link (prominent), key moments with clickable screenshots. All CSS/images inline (no external deps). Email-ready. Dark mode. Adapt v1-helper report generator HTML template patterns. Upload to S3 as output/summary.html.",
   "priority": 4,
-  "status": "pending",
+  "status": "completed",
   "assigned_worker": null,
-  "substeps": [],
+  "completed_at": "2026-03-29T00:00:00Z",
+  "substeps": [
+    {"id": "template", "title": "Create render-report.html template with {{placeholder}} syntax", "status": "completed", "pr": 38, "notes": "10 sections: header, visitor info, exec summary, timeline, products, interests, pain points, follow-up cards, score ring, SDR notes. Full print CSS."},
+    {"id": "refactor-js", "title": "Refactor render-report.js to use template", "status": "completed", "pr": 38, "notes": "Loads template, builds HTML fragments for repeating sections, replaces placeholders. Also reads timeline.json for merged click+speech events."}
+  ],
   "depends_on": ["ana-03-claude-analysis"],
   "source_project": "ProjectsCL1/v1-helper/scripts/report_generator.py",
   "tests": [

@@ -4,7 +4,8 @@
 // Usage: node render-report.js <sessionPath>
 //   sessionPath: local directory or s3://bucket/sessions/<sessionId>
 //
-// Reads: summary.json, follow-up.json (from output/ subdir or sessionPath root)
+// Reads: summary.json, follow-up.json, timeline.json (from output/ subdir)
+// Template: render-report.html ({{placeholder}} syntax)
 // Writes: output/summary.html (locally or to S3)
 
 'use strict';
@@ -27,6 +28,7 @@ if (!sessionPath) {
 
 const IS_S3 = sessionPath.startsWith('s3://');
 const REGION = process.env.AWS_REGION || 'us-east-1';
+const TEMPLATE_PATH = path.join(__dirname, 'render-report.html');
 
 function parseS3Path(s3Uri) {
   const without = s3Uri.replace('s3://', '');
@@ -79,6 +81,185 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// ── HTML fragment builders ──────────────────────────────────────
+
+function buildProductBadges(products) {
+  if (!products || !products.length) {
+    return '<span class="empty">No products recorded</span>';
+  }
+  return products.map(p => {
+    const initial = (p[0] || '?').toUpperCase();
+    return `<div class="product-badge"><span class="p-icon">${escapeHtml(initial)}</span>${escapeHtml(p)}</div>`;
+  }).join('\n            ');
+}
+
+function buildInterestsRows(interests) {
+  if (!interests || !interests.length) {
+    return '<tr><td colspan="3" class="empty">No interests recorded</td></tr>';
+  }
+  return interests.map(i => {
+    const cls = 'conf-' + (i.confidence || 'low').toLowerCase();
+    return `<tr>
+              <td style="font-weight:500">${escapeHtml(i.topic)}</td>
+              <td style="text-align:center"><span class="${cls}">${escapeHtml(i.confidence)}</span></td>
+              <td style="font-size:13px;color:#94a3b8">${escapeHtml(i.evidence)}</td>
+            </tr>`;
+  }).join('\n            ');
+}
+
+function buildPainPointRows(interests) {
+  // Extract pain points from interests with "pain" or "challenge" evidence,
+  // or from high-confidence items that suggest problems
+  const painPoints = (interests || []).filter(i =>
+    (i.evidence || '').toLowerCase().match(/pain|challenge|problem|struggle|concern|issue|frustrat/)
+  );
+  if (!painPoints.length) {
+    return '<tr><td colspan="2" class="empty">No explicit pain points detected</td></tr>';
+  }
+  return painPoints.map(i =>
+    `<tr>
+              <td style="font-weight:500">${escapeHtml(i.topic)}</td>
+              <td style="font-size:13px;color:#94a3b8">${escapeHtml(i.evidence)}</td>
+            </tr>`
+  ).join('\n            ');
+}
+
+function buildTimelineEvents(timeline, keyMoments) {
+  // Merge click events and transcript from timeline.json
+  const events = (timeline && timeline.events) || [];
+  if (!events.length && (!keyMoments || !keyMoments.length)) {
+    return '<p class="empty">No timeline events recorded</p>';
+  }
+
+  // If we have a full timeline, render it
+  if (events.length) {
+    return events.map(e => {
+      if (e.type === 'click') {
+        return `<div class="tl-event">
+              <div class="tl-dot tl-click"></div>
+              <div class="tl-time">${escapeHtml(e.timestamp || '')}</div>
+              <div class="tl-text"><span class="tl-click-label">CLICK</span>${escapeHtml(e.element_text || e.description || '')} &mdash; ${escapeHtml(e.page_title || '')}</div>
+            </div>`;
+      }
+      // speech / transcript
+      return `<div class="tl-event">
+              <div class="tl-dot tl-speech"></div>
+              <div class="tl-time">${escapeHtml(e.timestamp || '')}</div>
+              <div class="tl-text"><span class="tl-speaker">${escapeHtml(e.speaker || '')}</span>${escapeHtml(e.text || '')}</div>
+            </div>`;
+    }).join('\n            ');
+  }
+
+  // Fallback: render key_moments from summary.json
+  return keyMoments.map((m, idx) =>
+    `<div class="tl-event">
+              <div class="tl-dot tl-speech"></div>
+              <div class="tl-time">${escapeHtml(m.timestamp || '')}</div>
+              <div class="tl-text">${escapeHtml(m.description || '')}</div>
+            </div>`
+  ).join('\n            ');
+}
+
+function buildFollowUpCards(actions, priority) {
+  if (!actions || !actions.length) {
+    return '<p class="empty">No follow-up actions recorded</p>';
+  }
+  const priClass = 'priority-' + (priority || 'medium').toLowerCase();
+  return actions.map((a, idx) =>
+    `<div class="followup-card">
+              <div class="followup-num">${idx + 1}</div>
+              <div>
+                <div class="followup-text">${escapeHtml(a)}</div>
+                ${idx === 0 ? `<span class="followup-priority ${priClass}">${escapeHtml(priority || 'medium')}</span>` : ''}
+              </div>
+            </div>`
+  ).join('\n            ');
+}
+
+function computeScore(summary, followUp) {
+  // Score 0-100 based on session richness
+  let score = 50; // baseline
+  const interests = summary.visitor_interests || [];
+  const products = summary.products_shown || [];
+  const moments = summary.key_moments || [];
+  const actions = summary.recommended_follow_up || [];
+
+  // High-confidence interests boost score
+  score += interests.filter(i => i.confidence === 'high').length * 10;
+  score += interests.filter(i => i.confidence === 'medium').length * 5;
+
+  // Products shown
+  score += Math.min(products.length * 5, 15);
+
+  // Key moments
+  score += Math.min(moments.length * 3, 15);
+
+  // Follow-up priority
+  if ((followUp.priority || '').toLowerCase() === 'high') score += 10;
+
+  // Duration bonus (longer demos = more engaged)
+  if (summary.demo_duration_minutes > 15) score += 5;
+  if (summary.demo_duration_minutes > 25) score += 5;
+
+  return Math.min(Math.max(score, 0), 100);
+}
+
+function scoreColor(score) {
+  if (score >= 80) return '#4ade80'; // green
+  if (score >= 60) return '#facc15'; // yellow
+  if (score >= 40) return '#fb923c'; // orange
+  return '#f87171'; // red
+}
+
+function scoreSummary(score) {
+  if (score >= 80) return 'Strong engagement — high-priority follow-up recommended';
+  if (score >= 60) return 'Good engagement — visitor showed clear interest';
+  if (score >= 40) return 'Moderate engagement — some interest signals detected';
+  return 'Light engagement — brief interaction or limited data';
+}
+
+function formatDate(isoString) {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return isoString;
+  }
+}
+
+// ── Template rendering ──────────────────────────────────────────
+
+function renderTemplate(template, summary, followUp, timeline) {
+  const score = computeScore(summary, followUp);
+
+  const replacements = {
+    visitor_name:         escapeHtml(summary.visitor_name || 'Unknown Visitor'),
+    visitor_company:      escapeHtml(followUp.visitor_company || summary.visitor_company || '—'),
+    visitor_email:        escapeHtml(followUp.visitor_email || ''),
+    se_name:              escapeHtml(summary.se_name || '—'),
+    demo_duration_minutes: escapeHtml(String(summary.demo_duration_minutes || 0)),
+    session_date:         formatDate(summary.generated_at),
+    generated_at:         formatDate(summary.generated_at),
+    session_score:        String(score),
+    score_color:          scoreColor(score),
+    score_summary:        scoreSummary(score),
+    executive_summary:    escapeHtml(followUp.sdr_notes || 'No executive summary available.'),
+    sdr_notes:            escapeHtml(followUp.sdr_notes || 'No SDR notes recorded.'),
+    products_shown:       buildProductBadges(summary.products_shown),
+    visitor_interests:    buildInterestsRows(summary.visitor_interests),
+    pain_points:          buildPainPointRows(summary.visitor_interests),
+    timeline_events:      buildTimelineEvents(timeline, summary.key_moments),
+    follow_up_cards:      buildFollowUpCards(summary.recommended_follow_up, followUp.priority),
+  };
+
+  let html = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+  }
+  return html;
 }
 
 function confidenceColor(confidence) {
@@ -333,10 +514,16 @@ function renderHtml(summary, followUp) {
 </html>`;
 }
 
+// ── Main ────────────────────────────────────────────────────────
+
 async function run() {
   console.log(`[render-report] Reading from ${sessionPath}`);
 
-  let summary, followUp;
+  // Load template
+  const template = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+  console.log(`[render-report] Template loaded: ${TEMPLATE_PATH}`);
+
+  let summary, followUp, timeline;
 
   try {
     summary = await readJson('output/summary.json');
@@ -352,7 +539,14 @@ async function run() {
     followUp = {};
   }
 
-  const html = renderHtml(summary, followUp);
+  try {
+    timeline = await readJson('output/timeline.json');
+  } catch (err) {
+    console.warn(`[render-report] timeline.json not found, using key_moments fallback: ${err.message}`);
+    timeline = {};
+  }
+
+  const html = renderTemplate(template, summary, followUp, timeline);
   await writeFile('output/summary.html', html);
   console.log('[render-report] Done');
 }
