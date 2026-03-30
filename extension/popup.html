@@ -109,9 +109,20 @@
       animation: pulse-glow 2s ease-in-out infinite;
     }
 
+    .session-indicator.error {
+      background: #ef4444;
+      box-shadow: 0 0 24px #ef444455, 0 0 48px #ef444422;
+      animation: pulse-error 1.5s ease-in-out infinite;
+    }
+
     @keyframes pulse-glow {
       0%, 100% { box-shadow: 0 0 24px #34d39955, 0 0 48px #34d39922; }
       50% { box-shadow: 0 0 32px #34d39977, 0 0 64px #34d39933; }
+    }
+
+    @keyframes pulse-error {
+      0%, 100% { box-shadow: 0 0 24px #ef444455, 0 0 48px #ef444422; }
+      50% { box-shadow: 0 0 32px #ef444477, 0 0 64px #ef444433; }
     }
 
     .session-hero-label {
@@ -122,6 +133,10 @@
 
     .session-hero-label.active {
       color: #34d399;
+    }
+
+    .session-hero-label.error {
+      color: #ef4444;
     }
 
     .session-hero-visitor {

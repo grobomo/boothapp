@@ -59,7 +59,18 @@ function refreshStatus() {
 
     currentSessionActive = response.session_active;
 
-    if (response.session_active) {
+    // Clear all indicator states first
+    indicator.classList.remove('active', 'error');
+    label.classList.remove('active', 'error');
+
+    if (response.error_message) {
+      // Error state -- red indicator
+      indicator.classList.add('error');
+      label.textContent = response.error_message;
+      label.classList.add('error');
+      sessionCard.classList.remove('active');
+      heroVisitor.classList.remove('visible');
+    } else if (response.session_active) {
       indicator.classList.add('active');
       label.textContent = 'Recording';
       label.classList.add('active');
@@ -79,9 +90,7 @@ function refreshStatus() {
         updateDuration();
       }
     } else {
-      indicator.classList.remove('active');
       label.textContent = 'No Active Session';
-      label.classList.remove('active');
       heroVisitor.classList.remove('visible');
       sessionCard.classList.remove('active');
 

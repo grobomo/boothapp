@@ -267,6 +267,8 @@ async function s3GetJson(bucket, key, region, credentials) {
 // ─── S3 Session Polling (signed) ─────────────────────────────────────────────
 
 let pollingSessionId = null;
+let lastError = '';       // Surfaced to popup as error_message
+let lastErrorTime = 0;    // Auto-clear after 30s
 
 async function pollActiveSession() {
   const config = await chrome.storage.local.get([
@@ -331,6 +333,8 @@ async function pollActiveSession() {
       }
     }
   } catch (_err) {
+    lastError = 'S3 Poll Failed';
+    lastErrorTime = Date.now();
     // Network error — if tracking, end session
     if (pollingSessionId) {
       pollingSessionId = null;
@@ -438,6 +442,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'session_start') {
     const { session_id, visitor_name } = message;
+    lastError = '';
     // Clear previous session data
     Promise.all([
       clearAllScreenshots(),
@@ -477,9 +482,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'upload_session') {
     const { session_id, click_buffer } = message;
     uploadSessionData(session_id, click_buffer).then(() => {
+      lastError = '';
       sendResponse({ status: 'ok' });
     }).catch((err) => {
       console.error('V1-Helper upload failed:', err);
+      lastError = 'Upload Failed';
+      lastErrorTime = Date.now();
       // Still clear local data even on error
       clearAllScreenshots().catch(() => {});
       chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});
@@ -509,6 +517,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         } catch (_) {}
 
+        // Auto-clear errors after 30 seconds
+        const errorMessage = (lastError && (Date.now() - lastErrorTime < 30000)) ? lastError : '';
+        if (!errorMessage) lastError = '';
+
         sendResponse({
           status: 'ok',
           session_active: !!session.active,
@@ -521,6 +533,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           last_click_time: lastEvent ? lastEvent.timestamp : '',
           s3_polling: s3Configured,
           polling_session_id: pollingSessionId || '',
+          error_message: errorMessage,
         });
       } catch (err) {
         sendResponse({ status: 'error', error: err.message });
