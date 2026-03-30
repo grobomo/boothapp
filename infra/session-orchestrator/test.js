@@ -55,102 +55,105 @@ async function s3Get(key) {
   return JSON.parse(await res.Body.transformToString());
 }
 
-// ── Test 1: create session — S3 objects created within 5s ─────────────────
+(async function main() {
 
-console.log('\nTest 1: Create session → S3 folder + metadata.json + tenant.json');
-const t1 = await (async () => {
-  const start = Date.now();
-  const result = await createSession({
+  // -- Test 1: create session -- S3 objects created within 5s ---------------
+
+  console.log('\nTest 1: Create session -> S3 folder + metadata.json + tenant.json');
+  var start = Date.now();
+  var t1 = await createSession({
     visitor_name: 'Test Visitor 1',
     demo_pc: 'test-pc-1',
     se_name: 'Test SE',
     audio_consent: true,
   });
-  const elapsed = Date.now() - start;
+  var elapsed = Date.now() - start;
 
-  await assert('returns session_id', () => {
-    if (!result.session_id) throw new Error('no session_id');
+  await assert('returns session_id', function() {
+    if (!t1.session_id) throw new Error('no session_id');
   });
-  await assert('elapsed < 5000ms', () => {
-    if (elapsed >= 5000) throw new Error(`took ${elapsed}ms`);
+  await assert('elapsed < 5000ms', function() {
+    if (elapsed >= 5000) throw new Error('took ' + elapsed + 'ms');
   });
-  await assert('metadata.json exists in S3', async () => {
-    if (!await s3Exists(`sessions/${result.session_id}/metadata.json`)) throw new Error('missing');
+  await assert('metadata.json exists in S3', async function() {
+    if (!await s3Exists('sessions/' + t1.session_id + '/metadata.json')) throw new Error('missing');
   });
-  await assert('tenant.json exists in S3', async () => {
-    if (!await s3Exists(`sessions/${result.session_id}/v1-tenant/tenant.json`)) throw new Error('missing');
+  await assert('tenant.json exists in S3', async function() {
+    if (!await s3Exists('sessions/' + t1.session_id + '/v1-tenant/tenant.json')) throw new Error('missing');
   });
-  await assert('metadata status = active', async () => {
-    const meta = await s3Get(`sessions/${result.session_id}/metadata.json`);
-    if (meta.status !== 'active') throw new Error(`status = ${meta.status}`);
+  await assert('metadata status = active', async function() {
+    var meta = await s3Get('sessions/' + t1.session_id + '/metadata.json');
+    if (meta.status !== 'active') throw new Error('status = ' + meta.status);
   });
-  await assert('tenant queued when pool empty', async () => {
-    const tenant = await s3Get(`sessions/${result.session_id}/v1-tenant/tenant.json`);
+  await assert('tenant queued when pool empty', async function() {
+    var tenant = await s3Get('sessions/' + t1.session_id + '/v1-tenant/tenant.json');
     if (!tenant.status) throw new Error('no status field in tenant.json');
   });
-  return result;
+
+  // -- Test 2: demo PC detects start command within 2s ----------------------
+
+  console.log('\nTest 2: Demo PC polls -> detects session start within 2s');
+  await assert('start.json written for demo PC', async function() {
+    if (!await s3Exists('commands/test-pc-1/start.json')) throw new Error('missing');
+  });
+  await assert('start.json contains session_id', async function() {
+    var cmd = await s3Get('commands/test-pc-1/start.json');
+    if (cmd.session_id !== t1.session_id) throw new Error('got ' + cmd.session_id);
+  });
+
+  // -- Test 3: end session -> demo PC detects end command -------------------
+
+  console.log('\nTest 3: End session -> end.json written for demo PC');
+  var endResult = await endSession(t1.session_id, { demo_pc: 'test-pc-1' });
+  await assert('endSession returns ended status', function() {
+    if (endResult.status !== 'ended') throw new Error('status = ' + endResult.status);
+  });
+  await assert('end.json written for demo PC', async function() {
+    if (!await s3Exists('commands/test-pc-1/end.json')) throw new Error('missing');
+  });
+  await assert('metadata.json updated to ended', async function() {
+    var meta = await s3Get('sessions/' + t1.session_id + '/metadata.json');
+    if (meta.status !== 'ended') throw new Error('status = ' + meta.status);
+    if (!meta.ended_at) throw new Error('no ended_at');
+  });
+
+  // -- Test 4: two simultaneous sessions on different PCs -- no cross-talk --
+
+  console.log('\nTest 4: Two simultaneous sessions on different PCs -> no cross-talk');
+  var results = await Promise.all([
+    createSession({ visitor_name: 'Visitor A', demo_pc: 'test-pc-2' }),
+    createSession({ visitor_name: 'Visitor B', demo_pc: 'test-pc-3' }),
+  ]);
+  var s2 = results[0];
+  var s3r = results[1];
+  await assert('different session IDs', function() {
+    if (s2.session_id === s3r.session_id) throw new Error('same session_id!');
+  });
+  await assert('pc-2 start cmd has its own session_id', async function() {
+    var cmd = await s3Get('commands/test-pc-2/start.json');
+    if (cmd.session_id !== s2.session_id) throw new Error('cross-talk detected');
+  });
+  await assert('pc-3 start cmd has its own session_id', async function() {
+    var cmd = await s3Get('commands/test-pc-3/start.json');
+    if (cmd.session_id !== s3r.session_id) throw new Error('cross-talk detected');
+  });
+
+  // -- Test 5: getSession reflects correct state ----------------------------
+
+  console.log('\nTest 5: getSession returns live state');
+  var state = await getSession(t1.session_id);
+  await assert('getSession returns metadata', function() {
+    if (!state.session_id) throw new Error('no session_id in state');
+  });
+  await assert('commands flags reflect reality', function() {
+    if (!state.commands.start_sent) throw new Error('start_sent should be true');
+    if (!state.commands.end_sent)   throw new Error('end_sent should be true');
+  });
+
+  // -- Summary --------------------------------------------------------------
+
+  console.log('\n---------------------------------');
+  console.log('Results: ' + passed + ' passed, ' + failed + ' failed');
+  if (failed > 0) process.exit(1);
+
 })();
-
-// ── Test 2: demo PC detects start command within 2s ────────────────────────
-
-console.log('\nTest 2: Demo PC polls → detects session start within 2s');
-await assert('start.json written for demo PC', async () => {
-  if (!await s3Exists(`commands/test-pc-1/start.json`)) throw new Error('missing');
-});
-await assert('start.json contains session_id', async () => {
-  const cmd = await s3Get(`commands/test-pc-1/start.json`);
-  if (cmd.session_id !== t1.session_id) throw new Error(`got ${cmd.session_id}`);
-});
-
-// ── Test 3: end session → demo PC detects end command ─────────────────────
-
-console.log('\nTest 3: End session → end.json written for demo PC');
-const endResult = await endSession(t1.session_id, { demo_pc: 'test-pc-1' });
-await assert('endSession returns ended status', () => {
-  if (endResult.status !== 'ended') throw new Error(`status = ${endResult.status}`);
-});
-await assert('end.json written for demo PC', async () => {
-  if (!await s3Exists(`commands/test-pc-1/end.json`)) throw new Error('missing');
-});
-await assert('metadata.json updated to ended', async () => {
-  const meta = await s3Get(`sessions/${t1.session_id}/metadata.json`);
-  if (meta.status !== 'ended') throw new Error(`status = ${meta.status}`);
-  if (!meta.ended_at) throw new Error('no ended_at');
-});
-
-// ── Test 4: two simultaneous sessions on different PCs — no cross-talk ─────
-
-console.log('\nTest 4: Two simultaneous sessions on different PCs → no cross-talk');
-const [s2, s3r] = await Promise.all([
-  createSession({ visitor_name: 'Visitor A', demo_pc: 'test-pc-2' }),
-  createSession({ visitor_name: 'Visitor B', demo_pc: 'test-pc-3' }),
-]);
-await assert('different session IDs', () => {
-  if (s2.session_id === s3r.session_id) throw new Error('same session_id!');
-});
-await assert('pc-2 start cmd has its own session_id', async () => {
-  const cmd = await s3Get(`commands/test-pc-2/start.json`);
-  if (cmd.session_id !== s2.session_id) throw new Error('cross-talk detected');
-});
-await assert('pc-3 start cmd has its own session_id', async () => {
-  const cmd = await s3Get(`commands/test-pc-3/start.json`);
-  if (cmd.session_id !== s3r.session_id) throw new Error('cross-talk detected');
-});
-
-// ── Test 5: getSession reflects correct state ──────────────────────────────
-
-console.log('\nTest 5: getSession returns live state');
-const state = await getSession(t1.session_id);
-await assert('getSession returns metadata', () => {
-  if (!state.session_id) throw new Error('no session_id in state');
-});
-await assert('commands flags reflect reality', () => {
-  if (!state.commands.start_sent) throw new Error('start_sent should be true');
-  if (!state.commands.end_sent)   throw new Error('end_sent should be true');
-});
-
-// ── Cleanup ────────────────────────────────────────────────────────────────
-
-console.log('\n─────────────────────────────────');
-console.log(`Results: ${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
