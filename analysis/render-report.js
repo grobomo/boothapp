@@ -13,12 +13,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-} = require('@aws-sdk/client-s3');
-
 const [, , sessionPath] = process.argv;
 
 if (!sessionPath) {
@@ -28,6 +22,16 @@ if (!sessionPath) {
 
 const IS_S3 = sessionPath.startsWith('s3://');
 const REGION = process.env.AWS_REGION || 'us-east-1';
+
+// Lazy-load AWS SDK only when needed (keeps local/test usage dependency-free)
+let _s3;
+function getS3() {
+  if (!_s3) {
+    const sdk = require('@aws-sdk/client-s3');
+    _s3 = { S3Client: sdk.S3Client, GetObjectCommand: sdk.GetObjectCommand, PutObjectCommand: sdk.PutObjectCommand };
+  }
+  return _s3;
+}
 const TEMPLATE_PATH = path.join(__dirname, 'render-report.html');
 
 function parseS3Path(s3Uri) {
@@ -44,6 +48,7 @@ async function readJson(location) {
   if (IS_S3) {
     const { bucket, prefix } = parseS3Path(sessionPath);
     const key = prefix ? `${prefix}/${location}` : location;
+    const { S3Client, GetObjectCommand } = getS3();
     const client = new S3Client({ region: REGION });
     const resp = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
     const chunks = [];
@@ -57,6 +62,7 @@ async function writeFile(location, content) {
   if (IS_S3) {
     const { bucket, prefix } = parseS3Path(sessionPath);
     const key = prefix ? `${prefix}/${location}` : location;
+    const { S3Client, PutObjectCommand } = getS3();
     const client = new S3Client({ region: REGION });
     await client.send(new PutObjectCommand({
       Bucket: bucket,
