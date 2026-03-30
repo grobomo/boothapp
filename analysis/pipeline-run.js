@@ -16,6 +16,7 @@ const path = require('path');
 
 const { correlate } = require('./lib/correlator');
 const { getJson } = require('./lib/s3');
+const { sendNotification } = require('./lib/notify');
 const {
   S3Client,
   PutObjectCommand,
@@ -97,6 +98,19 @@ async function run() {
     log('HTML report complete — summary.html written to S3');
   } catch (err) {
     log(`WARNING: HTML report rendering failed: ${err.message}`);
+  }
+
+  // --- Step 6: Send completion notification ---
+  log('Sending completion notification...');
+  try {
+    const [summary, followUp] = await Promise.all([
+      getJson(bucket, `sessions/${sessionId}/output/summary.json`),
+      getJson(bucket, `sessions/${sessionId}/output/follow-up.json`),
+    ]);
+    await sendNotification({ sessionId, bucket, metadata, summary, followUp, dryRun: false });
+    log('Notification sent');
+  } catch (err) {
+    log(`WARNING: Notification failed: ${err.message}`);
   }
 }
 

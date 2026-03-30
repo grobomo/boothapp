@@ -12,6 +12,7 @@
 //
 // Usage:
 //   S3_BUCKET=my-bucket node analysis/watcher.js
+//   node analysis/watcher.js --test          (dry-run notification with sample data)
 //
 // Environment variables:
 //   S3_BUCKET              (required) S3 bucket name
@@ -26,8 +27,39 @@
 const http = require('http');
 const { listSessions, isSessionComplete, isAlreadyClaimed, writeMarker } = require('./lib/s3');
 const { triggerPipeline } = require('./lib/pipeline');
+const { sendNotification } = require('./lib/notify');
 const { spawn } = require('child_process');
 const path = require('path');
+
+// --test flag: run a dry notification with sample data and exit
+if (process.argv.includes('--test')) {
+  sendNotification({
+    sessionId: 'TEST-DRY-RUN',
+    bucket: 'none',
+    metadata: {
+      session_id: 'TEST-DRY-RUN',
+      visitor_name: 'Test Visitor',
+      company: 'Test Corp',
+    },
+    summary: {
+      session_id: 'TEST-DRY-RUN',
+      visitor_name: 'Test Visitor',
+    },
+    followUp: {
+      priority: 'high',
+      sdr_notes: 'This is a dry-run test of the notification system.',
+    },
+    dryRun: true,
+  })
+    .then(() => {
+      console.log('[watcher] --test complete');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error(`[watcher] --test failed: ${err.message}`);
+      process.exit(1);
+    });
+}
 
 const HEALTH_PORT = parseInt(process.env.HEALTH_PORT, 10) || 8090;
 const startTime = Date.now();
@@ -180,7 +212,9 @@ async function run() {
   setInterval(pollOnce, POLL_INTERVAL_MS);
 }
 
-run().catch((err) => {
-  console.error(`[watcher] FATAL: ${err.message}`);
-  process.exit(1);
-});
+if (!process.argv.includes('--test')) {
+  run().catch((err) => {
+    console.error(`[watcher] FATAL: ${err.message}`);
+    process.exit(1);
+  });
+}
