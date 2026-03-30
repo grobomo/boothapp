@@ -77,6 +77,12 @@
     .status-dot.active {
       background: #34d399;
       box-shadow: 0 0 6px #34d39966;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.7; }
     }
 
     .status-text {
