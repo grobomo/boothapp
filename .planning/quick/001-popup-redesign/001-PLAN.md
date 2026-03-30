@@ -1,14 +1,13 @@
-# Chrome Extension Popup Redesign
+# Popup Redesign for Demo Readiness
 
 ## Goal
-Redesign the V1-Helper Chrome extension popup (popup.html + popup.js) with improved session status visibility, real-time click tracking, manual session controls, and visitor name display.
+Redesign extension/popup.html and extension/popup.js so the popup is readable from 3 feet at a trade show booth.
 
 ## Success Criteria
-1. Large session status indicator (green circle = active, gray = inactive)
-2. Real-time click count displayed and updating live
-3. Manual Start/Stop session button
-4. Visitor name display when session is active
-5. Clean dark theme (consistent with existing design language)
-6. Vanilla HTML/CSS/JS only (no frameworks)
-7. Existing S3 config section preserved and functional
-8. Existing background.js message protocol unchanged
+- [ ] 150px status circle with pulse animation (green=recording, red=error, gray=idle)
+- [ ] Large click counter and screenshot counter numbers
+- [ ] Session timer in MM:SS format
+- [ ] Manual Start/Stop button
+- [ ] Collapsible S3 config section pre-filled from chrome.storage
+- [ ] Dark theme #1a1a2e background
+- [ ] Only popup.html and popup.js modified

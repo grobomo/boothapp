@@ -12,142 +12,149 @@
     }
 
     body {
-      width: 340px;
-      min-height: 200px;
+      width: 420px;
+      min-height: 300px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f0f14;
+      background: #1a1a2e;
       color: #e8e8f0;
     }
 
+    /* ── Header ── */
+
     .header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      background: #16213e;
       border-bottom: 1px solid #2a2a4a;
-      padding: 16px 20px;
+      padding: 10px 20px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
     }
 
-    .spark {
-      font-size: 24px;
-      line-height: 1;
-    }
-
-    .brand {
+    .header-left {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: 10px;
     }
 
     .brand-name {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 700;
       color: #a78bfa;
       letter-spacing: 0.5px;
     }
 
-    .brand-sub {
-      font-size: 11px;
-      color: #6b7280;
-      margin-top: 1px;
-    }
-
-    /* ── Status Bars ── */
-
-    .status-bar {
-      padding: 8px 20px;
-      background: #12121c;
-      border-bottom: 1px solid #1e1e30;
+    .s3-status {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       font-size: 12px;
     }
 
-    .status-dot {
-      width: 7px;
-      height: 7px;
+    .s3-dot {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #6b7280;
       flex-shrink: 0;
     }
 
-    .status-dot.active {
+    .s3-dot.active {
       background: #34d399;
       box-shadow: 0 0 6px #34d39966;
-      animation: pulse-dot 1.5s ease-in-out infinite;
     }
 
-    .status-dot.warning {
-      background: #fbbf24;
-      box-shadow: 0 0 6px #fbbf2466;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.4); opacity: 0.7; }
-    }
-
-    /* ── Large Session Indicator ── */
-
-    .session-hero {
-      text-align: center;
-      padding: 20px 20px 16px;
-    }
-
-    .session-indicator {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      margin: 0 auto 10px;
-      background: #2a2a3a;
-      transition: all 0.3s ease;
-    }
-
-    .session-indicator.active {
-      background: #34d399;
-      box-shadow: 0 0 24px #34d39955, 0 0 48px #34d39922;
-      animation: pulse-glow 2s ease-in-out infinite;
-    }
-
-    .session-indicator.error {
-      background: #ef4444;
-      box-shadow: 0 0 24px #ef444455, 0 0 48px #ef444422;
-      animation: pulse-error 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 24px #34d39955, 0 0 48px #34d39922; }
-      50% { box-shadow: 0 0 32px #34d39977, 0 0 64px #34d39933; }
-    }
-
-    @keyframes pulse-error {
-      0%, 100% { box-shadow: 0 0 24px #ef444455, 0 0 48px #ef444422; }
-      50% { box-shadow: 0 0 32px #ef444477, 0 0 64px #ef444433; }
-    }
-
-    .session-hero-label {
-      font-size: 14px;
-      font-weight: 600;
+    .s3-status-text {
       color: #6b7280;
     }
 
-    .session-hero-label.active {
+    .s3-status-text.active {
       color: #34d399;
     }
 
-    .session-hero-label.error {
-      color: #ef4444;
+    /* ── Hero: Status Circle + Timer ── */
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 20px 16px;
     }
 
-    .session-hero-visitor {
+    .status-circle {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: #2a2a3a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .status-circle.recording {
+      background: #059669;
+      box-shadow: 0 0 40px #34d39966, 0 0 80px #34d39933;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    .status-circle.error {
+      background: #dc2626;
+      box-shadow: 0 0 40px #ef444466, 0 0 80px #ef444433;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 40px #34d39966, 0 0 80px #34d39933; }
+      50% { box-shadow: 0 0 60px #34d39999, 0 0 100px #34d39955; }
+    }
+
+    .circle-timer {
+      font-size: 36px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .circle-label {
       font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-circle:not(.recording):not(.error) .circle-timer {
+      color: #6b7280;
+    }
+
+    .status-circle:not(.recording):not(.error) .circle-label {
+      color: #4b5563;
+    }
+
+    .hero-visitor {
+      font-size: 16px;
       color: #a78bfa;
       font-weight: 600;
-      margin-top: 4px;
+      margin-top: 10px;
       display: none;
     }
 
-    .session-hero-visitor.visible {
+    .hero-visitor.visible {
+      display: block;
+    }
+
+    .hero-error-msg {
+      font-size: 13px;
+      color: #f87171;
+      margin-top: 8px;
+      display: none;
+      text-align: center;
+      max-width: 300px;
+    }
+
+    .hero-error-msg.visible {
       display: block;
     }
 
@@ -155,186 +162,75 @@
 
     .stats-row {
       display: flex;
-      gap: 8px;
-      margin: 0 20px 14px;
+      gap: 12px;
+      margin: 0 20px 16px;
     }
 
     .stat-box {
       flex: 1;
       background: #12121c;
-      border: 1px solid #1e1e30;
-      border-radius: 8px;
-      padding: 10px 8px;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 14px 8px;
       text-align: center;
     }
 
     .stat-value {
-      font-size: 22px;
+      font-size: 36px;
       font-weight: 700;
       color: #a78bfa;
       line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
 
     .stat-label {
-      font-size: 9px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.7px;
-      color: #6b7280;
-      margin-top: 4px;
-    }
-
-    .status-text {
-      color: #9ca3af;
-    }
-
-    .status-text.active {
-      color: #34d399;
-    }
-
-    .status-label {
-      color: #6b7280;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      min-width: 52px;
-    }
-
-    /* ── Content ── */
-
-    .content {
-      padding: 16px 20px;
-    }
-
-    .section-title {
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: #6b7280;
-      margin-bottom: 10px;
+      margin-top: 6px;
     }
 
-    /* ── Session Info Card ── */
+    /* ── Session Button ── */
 
-    .session-card {
-      background: #1a1a2e;
-      border: 1px solid #2a2a4a;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 16px;
+    .btn-wrap {
+      padding: 0 20px 16px;
     }
-
-    .session-card.active {
-      border-color: #34d399;
-      box-shadow: 0 0 12px #34d39915;
-    }
-
-    .session-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 0;
-    }
-
-    .session-row + .session-row {
-      border-top: 1px solid #1e1e30;
-      margin-top: 4px;
-      padding-top: 8px;
-    }
-
-    .session-key {
-      font-size: 11px;
-      color: #6b7280;
-    }
-
-    .session-val {
-      font-size: 12px;
-      color: #e8e8f0;
-      font-weight: 500;
-      text-align: right;
-      max-width: 180px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .session-val.highlight {
-      color: #a78bfa;
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    .session-val.muted {
-      color: #4b5563;
-    }
-
-    /* ── Last Click ── */
-
-    .last-click-box {
-      background: #12121c;
-      border: 1px solid #2a2a4a;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 16px;
-      min-height: 36px;
-    }
-
-    .last-click-path {
-      font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      color: #a78bfa;
-      word-break: break-all;
-      line-height: 1.4;
-    }
-
-    .last-click-path.empty {
-      color: #3d3d5c;
-      font-family: inherit;
-    }
-
-    .last-click-time {
-      font-size: 10px;
-      color: #4b5563;
-      margin-top: 4px;
-    }
-
-    /* ── Session Toggle Button ── */
 
     .session-btn {
       width: 100%;
-      padding: 14px 20px;
-      border-radius: 10px;
+      padding: 16px 20px;
+      border-radius: 12px;
       border: none;
-      font-size: 15px;
+      font-size: 18px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       transition: all 0.2s ease;
-      margin-bottom: 16px;
       text-transform: uppercase;
     }
 
     .session-btn.start {
       background: linear-gradient(135deg, #059669 0%, #34d399 100%);
       color: #fff;
-      box-shadow: 0 4px 12px #05966940;
+      box-shadow: 0 4px 16px #05966950;
     }
 
     .session-btn.start:hover {
-      box-shadow: 0 6px 20px #05966960;
+      box-shadow: 0 6px 24px #05966970;
       transform: translateY(-1px);
     }
 
     .session-btn.stop {
       background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
       color: #fff;
-      box-shadow: 0 4px 12px #dc262640;
+      box-shadow: 0 4px 16px #dc262650;
     }
 
     .session-btn.stop:hover {
-      box-shadow: 0 6px 20px #dc262660;
+      box-shadow: 0 6px 24px #dc262670;
       transform: translateY(-1px);
     }
 
@@ -342,33 +238,74 @@
       transform: translateY(0);
     }
 
-    /* ── S3 Config ── */
+    /* ── Session Info (compact) ── */
+
+    .session-info {
+      padding: 0 20px 12px;
+    }
+
+    .session-info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 3px 0;
+      color: #6b7280;
+    }
+
+    .session-info-val {
+      color: #9ca3af;
+      text-align: right;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .session-info-val.muted {
+      color: #3d3d5c;
+    }
+
+    /* ── S3 Config (collapsible) ── */
 
     .s3-section {
-      margin-top: 16px;
+      border-top: 1px solid #2a2a4a;
+      padding: 0 20px;
     }
 
-    .s3-section-header {
+    .s3-toggle {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       cursor: pointer;
       user-select: none;
+      padding: 10px 0;
     }
 
-    .s3-section-header:hover .section-title {
+    .s3-toggle:hover .s3-toggle-label {
       color: #9ca3af;
     }
 
     .s3-arrow {
-      font-size: 9px;
+      font-size: 10px;
       color: #6b7280;
-      margin-bottom: 10px;
+      transition: transform 0.2s;
+    }
+
+    .s3-arrow.open {
+      transform: rotate(90deg);
+    }
+
+    .s3-toggle-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
     }
 
     .s3-configured-badge {
       font-size: 13px;
-      margin-bottom: 10px;
+      color: #34d399;
       display: none;
     }
 
@@ -376,6 +313,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      padding-bottom: 14px;
     }
 
     .s3-body.collapsed {
@@ -398,8 +336,8 @@
       background: #12121c;
       border: 1px solid #2a2a4a;
       border-radius: 6px;
-      padding: 7px 10px;
-      font-size: 12px;
+      padding: 8px 10px;
+      font-size: 13px;
       color: #e8e8f0;
       outline: none;
       width: 100%;
@@ -422,10 +360,10 @@
 
     .s3-btn {
       flex: 1;
-      padding: 8px 10px;
+      padding: 9px 10px;
       border-radius: 6px;
       border: none;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
@@ -446,51 +384,35 @@
     }
 
     .s3-btn-demo {
-      background: #1a1a2e;
+      background: #16213e;
       border: 1px solid #2a2a4a;
       color: #9ca3af;
-    }
-
-    .footer {
-      padding: 12px 20px;
-      border-top: 1px solid #1e1e30;
-      text-align: center;
-    }
-
-    .footer-text {
-      font-size: 11px;
-      color: #4b5563;
-    }
-
-    .footer-text span {
-      color: #7c3aed;
     }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
-    <div class="spark">&#9889;</div>
-    <div class="brand">
+    <div class="header-left">
       <div class="brand-name">V1-Helper</div>
-      <div class="brand-sub">by TrendAI</div>
+    </div>
+    <div class="s3-status">
+      <div class="s3-dot" id="s3PollDot"></div>
+      <span class="s3-status-text" id="s3PollText">S3: --</span>
     </div>
   </div>
 
-  <!-- S3 Connection Status -->
-  <div class="status-bar">
-    <span class="status-label">S3</span>
-    <div class="status-dot" id="s3PollDot"></div>
-    <span class="status-text" id="s3PollText">Not configured</span>
+  <!-- Hero: 150px status circle with timer inside -->
+  <div class="hero">
+    <div class="status-circle" id="statusCircle">
+      <div class="circle-timer" id="circleTimer">--:--</div>
+      <div class="circle-label" id="circleLabel">IDLE</div>
+    </div>
+    <div class="hero-visitor" id="heroVisitor"></div>
+    <div class="hero-error-msg" id="heroError"></div>
   </div>
 
-  <!-- Large Session Indicator -->
-  <div class="session-hero">
-    <div class="session-indicator" id="sessionIndicator"></div>
-    <div class="session-hero-label" id="sessionLabel">No Active Session</div>
-    <div class="session-hero-visitor" id="heroVisitor"></div>
-  </div>
-
-  <!-- Stats Row -->
+  <!-- Stats: Clicks + Screenshots (big numbers) -->
   <div class="stats-row">
     <div class="stat-box">
       <div class="stat-value" id="statClicks">0</div>
@@ -498,81 +420,65 @@
     </div>
     <div class="stat-box">
       <div class="stat-value" id="statScreenshots">0</div>
-      <div class="stat-label">Shots</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-value" id="statDuration">--</div>
-      <div class="stat-label">Duration</div>
+      <div class="stat-label">Screenshots</div>
     </div>
   </div>
 
-  <div class="content">
-    <!-- Session Toggle Button -->
+  <!-- Start / Stop button -->
+  <div class="btn-wrap">
     <button class="session-btn start" id="sessionBtn">Start Session</button>
+  </div>
 
-    <!-- Session Info -->
-    <div class="section-title">Session Info</div>
-    <div class="session-card" id="sessionCard">
-      <div class="session-row">
-        <span class="session-key">Session ID</span>
-        <span class="session-val muted" id="infoSessionId">--</span>
-      </div>
-      <div class="session-row">
-        <span class="session-key">Visitor</span>
-        <span class="session-val muted" id="infoVisitor">--</span>
-      </div>
-      <div class="session-row">
-        <span class="session-key">Started</span>
-        <span class="session-val muted" id="infoStartTime">--</span>
-      </div>
+  <!-- Compact session info -->
+  <div class="session-info">
+    <div class="session-info-row">
+      <span>Session</span>
+      <span class="session-info-val muted" id="infoSessionId">--</span>
     </div>
-
-    <!-- Last Click -->
-    <div class="section-title">Last Click</div>
-    <div class="last-click-box">
-      <div class="last-click-path empty" id="lastClickPath">No clicks recorded</div>
-      <div class="last-click-time" id="lastClickTime"></div>
+    <div class="session-info-row">
+      <span>Visitor</span>
+      <span class="session-info-val muted" id="infoVisitor">--</span>
     </div>
-
-    <!-- S3 Config (collapsible) -->
-    <div class="s3-section">
-      <div class="s3-section-header" id="s3ConfigToggle">
-        <span class="s3-arrow" id="s3Arrow">&#9654;</span>
-        <div class="section-title">S3 Config</div>
-        <span class="s3-configured-badge" id="s3ConfiguredBadge">&#10003;</span>
-      </div>
-
-      <div class="s3-body collapsed" id="s3ConfigBody">
-        <div class="s3-field">
-          <label class="s3-label" for="s3Bucket">S3 Bucket</label>
-          <input class="s3-input" id="s3Bucket" type="text" placeholder="my-bucket-name" />
-        </div>
-        <div class="s3-field">
-          <label class="s3-label" for="s3Region">AWS Region</label>
-          <input class="s3-input" id="s3Region" type="text" placeholder="us-east-1" />
-        </div>
-        <div class="s3-field">
-          <label class="s3-label" for="awsAccessKeyId">Access Key ID</label>
-          <input class="s3-input" id="awsAccessKeyId" type="text" placeholder="AKIA..." />
-        </div>
-        <div class="s3-field">
-          <label class="s3-label" for="awsSecretAccessKey">Secret Access Key</label>
-          <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
-        </div>
-        <div class="s3-field">
-          <label class="s3-label" for="awsSessionToken">Session Token <em style="font-style:normal;color:#3d3d5c">(optional)</em></label>
-          <input class="s3-input" id="awsSessionToken" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
-        </div>
-        <div class="s3-actions">
-          <button class="s3-btn s3-btn-save" id="s3SaveBtn">Save</button>
-          <button class="s3-btn s3-btn-demo" id="s3DemoBtn">Pre-fill Demo</button>
-        </div>
-      </div>
+    <div class="session-info-row">
+      <span>Started</span>
+      <span class="session-info-val muted" id="infoStartTime">--</span>
     </div>
   </div>
 
-  <div class="footer">
-    <div class="footer-text">Powered by <span>TrendAI</span></div>
+  <!-- S3 Config (collapsible, starts collapsed) -->
+  <div class="s3-section">
+    <div class="s3-toggle" id="s3ConfigToggle">
+      <span class="s3-arrow" id="s3Arrow">&#9654;</span>
+      <span class="s3-toggle-label">S3 Configuration</span>
+      <span class="s3-configured-badge" id="s3ConfiguredBadge">&#10003;</span>
+    </div>
+
+    <div class="s3-body collapsed" id="s3ConfigBody">
+      <div class="s3-field">
+        <label class="s3-label" for="s3Bucket">S3 Bucket</label>
+        <input class="s3-input" id="s3Bucket" type="text" placeholder="my-bucket-name" />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label" for="s3Region">AWS Region</label>
+        <input class="s3-input" id="s3Region" type="text" placeholder="us-east-1" />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label" for="awsAccessKeyId">Access Key ID</label>
+        <input class="s3-input" id="awsAccessKeyId" type="text" placeholder="AKIA..." />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label" for="awsSecretAccessKey">Secret Access Key</label>
+        <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label" for="awsSessionToken">Session Token <em style="font-style:normal;color:#3d3d5c">(optional)</em></label>
+        <input class="s3-input" id="awsSessionToken" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+      </div>
+      <div class="s3-actions">
+        <button class="s3-btn s3-btn-save" id="s3SaveBtn">Save</button>
+        <button class="s3-btn s3-btn-demo" id="s3DemoBtn">Pre-fill Demo</button>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>
