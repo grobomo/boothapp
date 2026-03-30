@@ -12,7 +12,7 @@
     }
 
     body {
-      width: 320px;
+      width: 340px;
       min-height: 200px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #0f0f14;
@@ -51,8 +51,10 @@
       margin-top: 1px;
     }
 
+    /* ── Status Bars ── */
+
     .status-bar {
-      padding: 10px 20px;
+      padding: 8px 20px;
       background: #12121c;
       border-bottom: 1px solid #1e1e30;
       display: flex;
@@ -69,28 +71,20 @@
       flex-shrink: 0;
     }
 
-    .status-dot.connected {
-      background: #34d399;
-      box-shadow: 0 0 6px #34d39966;
-    }
-
     .status-dot.active {
       background: #34d399;
       box-shadow: 0 0 6px #34d39966;
       animation: pulse 1.5s ease-in-out infinite;
     }
 
+    .status-dot.warning {
+      background: #fbbf24;
+      box-shadow: 0 0 6px #fbbf2466;
+    }
+
     @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 6px #34d39966;
-        opacity: 1;
-      }
-      50% {
-        transform: scale(1.4);
-        box-shadow: 0 0 12px #34d399aa;
-        opacity: 0.7;
-      }
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.7; }
     }
 
     .status-text {
@@ -101,8 +95,18 @@
       color: #34d399;
     }
 
+    .status-label {
+      color: #6b7280;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 52px;
+    }
+
+    /* ── Content ── */
+
     .content {
-      padding: 20px;
+      padding: 16px 20px;
     }
 
     .section-title {
@@ -111,8 +115,137 @@
       text-transform: uppercase;
       letter-spacing: 1px;
       color: #6b7280;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
+
+    /* ── Session Info Card ── */
+
+    .session-card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .session-card.active {
+      border-color: #34d399;
+      box-shadow: 0 0 12px #34d39915;
+    }
+
+    .session-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .session-row + .session-row {
+      border-top: 1px solid #1e1e30;
+      margin-top: 4px;
+      padding-top: 8px;
+    }
+
+    .session-key {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .session-val {
+      font-size: 12px;
+      color: #e8e8f0;
+      font-weight: 500;
+      text-align: right;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .session-val.highlight {
+      color: #a78bfa;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .session-val.muted {
+      color: #4b5563;
+    }
+
+    /* ── Last Click ── */
+
+    .last-click-box {
+      background: #12121c;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      min-height: 36px;
+    }
+
+    .last-click-path {
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      color: #a78bfa;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    .last-click-path.empty {
+      color: #3d3d5c;
+      font-family: inherit;
+    }
+
+    .last-click-time {
+      font-size: 10px;
+      color: #4b5563;
+      margin-top: 4px;
+    }
+
+    /* ── Session Toggle Button ── */
+
+    .session-btn {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .session-btn.start {
+      background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px #05966940;
+    }
+
+    .session-btn.start:hover {
+      box-shadow: 0 6px 20px #05966960;
+      transform: translateY(-1px);
+    }
+
+    .session-btn.stop {
+      background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px #dc262640;
+    }
+
+    .session-btn.stop:hover {
+      box-shadow: 0 6px 20px #dc262660;
+      transform: translateY(-1px);
+    }
+
+    .session-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ── Tool Count ── */
 
     .tool-count {
       background: #1a1a2e;
@@ -138,7 +271,7 @@
     /* ── S3 Config ── */
 
     .s3-section {
-      margin-top: 20px;
+      margin-top: 16px;
     }
 
     .s3-section-header {
@@ -156,12 +289,12 @@
     .s3-arrow {
       font-size: 9px;
       color: #6b7280;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .s3-configured-badge {
       font-size: 13px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       display: none;
     }
 
@@ -269,28 +402,64 @@
     </div>
   </div>
 
+  <!-- Connection Status -->
   <div class="status-bar">
-    <div class="status-dot" id="statusDot"></div>
-    <span class="status-text" id="statusText">Connecting to MCP relay...</span>
+    <span class="status-label">S3</span>
+    <div class="status-dot" id="s3PollDot"></div>
+    <span class="status-text" id="s3PollText">Not configured</span>
   </div>
 
   <div class="status-bar">
+    <span class="status-label">Session</span>
     <div class="status-dot" id="sessionDot"></div>
     <span class="status-text" id="sessionText">No Active Session</span>
   </div>
 
   <div class="content">
+    <!-- Session Toggle Button -->
+    <button class="session-btn start" id="sessionBtn">Start Session</button>
+
+    <!-- Session Info -->
+    <div class="section-title">Session Info</div>
+    <div class="session-card" id="sessionCard">
+      <div class="session-row">
+        <span class="session-key">Session ID</span>
+        <span class="session-val muted" id="infoSessionId">--</span>
+      </div>
+      <div class="session-row">
+        <span class="session-key">Visitor</span>
+        <span class="session-val muted" id="infoVisitor">--</span>
+      </div>
+      <div class="session-row">
+        <span class="session-key">Started</span>
+        <span class="session-val muted" id="infoStartTime">--</span>
+      </div>
+      <div class="session-row">
+        <span class="session-key">Clicks</span>
+        <span class="session-val highlight" id="infoClickCount">0</span>
+      </div>
+    </div>
+
+    <!-- Last Click -->
+    <div class="section-title">Last Click</div>
+    <div class="last-click-box">
+      <div class="last-click-path empty" id="lastClickPath">No clicks recorded</div>
+      <div class="last-click-time" id="lastClickTime"></div>
+    </div>
+
+    <!-- MCP Tools -->
     <div class="section-title">MCP Tools</div>
     <div class="tool-count">
       <span class="tool-count-label">Available tools</span>
       <span class="tool-count-value" id="toolCount">--</span>
     </div>
 
+    <!-- S3 Config (collapsible) -->
     <div class="s3-section">
       <div class="s3-section-header" id="s3ConfigToggle">
-        <span class="s3-arrow" id="s3Arrow">▶</span>
+        <span class="s3-arrow" id="s3Arrow">&#9654;</span>
         <div class="section-title">S3 Config</div>
-        <span class="s3-configured-badge" id="s3ConfiguredBadge">✓</span>
+        <span class="s3-configured-badge" id="s3ConfiguredBadge">&#10003;</span>
       </div>
 
       <div class="s3-body collapsed" id="s3ConfigBody">
@@ -308,11 +477,11 @@
         </div>
         <div class="s3-field">
           <label class="s3-label" for="awsSecretAccessKey">Secret Access Key</label>
-          <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="••••••••" />
+          <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
         </div>
         <div class="s3-field">
           <label class="s3-label" for="awsSessionToken">Session Token <em style="font-style:normal;color:#3d3d5c">(optional)</em></label>
-          <input class="s3-input" id="awsSessionToken" type="password" placeholder="••••••••" />
+          <input class="s3-input" id="awsSessionToken" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
         </div>
         <div class="s3-actions">
           <button class="s3-btn s3-btn-save" id="s3SaveBtn">Save</button>

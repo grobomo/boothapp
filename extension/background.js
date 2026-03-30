@@ -296,7 +296,13 @@ async function pollActiveSession() {
         });
         // Update local storage
         chrome.storage.local.set({
-          v1helper_session: { active: true, session_id: data.session_id, stop_audio: data.stop_audio || false }
+          v1helper_session: {
+            active: true,
+            session_id: data.session_id,
+            visitor_name: data.visitor_name || '',
+            start_time: new Date().toISOString(),
+            stop_audio: data.stop_audio || false,
+          }
         });
       } else if (data.stop_audio !== undefined) {
         // Update stop_audio flag if session is ongoing
@@ -431,13 +437,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'session_start') {
-    const { session_id } = message;
+    const { session_id, visitor_name } = message;
     // Clear previous session data
     Promise.all([
       clearAllScreenshots(),
       chrome.storage.local.remove(['v1helper_clicks']),
       chrome.storage.local.set({
-        v1helper_session: { active: true, session_id, stop_audio: false }
+        v1helper_session: {
+          active: true,
+          session_id,
+          visitor_name: visitor_name || '',
+          start_time: new Date().toISOString(),
+          stop_audio: false,
+        }
       }),
     ]).then(() => {
       sendResponse({ status: 'ok' });
@@ -473,6 +485,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});
       sendResponse({ status: 'error', error: err.message });
     });
+    return true;
+  }
+
+  if (message.type === 'get_popup_status') {
+    (async () => {
+      try {
+        const store = await chrome.storage.local.get(['v1helper_session', 'v1helper_clicks', 's3Bucket', 'awsAccessKeyId']);
+        const session = store.v1helper_session || { active: false };
+        const clicks = store.v1helper_clicks || { session_id: '', events: [] };
+        const s3Configured = !!(store.s3Bucket && store.awsAccessKeyId);
+        const lastEvent = clicks.events.length > 0 ? clicks.events[clicks.events.length - 1] : null;
+
+        sendResponse({
+          status: 'ok',
+          session_active: !!session.active,
+          session_id: session.session_id || '',
+          visitor_name: session.visitor_name || '',
+          start_time: session.start_time || '',
+          click_count: clicks.events.length,
+          last_click_path: lastEvent ? lastEvent.dom_path : '',
+          last_click_time: lastEvent ? lastEvent.timestamp : '',
+          s3_polling: s3Configured,
+          polling_session_id: pollingSessionId || '',
+        });
+      } catch (err) {
+        sendResponse({ status: 'error', error: err.message });
+      }
+    })();
     return true;
   }
 
