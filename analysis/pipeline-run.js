@@ -100,6 +100,19 @@ async function run() {
     log(`WARNING: HTML report rendering failed: ${err.message}`);
   }
 
+  // --- Step 5b: Generate email-ready HTML ---
+  log('Generating email-ready HTML (email-report.js)...');
+  const emailScript = path.join(__dirname, 'email-report.js');
+  try {
+    execFileSync('node', [emailScript, sessionS3Path], {
+      stdio: 'inherit',
+      timeout: 60_000,
+    });
+    log('Email report complete — email-ready.html written to S3');
+  } catch (err) {
+    log(`WARNING: Email report generation failed: ${err.message}`);
+  }
+
   // --- Step 6: Send completion notification ---
   log('Sending completion notification...');
   try {
