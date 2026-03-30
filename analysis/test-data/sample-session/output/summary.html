@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Report -- Priya Sharma</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b1120;color:#cbd5e1;line-height:1.6;min-height:100vh}
+.wrap{max-width:900px;margin:0 auto;padding:0 24px 60px}
+
+/* -- Header --------------------------------------------------- */
+.hdr{background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);border-bottom:2px solid #1e40af;padding:36px 0 32px;position:relative}
+.hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#3b82f6);background-size:200% 100%;animation:shimmer 4s linear infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.hdr-inner{max-width:900px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.hdr-left{display:flex;align-items:center;gap:20px}
+.logo-box{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(59,130,246,.35)}
+.logo-box svg{width:28px;height:28px;fill:#fff}
+.hdr-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.15em}
+.hdr-name{font-size:28px;font-weight:800;color:#f1f5f9;margin-top:2px}
+.hdr-company{font-size:15px;color:#94a3b8;margin-top:2px}
+.hdr-right{text-align:right;font-size:13px;color:#64748b}
+.hdr-right strong{color:#94a3b8}
+.company-logo{width:80px;height:80px;border-radius:16px;background:#1e293b;border:1px solid #334155;display:flex;align-items:center;justify-content:center;font-size:11px;color:#475569;text-align:center;padding:8px}
+
+/* -- Cards ---------------------------------------------------- */
+.card{background:#111827;border:1px solid #1e293b;border-radius:14px;padding:28px 28px 24px;margin-top:24px}
+.card h2{font-size:20px;font-weight:700;color:#e2e8f0;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.card h2 .ico{font-size:16px;color:#3b82f6;font-family:monospace}
+
+/* -- Engagement Gauge ----------------------------------------- */
+.gauge-row{display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+.gauge{position:relative;width:130px;height:130px;flex-shrink:0}
+.gauge svg{width:130px;height:130px;transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:#1e293b;stroke-width:8}
+.gauge-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.gauge-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-num{font-size:36px;font-weight:800;line-height:1}
+.gauge-sub{font-size:11px;color:#64748b;margin-top:2px}
+.gauge-text{flex:1;min-width:200px}
+.gauge-text .summary{font-size:15px;color:#94a3b8;line-height:1.7}
+.gauge-text .exec{font-size:14px;color:#64748b;margin-top:8px;font-style:italic}
+
+/* -- Session Meta --------------------------------------------- */
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:16px}
+.meta-item{background:#0f172a;border-radius:10px;padding:14px 16px;border:1px solid #1e293b}
+.meta-item .label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#475569;margin-bottom:4px}
+.meta-item .value{font-size:18px;font-weight:700;color:#e2e8f0}
+
+/* -- Timeline Strip ------------------------------------------- */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#3b82f6 0%,#8b5cf6 50%,#ec4899 100%);border-radius:1px}
+.tl-item{position:relative;padding:10px 0 10px 20px;font-size:14px}
+.tl-dot{position:absolute;left:-20px;top:14px;width:12px;height:12px;border-radius:50%;border:2px solid #0b1120}
+.tl-dot.click{background:#3b82f6}
+.tl-dot.speech{background:#8b5cf6}
+.tl-dot.moment{background:#ec4899;box-shadow:0 0 8px rgba(236,72,153,.5)}
+.tl-time{font-size:11px;color:#475569;font-family:monospace}
+.tl-desc{color:#cbd5e1}
+.tl-impact{font-size:12px;color:#a78bfa;margin-top:2px}
+.tl-label{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;margin-right:6px}
+.tl-label.click-label{background:#1e3a5f;color:#60a5fa}
+.tl-label.speech-label{background:#2e1065;color:#c084fc}
+
+/* -- Product Tags --------------------------------------------- */
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid}
+.tag-0{background:#172554;border-color:#1e40af;color:#60a5fa}
+.tag-1{background:#1e1b4b;border-color:#4338ca;color:#a78bfa}
+.tag-2{background:#171717;border-color:#a16207;color:#fbbf24}
+.tag-3{background:#14532d;border-color:#15803d;color:#4ade80}
+.tag-4{background:#4a1d2e;border-color:#9d174d;color:#fb7185}
+.tag-5{background:#164e63;border-color:#0e7490;color:#22d3ee}
+.tag .dot{width:8px;height:8px;border-radius:50%}
+.tag-0 .dot{background:#3b82f6}
+.tag-1 .dot{background:#8b5cf6}
+.tag-2 .dot{background:#f59e0b}
+.tag-3 .dot{background:#22c55e}
+.tag-4 .dot{background:#f43f5e}
+.tag-5 .dot{background:#06b6d4}
+
+/* -- Interests Table ------------------------------------------ */
+.int-table{width:100%;border-collapse:collapse}
+.int-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#475569;padding:8px 12px;border-bottom:1px solid #1e293b}
+.int-table td{padding:10px 12px;border-bottom:1px solid #1e293b;font-size:14px}
+.conf-high{color:#4ade80;font-weight:700}
+.conf-medium{color:#fbbf24;font-weight:600}
+.conf-low{color:#64748b}
+
+/* -- Follow-up Cards ------------------------------------------ */
+.fu-card{display:flex;gap:14px;padding:16px;background:#0f172a;border:1px solid #1e293b;border-radius:10px;margin-bottom:10px;align-items:flex-start}
+.fu-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.fu-num.p-high{background:#14532d;color:#4ade80;border:1px solid #15803d}
+.fu-num.p-medium{background:#422006;color:#fbbf24;border:1px solid #a16207}
+.fu-num.p-low{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+.fu-text{font-size:14px;color:#cbd5e1;flex:1}
+.fu-priority{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;text-transform:uppercase;margin-left:8px}
+.fu-priority.p-high{background:#14532d;color:#4ade80}
+.fu-priority.p-medium{background:#422006;color:#fbbf24}
+.fu-priority.p-low{background:#1e293b;color:#94a3b8}
+
+/* -- SDR Notes ------------------------------------------------ */
+.sdr-box{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:18px 20px;font-size:14px;color:#94a3b8;line-height:1.7}
+
+/* -- Footer --------------------------------------------------- */
+.footer{text-align:center;padding:32px 0;font-size:12px;color:#334155;border-top:1px solid #1e293b;margin-top:40px}
+
+/* -- Responsive ----------------------------------------------- */
+@media(max-width:640px){
+  .hdr-inner{flex-direction:column;align-items:flex-start}
+  .hdr-right{text-align:left}
+  .gauge-row{flex-direction:column;align-items:flex-start}
+  .meta-grid{grid-template-columns:1fr 1fr}
+  .company-logo{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-left">
+      <div class="logo-box">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <div class="hdr-title">Booth Demo Report</div>
+        <div class="hdr-name">Priya Sharma</div>
+        <div class="hdr-company"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <div class="hdr-right">
+        <div>Session <strong>B291047</strong></div>
+        <div>SE: <strong>Casey Mondoux</strong></div>
+        <div>2026-08-06T10:35:00Z</div>
+      </div>
+      <div class="company-logo">Company<br>Logo</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ========== ENGAGEMENT GAUGE ========== -->
+<div class="card">
+  <h2><span class="ico">///</span> Engagement Score</h2>
+  <div class="gauge-row">
+    <div class="gauge">
+      <svg viewBox="0 0 100 100">
+        <circle class="gauge-bg" cx="50" cy="50" r="40"/>
+        <circle class="gauge-fill" cx="50" cy="50" r="40"
+                stroke="#4ade80"
+                stroke-dasharray="201.1 251.3"
+                stroke-dashoffset="0"/>
+      </svg>
+      <div class="gauge-label">
+        <span class="gauge-num" style="color:#4ade80">8</span>
+        <span class="gauge-sub">/ 10</span>
+      </div>
+    </div>
+    <div class="gauge-text">
+      <div class="summary">Strong engagement -- high-priority follow-up recommended</div>
+      <div class="exec">Priya showed strong interest in BYOD containerization and automated risk response for her 3,500-endpoint financial firm. Schedule a POC scoping call within the week to capitalize on competitive evaluation against CrowdStrike.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SESSION META ========== -->
+<div class="card">
+  <h2><span class="ico">[i]</span> Session Details</h2>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">Duration</div><div class="value">17 min</div></div>
+    <div class="meta-item"><div class="label">Clicks</div><div class="value">10</div></div>
+    <div class="meta-item"><div class="label">Transcript</div><div class="value">20 entries</div></div>
+    <div class="meta-item"><div class="label">Priority</div><div class="value" style="color:#4ade80">high</div></div>
+  </div>
+</div>
+
+<!-- ========== PRODUCT INTEREST TAGS ========== -->
+<div class="card">
+  <h2><span class="ico">#</span> Products Demonstrated</h2>
+  <div class="tags">
+    <span class="tag tag-0"><span class="dot"></span>Endpoint Security</span>
+    <span class="tag tag-1"><span class="dot"></span>XDR</span>
+    <span class="tag tag-2"><span class="dot"></span>Risk Insights</span>
+  </div>
+</div>
+
+<!-- ========== TIMELINE STRIP ========== -->
+<div class="card">
+  <h2><span class="ico">|></span> Demo Timeline</h2>
+  <div class="timeline">
+    <div class="tl-item"><div class="tl-dot moment"></div><div class="tl-time">01:20</div><div class="tl-desc"><span class="tl-label speech-label">KEY</span>Visitor asked if BYOD requires full MDM — key differentiator moment</div><div class="tl-impact">Previous MobileIron pushback makes lightweight container a strong selling point</div></div>
+    <div class="tl-item"><div class="tl-dot moment"></div><div class="tl-time">04:35</div><div class="tl-desc"><span class="tl-label speech-label">KEY</span>Visitor compared V1 correlation speed to their 20-minute SIEM</div><div class="tl-impact">Direct pain point — current tooling too slow for incident response</div></div>
+    <div class="tl-item"><div class="tl-dot moment"></div><div class="tl-time">09:05</div><div class="tl-desc"><span class="tl-label speech-label">KEY</span>Visitor called automated remediation 'what we need'</div><div class="tl-impact">Strong buying signal — manual process taking hours today</div></div>
+    <div class="tl-item"><div class="tl-dot click"></div><div class="tl-time">01:02</div><div class="tl-desc"><span class="tl-label click-label">DEMO</span>BYOD Policy Configuration</div></div>
+    <div class="tl-item"><div class="tl-dot click"></div><div class="tl-time">02:44</div><div class="tl-desc"><span class="tl-label click-label">DEMO</span>Device Enrollment Settings</div></div>
+    <div class="tl-item"><div class="tl-dot click"></div><div class="tl-time">05:12</div><div class="tl-desc"><span class="tl-label click-label">DEMO</span>XDR Workbench</div></div>
+    <div class="tl-item"><div class="tl-dot click"></div><div class="tl-time">05:45</div><div class="tl-desc"><span class="tl-label click-label">DEMO</span>Attack Chain Visualization</div></div>
+    <div class="tl-item"><div class="tl-dot click"></div><div class="tl-time">09:18</div><div class="tl-desc"><span class="tl-label click-label">DEMO</span>BYOD Device Exposure</div></div>
+    <div class="tl-item"><div class="tl-dot click"></div><div class="tl-time">11:05</div><div class="tl-desc"><span class="tl-label click-label">DEMO</span>Automated Remediation Workflow</div></div>
+  </div>
+</div>
+
+<!-- ========== VISITOR INTERESTS ========== -->
+<div class="card">
+  <h2><span class="ico">*</span> Visitor Interests</h2>
+  <table class="int-table">
+    <thead><tr><th>Topic</th><th>Confidence</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>BYOD Container Policy</td><td><span class="conf-high">high</span></td><td style="color:#94a3b8;font-size:13px">Asked 3 detailed questions about MDM-free enrollment and platform-specific policies</td></tr>
+      <tr><td>Automated Risk Remediation</td><td><span class="conf-high">high</span></td><td style="color:#94a3b8;font-size:13px">Said 'That automated response is what we need' after seeing workflow demo</td></tr>
+      <tr><td>XDR Correlation Speed</td><td><span class="conf-medium">medium</span></td><td style="color:#94a3b8;font-size:13px">Compared 20-min SIEM correlation to V1's sub-2-minute detection</td></tr>
+      <tr><td>Splunk Integration</td><td><span class="conf-medium">medium</span></td><td style="color:#94a3b8;font-size:13px">Asked specifically about native Splunk app and API push</td></tr>
+      <tr><td>EU Data Residency</td><td><span class="conf-low">low</span></td><td style="color:#94a3b8;font-size:13px">Brief question about regulatory requirements at end of session</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ========== FOLLOW-UP RECOMMENDATIONS ========== -->
+<div class="card">
+  <h2><span class="ico">>></span> Recommended Follow-Up</h2>
+  <div class="fu-card"><div class="fu-num p-high">1</div><div class="fu-text">Send BYOD container deployment guide with iOS/Android comparison matrix <span class="fu-priority p-high">high</span></div></div>
+  <div class="fu-card"><div class="fu-num p-high">2</div><div class="fu-text">Schedule POC scoping call for 3,500-endpoint environment within 5 business days</div></div>
+  <div class="fu-card"><div class="fu-num p-high">3</div><div class="fu-text">Provide competitive comparison: V1 BYOD vs CrowdStrike Falcon Go mobile coverage</div></div>
+  <div class="fu-card"><div class="fu-num p-high">4</div><div class="fu-text">Share EU data residency documentation and DPA template</div></div>
+  <div class="fu-card"><div class="fu-num p-high">5</div><div class="fu-text">Connect with Splunk integration team for pre-POC architecture review</div></div>
+</div>
+
+<!-- ========== SDR NOTES ========== -->
+<div class="card">
+  <h2><span class="ico">@</span> SDR Notes</h2>
+  <div class="sdr-box">Priya Sharma is evaluating endpoint security for a mid-size financial firm (3,500 endpoints). Primary pain point is BYOD management — previous MobileIron deployment failed due to employee pushback. Currently comparing V1 against CrowdStrike Falcon Go. Strong interest in automated risk remediation (manual process taking hours). EU data residency is a regulatory requirement. Requested POC information. Urgency: active evaluation cycle.</div>
+</div>
+
+<div class="card"><h2><span class="ico">-></span> Your Vision One Tenant</h2><div class="sdr-box"><a href="https://portal.xdr.trendmicro.com/tenants/demo-B291047" style="color:#60a5fa;text-decoration:none">https://portal.xdr.trendmicro.com/tenants/demo-B291047</a><div style="color:#475569;margin-top:6px;font-size:12px">This tenant is preserved for 30 days after your demo.</div></div></div>
+
+<div class="footer">
+  Generated by BoothApp Analysis Pipeline -- Trend Micro -- 2026-08-06T10:35:00Z
+</div>
+</div>
+</body>
+</html>

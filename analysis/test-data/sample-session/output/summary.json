@@ -1,0 +1,69 @@
+{
+  "session_id": "B291047",
+  "visitor_name": "Priya Sharma",
+  "demo_duration_minutes": 17,
+  "session_score": 8,
+  "executive_summary": "Priya showed strong interest in BYOD containerization and automated risk response for her 3,500-endpoint financial firm. Schedule a POC scoping call within the week to capitalize on competitive evaluation against CrowdStrike.",
+  "products_shown": [
+    "Endpoint Security",
+    "XDR",
+    "Risk Insights"
+  ],
+  "visitor_interests": [
+    {
+      "topic": "BYOD Container Policy",
+      "confidence": "high",
+      "evidence": "Asked 3 detailed questions about MDM-free enrollment and platform-specific policies"
+    },
+    {
+      "topic": "Automated Risk Remediation",
+      "confidence": "high",
+      "evidence": "Said 'That automated response is what we need' after seeing workflow demo"
+    },
+    {
+      "topic": "XDR Correlation Speed",
+      "confidence": "medium",
+      "evidence": "Compared 20-min SIEM correlation to V1's sub-2-minute detection"
+    },
+    {
+      "topic": "Splunk Integration",
+      "confidence": "medium",
+      "evidence": "Asked specifically about native Splunk app and API push"
+    },
+    {
+      "topic": "EU Data Residency",
+      "confidence": "low",
+      "evidence": "Brief question about regulatory requirements at end of session"
+    }
+  ],
+  "recommended_follow_up": [
+    "Send BYOD container deployment guide with iOS/Android comparison matrix",
+    "Schedule POC scoping call for 3,500-endpoint environment within 5 business days",
+    "Provide competitive comparison: V1 BYOD vs CrowdStrike Falcon Go mobile coverage",
+    "Share EU data residency documentation and DPA template",
+    "Connect with Splunk integration team for pre-POC architecture review"
+  ],
+  "key_moments": [
+    {
+      "timestamp": "01:20",
+      "screenshot": "click-003.jpg",
+      "description": "Visitor asked if BYOD requires full MDM \u2014 key differentiator moment",
+      "impact": "Previous MobileIron pushback makes lightweight container a strong selling point"
+    },
+    {
+      "timestamp": "04:35",
+      "screenshot": "click-006.jpg",
+      "description": "Visitor compared V1 correlation speed to their 20-minute SIEM",
+      "impact": "Direct pain point \u2014 current tooling too slow for incident response"
+    },
+    {
+      "timestamp": "09:05",
+      "screenshot": "click-009.jpg",
+      "description": "Visitor called automated remediation 'what we need'",
+      "impact": "Strong buying signal \u2014 manual process taking hours today"
+    }
+  ],
+  "v1_tenant_link": "https://portal.xdr.trendmicro.com/tenants/demo-B291047",
+  "generated_at": "2026-08-06T10:35:00Z",
+  "se_name": "Casey Mondoux"
+}

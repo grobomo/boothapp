@@ -10,6 +10,7 @@ from .prompts import (
     SYSTEM_RECOMMENDATIONS,
     FACTUAL_EXTRACTION_PROMPT,
     RECOMMENDATIONS_PROMPT,
+    render_html_report,
 )
 
 MODEL = os.environ.get("ANALYSIS_MODEL", "claude-sonnet-4-6")
@@ -33,9 +34,13 @@ class SessionAnalyzer:
         timeline_text, screenshot_map = self._build_timeline_context()
         factual = self._pass1_factual_extraction(timeline_text, screenshot_map)
         recommendations = self._pass2_recommendations(factual)
+        summary = self._build_summary_json(factual, recommendations)
+        follow_up = self._build_follow_up_json(recommendations)
+        html = render_html_report(summary, follow_up, factual)
         return {
-            "summary": self._build_summary_json(factual, recommendations),
-            "follow_up": self._build_follow_up_json(recommendations),
+            "summary": summary,
+            "follow_up": follow_up,
+            "html": html,
         }
 
     def _get_s3_client(self):

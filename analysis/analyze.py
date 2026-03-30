@@ -11,7 +11,10 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Analyze a booth demo session with Claude"
     )
-    parser.add_argument("session_dir", help="Local path or s3://bucket/sessions/SESSION_ID")
+    parser.add_argument("--session-dir", dest="session_dir_flag", default=None,
+                        help="Local path or s3://bucket/sessions/SESSION_ID")
+    parser.add_argument("session_dir", nargs="?", default=None,
+                        help="Local path or s3://bucket/sessions/SESSION_ID")
     parser.add_argument(
         "output_dir",
         nargs="?",
@@ -23,7 +26,12 @@ def parse_args():
         action="store_true",
         help="Run analysis but do not write output files",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    # Support both positional and --session-dir flag
+    args.session_dir = args.session_dir_flag or args.session_dir
+    if not args.session_dir:
+        parser.error("session_dir is required (positional or --session-dir)")
+    return args
 
 
 def resolve_output_dir(session_dir: str, output_dir: str) -> str:
@@ -51,6 +59,11 @@ def write_output(output_dir: str, results: dict):
             with open(path, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"  Wrote {path}")
+        if results.get("html"):
+            html_path = os.path.join(output_dir, "summary.html")
+            with open(html_path, "w") as f:
+                f.write(results["html"])
+            print(f"  Wrote {html_path}")
 
 
 def print_summary(results: dict):

@@ -1,0 +1,175 @@
+{
+  "session_id": "B291047",
+  "events": [
+    {
+      "index": 1,
+      "timestamp": "2026-08-06T10:15:18.042Z",
+      "type": "click",
+      "dom_path": "div.app-content > nav > a.endpoint-security",
+      "element": {
+        "tag": "a",
+        "id": "ep-nav",
+        "class": "nav-item endpoint-security",
+        "text": "Endpoint Security",
+        "href": "/app/endpoint-security"
+      },
+      "coordinates": {"x": 240, "y": 110},
+      "page_url": "https://portal.xdr.trendmicro.com/app/dashboard",
+      "page_title": "Vision One - Dashboard",
+      "screenshot_file": "screenshots/click-001.jpg"
+    },
+    {
+      "index": 2,
+      "timestamp": "2026-08-06T10:16:05.210Z",
+      "type": "click",
+      "dom_path": "div.ep-content > section > div.policy-list > a.policy-byod",
+      "element": {
+        "tag": "a",
+        "id": "policy-byod",
+        "class": "policy-item policy-byod",
+        "text": "BYOD Policy",
+        "href": "/app/endpoint-security/policies/byod"
+      },
+      "coordinates": {"x": 610, "y": 340},
+      "page_url": "https://portal.xdr.trendmicro.com/app/endpoint-security",
+      "page_title": "Vision One - Endpoint Security",
+      "screenshot_file": "screenshots/click-002.jpg"
+    },
+    {
+      "index": 3,
+      "timestamp": "2026-08-06T10:17:44.882Z",
+      "type": "click",
+      "dom_path": "div.byod-config > button.device-enrollment",
+      "element": {
+        "tag": "button",
+        "id": "device-enrollment-btn",
+        "class": "btn btn-primary device-enrollment",
+        "text": "Device Enrollment Settings",
+        "href": null
+      },
+      "coordinates": {"x": 820, "y": 480},
+      "page_url": "https://portal.xdr.trendmicro.com/app/endpoint-security/policies/byod",
+      "page_title": "Vision One - BYOD Policy",
+      "screenshot_file": "screenshots/click-003.jpg"
+    },
+    {
+      "index": 4,
+      "timestamp": "2026-08-06T10:19:30.115Z",
+      "type": "click",
+      "dom_path": "div.app-content > nav > a.xdr",
+      "element": {
+        "tag": "a",
+        "id": "xdr-nav",
+        "class": "nav-item xdr",
+        "text": "XDR",
+        "href": "/app/xdr"
+      },
+      "coordinates": {"x": 240, "y": 155},
+      "page_url": "https://portal.xdr.trendmicro.com/app/endpoint-security/policies/byod",
+      "page_title": "Vision One - BYOD Policy",
+      "screenshot_file": "screenshots/click-004.jpg"
+    },
+    {
+      "index": 5,
+      "timestamp": "2026-08-06T10:20:12.330Z",
+      "type": "click",
+      "dom_path": "div.xdr-content > section.threat-investigation > a.workbench",
+      "element": {
+        "tag": "a",
+        "id": "workbench-link",
+        "class": "section-link workbench",
+        "text": "Workbench",
+        "href": "/app/xdr/workbench"
+      },
+      "coordinates": {"x": 490, "y": 260},
+      "page_url": "https://portal.xdr.trendmicro.com/app/xdr",
+      "page_title": "Vision One - XDR Overview",
+      "screenshot_file": "screenshots/click-005.jpg"
+    },
+    {
+      "index": 6,
+      "timestamp": "2026-08-06T10:21:55.774Z",
+      "type": "click",
+      "dom_path": "div.workbench-alerts > table > tr:nth-child(2) > td > a",
+      "element": {
+        "tag": "a",
+        "id": null,
+        "class": "alert-link high-severity",
+        "text": "Suspicious PowerShell Execution",
+        "href": "/app/xdr/workbench/alert-00847"
+      },
+      "coordinates": {"x": 670, "y": 310},
+      "page_url": "https://portal.xdr.trendmicro.com/app/xdr/workbench",
+      "page_title": "Vision One - Workbench",
+      "screenshot_file": "screenshots/click-006.jpg"
+    },
+    {
+      "index": 7,
+      "timestamp": "2026-08-06T10:23:40.089Z",
+      "type": "click",
+      "dom_path": "div.app-content > nav > a.risk-insights",
+      "element": {
+        "tag": "a",
+        "id": "risk-nav",
+        "class": "nav-item risk-insights",
+        "text": "Risk Insights",
+        "href": "/app/risk-insights"
+      },
+      "coordinates": {"x": 240, "y": 200},
+      "page_url": "https://portal.xdr.trendmicro.com/app/xdr/workbench/alert-00847",
+      "page_title": "Vision One - Alert Detail",
+      "screenshot_file": "screenshots/click-007.jpg"
+    },
+    {
+      "index": 8,
+      "timestamp": "2026-08-06T10:24:18.450Z",
+      "type": "click",
+      "dom_path": "div.risk-content > section.attack-surface > div.byod-exposure",
+      "element": {
+        "tag": "div",
+        "id": "byod-exposure-tile",
+        "class": "exposure-tile byod-exposure clickable",
+        "text": "BYOD Device Exposure",
+        "href": null
+      },
+      "coordinates": {"x": 530, "y": 390},
+      "page_url": "https://portal.xdr.trendmicro.com/app/risk-insights",
+      "page_title": "Vision One - Risk Insights",
+      "screenshot_file": "screenshots/click-008.jpg"
+    },
+    {
+      "index": 9,
+      "timestamp": "2026-08-06T10:26:05.900Z",
+      "type": "click",
+      "dom_path": "div.byod-exposure-detail > button.remediation-workflow",
+      "element": {
+        "tag": "button",
+        "id": "start-remediation-btn",
+        "class": "btn btn-warning remediation-workflow",
+        "text": "Start Remediation Workflow",
+        "href": null
+      },
+      "coordinates": {"x": 720, "y": 520},
+      "page_url": "https://portal.xdr.trendmicro.com/app/risk-insights/byod-exposure",
+      "page_title": "Vision One - BYOD Exposure Detail",
+      "screenshot_file": "screenshots/click-009.jpg"
+    },
+    {
+      "index": 10,
+      "timestamp": "2026-08-06T10:28:30.123Z",
+      "type": "click",
+      "dom_path": "div.app-content > nav > a.endpoint-security",
+      "element": {
+        "tag": "a",
+        "id": "ep-nav",
+        "class": "nav-item endpoint-security",
+        "text": "Endpoint Security",
+        "href": "/app/endpoint-security"
+      },
+      "coordinates": {"x": 240, "y": 110},
+      "page_url": "https://portal.xdr.trendmicro.com/app/risk-insights/byod-exposure",
+      "page_title": "Vision One - BYOD Exposure Detail",
+      "screenshot_file": "screenshots/click-010.jpg"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "session_id": "B291047",
+  "visitor_email": "priya.sharma@example.com",
+  "subject": "Your Vision One Demo Summary",
+  "summary_url": "https://boothapp.trendmicro.com/sessions/B291047/summary.html",
+  "tenant_url": "https://portal.xdr.trendmicro.com/tenants/demo-B291047",
+  "priority": "high",
+  "tags": [
+    "byod",
+    "xdr",
+    "risk",
+    "endpoint"
+  ],
+  "sdr_notes": "Priya Sharma is evaluating endpoint security for a mid-size financial firm (3,500 endpoints). Primary pain point is BYOD management \u2014 previous MobileIron deployment failed due to employee pushback. Currently comparing V1 against CrowdStrike Falcon Go. Strong interest in automated risk remediation (manual process taking hours). EU data residency is a regulatory requirement. Requested POC information. Urgency: active evaluation cycle."
+}
