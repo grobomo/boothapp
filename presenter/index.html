@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Presenter Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #58a6ff;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  .session-id {
+    font-size: 1.2rem;
+    color: #8b949e;
+    margin-bottom: 2rem;
+    font-family: monospace;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    text-align: center;
+  }
+
+  .card-label {
+    font-size: 1.4rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.8rem;
+  }
+
+  .card-value {
+    font-size: 4.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    word-break: break-word;
+  }
+
+  .card-value.name   { color: #f0f6fc; font-size: 3.5rem; }
+  .card-value.timer  { color: #58a6ff; font-family: monospace; }
+  .card-value.clicks { color: #f78166; }
+
+  .status-dot {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  .status-dot.recording { background: #f85149; animation: pulse 1.5s infinite; }
+  .status-dot.ended     { background: #8b949e; }
+  .status-dot.waiting   { background: #d29922; animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  .card-value.status { font-size: 2.5rem; }
+
+  .card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .se-name {
+    font-size: 1rem;
+    color: #8b949e;
+    margin-top: 0.3rem;
+  }
+
+  .error-banner {
+    background: #f8514922;
+    border: 1px solid #f85149;
+    color: #f85149;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    display: none;
+    width: 100%;
+    max-width: 900px;
+    text-align: center;
+  }
+
+  .refresh-indicator {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #484f58;
+  }
+
+  /* -- Setup screen -- */
+  .setup {
+    text-align: center;
+    margin-top: 4rem;
+  }
+  .setup label {
+    display: block;
+    font-size: 1.3rem;
+    color: #8b949e;
+    margin-bottom: 1rem;
+  }
+  .setup input {
+    font-size: 2rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #e6edf3;
+    text-align: center;
+    font-family: monospace;
+    width: 320px;
+  }
+  .setup input:focus { outline: 2px solid #58a6ff; }
+  .setup button {
+    display: block;
+    margin: 1.5rem auto 0;
+    font-size: 1.4rem;
+    padding: 0.7rem 2.5rem;
+    border-radius: 8px;
+    border: none;
+    background: #238636;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .setup button:hover { background: #2ea043; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Setup: enter session ID if not in URL -->
+<div id="setup" class="setup">
+  <h1>BoothApp Presenter</h1>
+  <label for="session-input">Enter Session ID</label>
+  <input id="session-input" type="text" placeholder="A726594" autofocus>
+  <button id="go-btn">Go</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="hidden">
+  <h1>BoothApp Presenter</h1>
+  <div class="session-id" id="sid-display"></div>
+  <div class="error-banner" id="error-banner"></div>
+
+  <div class="grid">
+    <div class="card full-width">
+      <div class="card-label">Visitor</div>
+      <div class="card-value name" id="visitor-name">--</div>
+      <div class="se-name" id="se-name"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Duration</div>
+      <div class="card-value timer" id="duration">00:00</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Clicks</div>
+      <div class="card-value clicks" id="click-count">0</div>
+    </div>
+    <div class="card full-width">
+      <div class="card-label">Status</div>
+      <div class="card-value status" id="rec-status">
+        <span class="status-dot waiting"></span> Waiting
+      </div>
+    </div>
+  </div>
+
+  <div class="refresh-indicator" id="refresh-indicator">Auto-refresh: 5s</div>
+</div>
+
+<script>
+(function () {
+  // ── Config ──────────────────────────────────────────────────────────────────
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+  var REFRESH_MS = 5000;
+
+  // S3 public URL (requires bucket policy or pre-signed URLs in production)
+  // For the demo, we use the S3 REST endpoint with unsigned requests.
+  // If the bucket isn't public, swap this for a pre-signed URL generator or API Gateway.
+  function s3Url(key) {
+    return "https://" + BUCKET + ".s3." + REGION + ".amazonaws.com/" + key;
+  }
+
+  // ── URL param ───────────────────────────────────────────────────────────────
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get("session") || "";
+
+  var setupEl     = document.getElementById("setup");
+  var dashboardEl = document.getElementById("dashboard");
+  var sidDisplay  = document.getElementById("sid-display");
+  var errorBanner = document.getElementById("error-banner");
+  var nameEl      = document.getElementById("visitor-name");
+  var seNameEl    = document.getElementById("se-name");
+  var durationEl  = document.getElementById("duration");
+  var clicksEl    = document.getElementById("click-count");
+  var statusEl    = document.getElementById("rec-status");
+  var sessionInput = document.getElementById("session-input");
+  var goBtn       = document.getElementById("go-btn");
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = "block";
+  }
+  function clearError() {
+    errorBanner.style.display = "none";
+  }
+
+  // ── Setup screen ────────────────────────────────────────────────────────────
+  function activate(sid) {
+    sessionId = sid.trim();
+    if (!sessionId) return;
+    params.set("session", sessionId);
+    window.history.replaceState({}, "", "?" + params.toString());
+    setupEl.classList.add("hidden");
+    dashboardEl.classList.remove("hidden");
+    sidDisplay.textContent = "Session: " + sessionId;
+    poll();
+    setInterval(poll, REFRESH_MS);
+  }
+
+  if (sessionId) {
+    activate(sessionId);
+  } else {
+    goBtn.addEventListener("click", function () { activate(sessionInput.value); });
+    sessionInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") activate(sessionInput.value);
+    });
+  }
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  var meta = null;     // metadata.json contents
+  var clickCount = 0;  // from clicks.json
+  var timerHandle = null;
+
+  // ── Duration timer (ticks every second between refreshes) ───────────────────
+  function startTimer() {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(renderDuration, 1000);
+  }
+
+  function renderDuration() {
+    if (!meta || !meta.started_at) { durationEl.textContent = "--:--"; return; }
+    var start = new Date(meta.started_at).getTime();
+    var end = meta.ended_at ? new Date(meta.ended_at).getTime() : Date.now();
+    var diff = Math.max(0, Math.floor((end - start) / 1000));
+    var m = Math.floor(diff / 60);
+    var s = diff % 60;
+    durationEl.textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // ── Status rendering ───────────────────────────────────────────────────────
+  function renderStatus() {
+    if (!meta) {
+      statusEl.innerHTML = '<span class="status-dot waiting"></span> Waiting';
+      return;
+    }
+    var st = (meta.status || "").toLowerCase();
+    if (st === "completed" || meta.ended_at) {
+      statusEl.innerHTML = '<span class="status-dot ended"></span> Ended';
+    } else if (st === "in_progress" || st === "recording") {
+      statusEl.innerHTML = '<span class="status-dot recording"></span> Recording';
+    } else {
+      statusEl.innerHTML = '<span class="status-dot waiting"></span> ' + (meta.status || "Waiting");
+    }
+  }
+
+  // ── Fetch helpers ───────────────────────────────────────────────────────────
+  function fetchJson(key, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", s3Url(key), true);
+    xhr.responseType = "json";
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        cb(null, xhr.response);
+      } else {
+        cb("HTTP " + xhr.status);
+      }
+    };
+    xhr.onerror = function () { cb("Network error"); };
+    xhr.send();
+  }
+
+  // ── Poll ────────────────────────────────────────────────────────────────────
+  function poll() {
+    // Fetch metadata
+    fetchJson("sessions/" + sessionId + "/metadata.json", function (err, data) {
+      if (err) {
+        showError("Could not load metadata: " + err);
+        return;
+      }
+      clearError();
+      meta = data;
+      nameEl.textContent = meta.visitor_name || "--";
+      seNameEl.textContent = meta.se_name ? "SE: " + meta.se_name : "";
+      renderStatus();
+      renderDuration();
+      startTimer();
+    });
+
+    // Fetch clicks
+    fetchJson("sessions/" + sessionId + "/clicks/clicks.json", function (err, data) {
+      if (err) {
+        // clicks.json may not exist yet — that's fine
+        clickCount = 0;
+      } else {
+        clickCount = (data && data.events) ? data.events.length : 0;
+      }
+      clicksEl.textContent = clickCount;
+    });
+  }
+})();
+</script>
+</body>
+</html>
