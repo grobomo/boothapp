@@ -142,18 +142,21 @@ function buildTimelineEvents(timeline, keyMoments) {
   // If we have a full timeline, render it
   if (events.length) {
     return events.map(e => {
+      const screenshotHtml = e.screenshot_url
+        ? `\n              <div class="tl-screenshot"><img src="${escapeHtml(e.screenshot_url)}" alt="Screenshot"></div>`
+        : '';
       if (e.type === 'click') {
         return `<div class="tl-event">
               <div class="tl-dot tl-click"></div>
               <div class="tl-time">${escapeHtml(e.timestamp || '')}</div>
-              <div class="tl-text"><span class="tl-click-label">CLICK</span>${escapeHtml(e.element_text || e.description || '')} &mdash; ${escapeHtml(e.page_title || '')}</div>
+              <div class="tl-text"><span class="tl-click-label">CLICK</span>${escapeHtml(e.element_text || e.description || '')} &mdash; ${escapeHtml(e.page_title || '')}</div>${screenshotHtml}
             </div>`;
       }
       // speech / transcript
       return `<div class="tl-event">
               <div class="tl-dot tl-speech"></div>
               <div class="tl-time">${escapeHtml(e.timestamp || '')}</div>
-              <div class="tl-text"><span class="tl-speaker">${escapeHtml(e.speaker || '')}</span>${escapeHtml(e.text || '')}</div>
+              <div class="tl-text"><span class="tl-speaker">${escapeHtml(e.speaker || '')}</span>${escapeHtml(e.text || '')}</div>${screenshotHtml}
             </div>`;
     }).join('\n            ');
   }
@@ -174,9 +177,9 @@ function buildFollowUpCards(actions, priority) {
   }
   const priClass = 'priority-' + (priority || 'medium').toLowerCase();
   return actions.map((a, idx) =>
-    `<div class="followup-card">
+    `<div class="action-card">
               <div class="followup-num">${idx + 1}</div>
-              <div>
+              <div class="followup-content">
                 <div class="followup-text">${escapeHtml(a)}</div>
                 ${idx === 0 ? `<span class="followup-priority ${priClass}">${escapeHtml(priority || 'medium')}</span>` : ''}
               </div>
@@ -219,6 +222,38 @@ function scoreColor(score) {
   return '#f87171'; // red
 }
 
+function scoreColorLight(score) {
+  if (score >= 80) return '#86efac';
+  if (score >= 60) return '#fde68a';
+  if (score >= 40) return '#fdba74';
+  return '#fca5a5';
+}
+
+function scoreDasharray(score) {
+  // SVG circle r=36 => circumference = 2 * PI * 36 ~= 226.19
+  const circumference = 2 * Math.PI * 36;
+  const filled = (score / 100) * circumference;
+  return `${filled.toFixed(1)} ${circumference.toFixed(1)}`;
+}
+
+function buildVisitorPhoto(summary) {
+  // If badge_photo_url exists, render an <img>; otherwise render SVG placeholder
+  if (summary.badge_photo_url) {
+    return `<img src="${escapeHtml(summary.badge_photo_url)}" alt="${escapeHtml(summary.visitor_name || 'Visitor')}">`;
+  }
+  return '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+}
+
+function buildPriorityChip(priority) {
+  const p = (priority || 'medium').toLowerCase();
+  return `<span class="chip chip-priority chip-priority-${escapeHtml(p)}">${escapeHtml(priority || 'medium')}</span>`;
+}
+
+function buildTagChips(tags) {
+  if (!tags || !tags.length) return '';
+  return tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('\n            ');
+}
+
 function scoreSummary(score) {
   if (score >= 80) return 'Strong engagement — high-priority follow-up recommended';
   if (score >= 60) return 'Good engagement — visitor showed clear interest';
@@ -251,7 +286,12 @@ function renderTemplate(template, summary, followUp, timeline) {
     generated_at:         formatDate(summary.generated_at),
     session_score:        String(score),
     score_color:          scoreColor(score),
+    score_color_light:    scoreColorLight(score),
+    score_dasharray:      scoreDasharray(score),
     score_summary:        scoreSummary(score),
+    visitor_photo:        buildVisitorPhoto(summary),
+    priority_chip:        buildPriorityChip(followUp.priority),
+    tag_chips:            buildTagChips(followUp.tags),
     executive_summary:    escapeHtml(followUp.sdr_notes || 'No executive summary available.'),
     sdr_notes:            escapeHtml(followUp.sdr_notes || 'No SDR notes recorded.'),
     products_shown:       buildProductBadges(summary.products_shown),
@@ -266,258 +306,6 @@ function renderTemplate(template, summary, followUp, timeline) {
     html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
   }
   return html;
-}
-
-function confidenceColor(confidence) {
-  switch ((confidence || '').toLowerCase()) {
-    case 'high':   return '#4ade80'; // green
-    case 'medium': return '#facc15'; // yellow
-    case 'low':    return '#94a3b8'; // slate
-    default:       return '#94a3b8';
-  }
-}
-
-function priorityBadge(priority) {
-  const colors = {
-    high:   { bg: '#dc2626', text: '#fff' },
-    medium: { bg: '#d97706', text: '#fff' },
-    low:    { bg: '#475569', text: '#fff' },
-  };
-  const c = colors[(priority || 'medium').toLowerCase()] || colors.medium;
-  return `<span style="background:${c.bg};color:${c.text};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">${escapeHtml(priority || 'medium')}</span>`;
-}
-
-function renderHtml(summary, followUp) {
-  const {
-    visitor_name = 'Unknown Visitor',
-    demo_duration_minutes = 0,
-    session_score = 0,
-    executive_summary = '',
-    products_shown = [],
-    visitor_interests = [],
-    recommended_follow_up = [],
-    key_moments = [],
-    v1_tenant_link = '',
-    generated_at = '',
-  } = summary;
-
-  const {
-    visitor_email = '',
-    priority = 'medium',
-    sdr_notes = '',
-    tags = [],
-  } = followUp;
-
-  const productsHtml = products_shown.length
-    ? products_shown.map(p =>
-        `<span style="display:inline-block;background:#1e40af;color:#bfdbfe;padding:4px 12px;border-radius:16px;font-size:13px;font-weight:500;margin:3px 4px 3px 0">${escapeHtml(p)}</span>`
-      ).join('')
-    : '<span style="color:#64748b;font-style:italic">None recorded</span>';
-
-  const interestsHtml = visitor_interests.length
-    ? visitor_interests.map(i => `
-        <tr>
-          <td style="padding:10px 14px;border-bottom:1px solid #1e293b;font-weight:500">${escapeHtml(i.topic)}</td>
-          <td style="padding:10px 14px;border-bottom:1px solid #1e293b;text-align:center">
-            <span style="color:${confidenceColor(i.confidence)};font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:0.05em">${escapeHtml(i.confidence)}</span>
-          </td>
-          <td style="padding:10px 14px;border-bottom:1px solid #1e293b;color:#94a3b8;font-size:13px">${escapeHtml(i.evidence)}</td>
-        </tr>`).join('')
-    : '<tr><td colspan="3" style="padding:14px;color:#64748b;font-style:italic">No interests recorded</td></tr>';
-
-  const momentsHtml = key_moments.length
-    ? key_moments.map((m, idx) => `
-        <div style="display:flex;gap:16px;margin-bottom:20px">
-          <div style="display:flex;flex-direction:column;align-items:center">
-            <div style="width:36px;height:36px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#93c5fd;flex-shrink:0">${idx + 1}</div>
-            ${idx < key_moments.length - 1 ? '<div style="width:2px;flex:1;background:#1e293b;margin-top:6px"></div>' : ''}
-          </div>
-          <div style="padding-top:6px;padding-bottom:8px">
-            <div style="font-size:12px;color:#475569;margin-bottom:4px;font-family:monospace">${escapeHtml(m.timestamp)}</div>
-            <div style="color:#e2e8f0">${escapeHtml(m.description)}</div>
-            ${m.impact ? `<div style="color:#94a3b8;font-size:13px;margin-top:4px;font-style:italic">${escapeHtml(m.impact)}</div>` : ''}
-          </div>
-        </div>`).join('')
-    : '<p style="color:#64748b;font-style:italic">No key moments recorded</p>';
-
-  const followUpActionsHtml = recommended_follow_up.length
-    ? recommended_follow_up.map(a => `
-        <li style="padding:10px 0;border-bottom:1px solid #1e293b;color:#cbd5e1;display:flex;gap:10px;align-items:flex-start">
-          <span style="color:#3b82f6;font-size:18px;line-height:1;flex-shrink:0">›</span>
-          <span>${escapeHtml(a)}</span>
-        </li>`).join('')
-    : '<li style="color:#64748b;font-style:italic">No follow-up actions recorded</li>';
-
-  const tenantLinkHtml = v1_tenant_link
-    ? `<a href="${escapeHtml(v1_tenant_link)}" style="color:#60a5fa;text-decoration:none">${escapeHtml(v1_tenant_link)}</a>`
-    : '<span style="color:#64748b">—</span>';
-
-  const generatedDate = generated_at
-    ? new Date(generated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-    : '';
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demo Summary — ${escapeHtml(visitor_name)}</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-    .header {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border-bottom: 1px solid #1e293b;
-      padding: 32px 0;
-    }
-    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
-    .header-meta { color: #64748b; font-size: 13px; margin-top: 6px; }
-    h1 { font-size: 26px; font-weight: 700; color: #f1f5f9; }
-    .badge-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-    .stat-chip {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 4px 12px;
-      font-size: 13px;
-      color: #94a3b8;
-    }
-    .stat-chip strong { color: #e2e8f0; }
-    .main { padding: 32px 0; }
-    .section {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      margin-bottom: 24px;
-      overflow: hidden;
-    }
-    .section-title {
-      padding: 16px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #94a3b8;
-      border-bottom: 1px solid #334155;
-      background: #162032;
-    }
-    .section-body { padding: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th {
-      text-align: left;
-      padding: 8px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #64748b;
-      border-bottom: 2px solid #334155;
-    }
-    ul { list-style: none; }
-    .footer {
-      border-top: 1px solid #1e293b;
-      padding: 20px 0;
-      color: #475569;
-      font-size: 12px;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="container">
-      <h1>${escapeHtml(visitor_name)}</h1>
-      ${visitor_email ? `<div class="header-meta">${escapeHtml(visitor_email)}</div>` : ''}
-      <div class="badge-row">
-        ${priorityBadge(priority)}
-        ${session_score ? `<div class="stat-chip"><strong>${escapeHtml(String(session_score))}</strong>/10 session score</div>` : ''}
-        ${demo_duration_minutes ? `<div class="stat-chip"><strong>${escapeHtml(String(demo_duration_minutes))}</strong> min demo</div>` : ''}
-        ${tags.map(t => `<div class="stat-chip">${escapeHtml(t)}</div>`).join('')}
-      </div>
-      ${v1_tenant_link ? `<div class="header-meta" style="margin-top:10px">Tenant: ${tenantLinkHtml}</div>` : ''}
-    </div>
-  </div>
-
-  <div class="main">
-    <div class="container">
-
-      <!-- Executive Summary -->
-      ${executive_summary ? `
-      <div class="section">
-        <div class="section-title">Executive Summary</div>
-        <div class="section-body">
-          <div style="font-size:15px;line-height:1.7;color:#e2e8f0">${escapeHtml(executive_summary)}</div>
-        </div>
-      </div>` : ''}
-
-      <!-- Products Demonstrated -->
-      <div class="section">
-        <div class="section-title">Products Demonstrated</div>
-        <div class="section-body">${productsHtml}</div>
-      </div>
-
-      <!-- Visitor Interests -->
-      <div class="section">
-        <div class="section-title">Visitor Interests</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Topic</th>
-              <th style="text-align:center">Confidence</th>
-              <th>Evidence</th>
-            </tr>
-          </thead>
-          <tbody>${interestsHtml}</tbody>
-        </table>
-      </div>
-
-      <!-- Key Moments -->
-      <div class="section">
-        <div class="section-title">Key Moments</div>
-        <div class="section-body">${momentsHtml}</div>
-      </div>
-
-      <!-- Follow-Up Actions -->
-      <div class="section">
-        <div class="section-title">Follow-Up Actions</div>
-        <div class="section-body">
-          <ul>${followUpActionsHtml}</ul>
-        </div>
-      </div>
-
-      <!-- Follow-Up Details -->
-      <div class="section">
-        <div class="section-title">Follow-Up Details</div>
-        <div class="section-body">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-            <span style="font-size:13px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Priority</span>
-            ${priorityBadge(priority)}
-          </div>
-          ${sdr_notes
-            ? `<div>
-                <div style="font-size:13px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">SDR Notes</div>
-                <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 16px;color:#cbd5e1;font-size:14px;line-height:1.7">${escapeHtml(sdr_notes)}</div>
-              </div>`
-            : '<p style="color:#64748b;font-style:italic">No SDR notes recorded</p>'}
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <div class="footer">
-    <div class="container">
-      Generated ${generatedDate} · Trend Micro Vision One Booth App
-    </div>
-  </div>
-</body>
-</html>`;
 }
 
 // ── Main ────────────────────────────────────────────────────────
