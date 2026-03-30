@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Review — BoothApp</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* -- Header -- */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .session-id {
+    font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    color: var(--accent);
+    background: var(--bg);
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* -- Buttons -- */
+  .btn {
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--green);
+    color: #000;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* -- Status bar -- */
+  .status-bar {
+    padding: 10px 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .status-bar .ok { color: var(--green); }
+  .status-bar .err { color: var(--red); }
+
+  /* -- Layout -- */
+  .content {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    height: calc(100vh - 120px);
+  }
+  @media (max-width: 1000px) {
+    .content {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+  }
+
+  /* -- Report iframe panel -- */
+  .report-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-title {
+    padding: 12px 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .report-frame {
+    flex: 1;
+    border: none;
+    background: #0f172a;
+    width: 100%;
+    min-height: 600px;
+  }
+
+  /* -- Sidebar metrics -- */
+  .sidebar {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .metric-section {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .metric-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* -- Score -- */
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .score-ring {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    border: 4px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .score-meta .label { font-size: 13px; color: var(--text-muted); }
+  .score-meta .value { font-size: 15px; font-weight: 600; }
+
+  /* -- Pills -- */
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    background: rgba(88, 166, 255, 0.15);
+    color: var(--accent);
+    font-weight: 600;
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 13px;
+  }
+
+  /* -- Interest rows -- */
+  .interest-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+  }
+  .interest-item:last-child { border-bottom: none; }
+  .interest-topic { font-size: 14px; font-weight: 500; }
+  .interest-evidence { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .badge-high { background: var(--green); color: #000; }
+  .badge-medium { background: var(--orange); color: #000; }
+  .badge-low { background: var(--border); color: var(--text-muted); }
+
+  /* -- Follow-up list -- */
+  .followup-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+  }
+  .followup-item:last-child { border-bottom: none; }
+
+  .followup-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .followup-text { font-size: 14px; }
+
+  /* -- Approve footer -- */
+  .approve-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .approve-footer .note {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* -- Config overlay -- */
+  .config-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .config-overlay.hidden { display: none; }
+
+  .config-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    width: 420px;
+    max-width: 90vw;
+  }
+
+  .config-box h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+
+  .config-box label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    margin-top: 12px;
+  }
+
+  .config-box input {
+    width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .config-box .actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* -- Empty / loading states -- */
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 15px;
+    padding: 40px;
+    text-align: center;
+  }
+
+  /* -- Toast -- */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green);
+    color: #000;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Config overlay (shown when no bucket is configured) -->
+<div class="config-overlay" id="configOverlay">
+  <div class="config-box">
+    <h2>Session Review Setup</h2>
+    <label>S3 Bucket</label>
+    <input id="cfgBucket" type="text" placeholder="my-booth-bucket" />
+    <label>AWS Region</label>
+    <input id="cfgRegion" type="text" placeholder="us-east-1" value="us-east-1" />
+    <label>Session ID</label>
+    <input id="cfgSession" type="text" placeholder="A726594" />
+    <div class="actions">
+      <button class="btn btn-primary" onclick="applyConfig()">Load Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">B</div>
+    <div>
+      <div class="logo-text">BoothApp</div>
+    </div>
+    <span class="session-id" id="headerSessionId">--</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary" onclick="showConfig()">Change Session</button>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar" id="statusBar">Loading session data...</div>
+
+<!-- Main content -->
+<div class="content" id="mainContent" style="display:none">
+
+  <!-- Left: HTML report iframe -->
+  <div class="report-panel">
+    <div class="panel-title">Generated Report</div>
+    <iframe class="report-frame" id="reportFrame" sandbox="allow-same-origin"></iframe>
+  </div>
+
+  <!-- Right: Metrics sidebar -->
+  <div class="sidebar">
+
+    <!-- Session Score -->
+    <div class="metric-section">
+      <div class="metric-title">Session Score</div>
+      <div class="score-row">
+        <div class="score-ring" id="scoreRing">--</div>
+        <div class="score-meta">
+          <div class="value" id="scoreDuration">-- min</div>
+          <div class="label" id="scoreLabel">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="metric-section" id="execSection" style="display:none">
+      <div class="metric-title">Executive Summary</div>
+      <div id="execSummary" style="font-size:14px; color:var(--text-muted); line-height:1.6"></div>
+    </div>
+
+    <!-- Products Shown -->
+    <div class="metric-section">
+      <div class="metric-title">Products Shown</div>
+      <div class="pills" id="productsContainer">
+        <span style="color:var(--text-muted); font-style:italic; font-size:13px">None loaded</span>
+      </div>
+    </div>
+
+    <!-- Visitor Interests -->
+    <div class="metric-section">
+      <div class="metric-title">Visitor Interests</div>
+      <div id="interestsContainer">
+        <span style="color:var(--text-muted); font-style:italic; font-size:13px">None loaded</span>
+      </div>
+    </div>
+
+    <!-- Recommended Follow-Ups -->
+    <div class="metric-section">
+      <div class="metric-title">Recommended Follow-Ups</div>
+      <div id="followupsContainer">
+        <span style="color:var(--text-muted); font-style:italic; font-size:13px">None loaded</span>
+      </div>
+    </div>
+
+    <!-- Approve & Send -->
+    <div class="approve-footer">
+      <button class="btn btn-primary" id="approveBtn" style="width:100%" onclick="approveAndSend()" disabled>
+        Approve &amp; Send
+      </button>
+      <div class="note">Review the report before sending to the visitor</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+var state = {
+  bucket: '',
+  region: 'us-east-1',
+  sessionId: '',
+  summaryData: null
+};
+
+/* ── URL Param Parsing ──────────────────────────────────────── */
+function getParams() {
+  var params = new URLSearchParams(window.location.search);
+  return {
+    session: params.get('session') || '',
+    bucket: params.get('bucket') || '',
+    region: params.get('region') || 'us-east-1'
+  };
+}
+
+/* ── S3 URL Builder ─────────────────────────────────────────── */
+function s3Url(path) {
+  return 'https://' + state.bucket + '.s3.' + state.region + '.amazonaws.com/sessions/' + state.sessionId + '/' + path;
+}
+
+/* ── Status ─────────────────────────────────────────────────── */
+function setStatus(msg, ok) {
+  var el = document.getElementById('statusBar');
+  el.innerHTML = '<span class="' + (ok ? 'ok' : 'err') + '">' + msg + '</span>';
+}
+
+/* ── Toast ──────────────────────────────────────────────────── */
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+/* ── Escape HTML ────────────────────────────────────────────── */
+function esc(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+/* ── Score Color ────────────────────────────────────────────── */
+function scoreColor(s) {
+  if (s >= 8) return 'var(--green)';
+  if (s >= 5) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+/* ── Compute Score (fallback if not in JSON) ────────────────── */
+function computeScore(data) {
+  if (data.session_score) return data.session_score;
+  var score = 0;
+  var dur = data.demo_duration_minutes || 0;
+  if (dur >= 15) score += 3;
+  else if (dur >= 10) score += 2;
+  else if (dur >= 5) score += 1;
+
+  var prods = (data.products_shown || []).length;
+  if (prods >= 3) score += 3;
+  else score += prods;
+
+  var highInterests = (data.visitor_interests || []).filter(function(i) { return i.confidence === 'high'; }).length;
+  if (highInterests >= 2) score += 2;
+  else score += highInterests;
+
+  var moments = (data.key_moments || []).length;
+  if (moments >= 3) score += 2;
+  else if (moments >= 1) score += 1;
+
+  return Math.min(10, Math.max(1, score));
+}
+
+/* ── Render Metrics Sidebar ─────────────────────────────────── */
+function renderMetrics(data) {
+  // Score
+  var score = computeScore(data);
+  var ring = document.getElementById('scoreRing');
+  ring.textContent = score;
+  ring.style.borderColor = scoreColor(score);
+  ring.style.color = scoreColor(score);
+
+  document.getElementById('scoreDuration').textContent = (data.demo_duration_minutes || '--') + ' min';
+  document.getElementById('scoreLabel').textContent =
+    score >= 8 ? 'High engagement' : score >= 5 ? 'Moderate engagement' : 'Low engagement';
+
+  // Executive Summary
+  if (data.executive_summary) {
+    document.getElementById('execSection').style.display = '';
+    document.getElementById('execSummary').textContent = data.executive_summary;
+  }
+
+  // Products
+  var pc = document.getElementById('productsContainer');
+  pc.innerHTML = '';
+  var products = data.products_shown || [];
+  if (products.length === 0) {
+    pc.innerHTML = '<span style="color:var(--text-muted); font-style:italic; font-size:13px">None detected</span>';
+  } else {
+    products.forEach(function(p) {
+      var span = document.createElement('span');
+      span.className = 'pill';
+      span.textContent = p;
+      pc.appendChild(span);
+    });
+  }
+
+  // Interests
+  var ic = document.getElementById('interestsContainer');
+  ic.innerHTML = '';
+  var interests = data.visitor_interests || [];
+  if (interests.length === 0) {
+    ic.innerHTML = '<span style="color:var(--text-muted); font-style:italic; font-size:13px">None detected</span>';
+  } else {
+    interests.forEach(function(vi) {
+      var row = document.createElement('div');
+      row.className = 'interest-item';
+      var conf = vi.confidence || 'medium';
+      row.innerHTML =
+        '<div>' +
+          '<div class="interest-topic">' + esc(vi.topic) + '</div>' +
+          '<div class="interest-evidence">' + esc(vi.evidence) + '</div>' +
+        '</div>' +
+        '<span class="badge badge-' + esc(conf) + '">' + esc(conf) + '</span>';
+      ic.appendChild(row);
+    });
+  }
+
+  // Follow-ups
+  var fc = document.getElementById('followupsContainer');
+  fc.innerHTML = '';
+  var followups = data.recommended_follow_up || [];
+  if (followups.length === 0) {
+    fc.innerHTML = '<span style="color:var(--text-muted); font-style:italic; font-size:13px">None suggested</span>';
+  } else {
+    followups.forEach(function(text, i) {
+      var item = document.createElement('div');
+      item.className = 'followup-item';
+      item.innerHTML =
+        '<span class="followup-num">' + (i + 1) + '</span>' +
+        '<span class="followup-text">' + esc(text) + '</span>';
+      fc.appendChild(item);
+    });
+  }
+
+  // Enable approve button
+  document.getElementById('approveBtn').disabled = false;
+}
+
+/* ── Load Session Data ──────────────────────────────────────── */
+function loadSession() {
+  if (!state.bucket || !state.sessionId) {
+    showConfig();
+    return;
+  }
+
+  document.getElementById('headerSessionId').textContent = state.sessionId;
+  document.getElementById('configOverlay').classList.add('hidden');
+  document.getElementById('mainContent').style.display = '';
+  setStatus('Fetching session ' + state.sessionId + ' ...', true);
+
+  // Fetch summary.json
+  fetch(s3Url('output/summary.json'), { mode: 'cors' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      state.summaryData = data;
+      var now = new Date().toLocaleTimeString();
+      setStatus('Loaded at ' + now + ' | Session: ' + (data.visitor_name || state.sessionId), true);
+      renderMetrics(data);
+    })
+    .catch(function(err) {
+      setStatus('Error loading summary.json: ' + err.message + '. Check bucket CORS and session ID.', false);
+    });
+
+  // Load summary.html into iframe
+  var frame = document.getElementById('reportFrame');
+  frame.src = s3Url('output/summary.html');
+  frame.onerror = function() {
+    setStatus('Error loading summary.html report.', false);
+  };
+}
+
+/* ── Config Overlay ─────────────────────────────────────────── */
+function showConfig() {
+  document.getElementById('cfgBucket').value = state.bucket;
+  document.getElementById('cfgRegion').value = state.region;
+  document.getElementById('cfgSession').value = state.sessionId;
+  document.getElementById('configOverlay').classList.remove('hidden');
+}
+
+function applyConfig() {
+  state.bucket = document.getElementById('cfgBucket').value.trim();
+  state.region = document.getElementById('cfgRegion').value.trim() || 'us-east-1';
+  state.sessionId = document.getElementById('cfgSession').value.trim();
+
+  if (!state.bucket || !state.sessionId) {
+    return;
+  }
+
+  // Update URL params without reload
+  var url = new URL(window.location);
+  url.searchParams.set('session', state.sessionId);
+  url.searchParams.set('bucket', state.bucket);
+  url.searchParams.set('region', state.region);
+  window.history.replaceState({}, '', url);
+
+  loadSession();
+}
+
+/* ── Approve & Send (placeholder) ───────────────────────────── */
+function approveAndSend() {
+  var btn = document.getElementById('approveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  // Placeholder: simulate async action
+  setTimeout(function() {
+    btn.textContent = 'Approved & Sent';
+    btn.style.background = 'var(--accent)';
+    showToast('Session approved and queued for delivery');
+    // TODO: POST to API endpoint to trigger email delivery
+  }, 1200);
+}
+
+/* ── Init ────────────────────────────────────────────────────── */
+(function init() {
+  var params = getParams();
+  state.sessionId = params.session;
+  state.bucket = params.bucket;
+  state.region = params.region;
+
+  if (state.bucket && state.sessionId) {
+    loadSession();
+  } else {
+    // Pre-fill session ID from URL if present
+    if (params.session) {
+      document.getElementById('cfgSession').value = params.session;
+    }
+    showConfig();
+  }
+})();
+</script>
+</body>
+</html>
