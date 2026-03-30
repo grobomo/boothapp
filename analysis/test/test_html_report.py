@@ -65,19 +65,19 @@ class TestEscapeHtml(unittest.TestCase):
 
 class TestScoreColor(unittest.TestCase):
     def test_high_score_green(self):
-        self.assertEqual(_score_color(8), "#4ade80")
-        self.assertEqual(_score_color(10), "#4ade80")
+        self.assertEqual(_score_color(8), "#14b8a6")
+        self.assertEqual(_score_color(10), "#8b5cf6")
 
     def test_medium_score_yellow(self):
-        self.assertEqual(_score_color(6), "#fbbf24")
-        self.assertEqual(_score_color(7), "#fbbf24")
+        self.assertEqual(_score_color(6), "#22c55e")
+        self.assertEqual(_score_color(7), "#10b981")
 
     def test_low_score_orange(self):
-        self.assertEqual(_score_color(4), "#fb923c")
+        self.assertEqual(_score_color(4), "#eab308")
 
     def test_very_low_score_red(self):
-        self.assertEqual(_score_color(1), "#f87171")
-        self.assertEqual(_score_color(0), "#f87171")
+        self.assertEqual(_score_color(1), "#ef4444")
+        self.assertEqual(_score_color(0), "#ef4444")
 
 
 class TestGaugeDasharray(unittest.TestCase):
@@ -198,7 +198,7 @@ class TestRenderHtmlReport(unittest.TestCase):
             self.assertNotIn("{" + key + "}", self.html)
 
     def test_dark_theme(self):
-        self.assertIn("#0b1120", self.html)
+        self.assertIn("#1a1a2e", self.html)
 
     def test_responsive(self):
         self.assertIn("@media", self.html)
@@ -206,8 +206,8 @@ class TestRenderHtmlReport(unittest.TestCase):
     def test_xss_escaped(self):
         xss_summary = dict(SAMPLE_SUMMARY, visitor_name="<script>alert(1)</script>")
         html = render_html_report(xss_summary, SAMPLE_FOLLOW_UP)
-        self.assertNotIn("<script>", html)
-        self.assertIn("&lt;script&gt;", html)
+        self.assertNotIn("<script>alert(1)</script>", html)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
 
     def test_minimal_data(self):
         html = render_html_report({"visitor_name": "Min"}, {})
