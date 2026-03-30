@@ -30,6 +30,7 @@ const { triggerPipeline } = require('./lib/pipeline');
 const { sendNotification } = require('./lib/notify');
 const { spawn } = require('child_process');
 const path = require('path');
+const health = require('./watcher-health');
 
 // --test flag: run a dry notification with sample data and exit
 if (process.argv.includes('--test')) {
@@ -86,6 +87,7 @@ async function pollOnce() {
   }
 
   log(`Checking ${sessions.length} session(s)...`);
+  health.setQueueDepth(sessions.length - dispatched.size);
 
   // Check all sessions concurrently — each check is independent
   await Promise.all(sessions.map(async (sessionId) => {
@@ -111,6 +113,7 @@ async function pollOnce() {
           await runTranscriber(sessionId);
           log(`  ${sessionId}: transcription complete`);
         } catch (err) {
+          health.recordFailed(sessionId);
           log(`  ${sessionId}: transcription FAILED — ${err.message}`);
           return; // Don't proceed to analysis without transcript
         }
@@ -126,11 +129,15 @@ async function pollOnce() {
       });
       dispatched.add(sessionId);
       sessionsProcessed++;
+      health.recordProcessed(sessionId);
 
       // Trigger pipeline (fire-and-forget — errors are logged, not fatal)
       triggerPipeline(sessionId, BUCKET)
         .then((result) => log(`  ${sessionId}: pipeline finished — ${result.status}`))
-        .catch((err) => log(`  ${sessionId}: pipeline ERROR — ${err.message}`));
+        .catch((err) => {
+          health.recordFailed(sessionId);
+          log(`  ${sessionId}: pipeline ERROR — ${err.message}`);
+        });
 
     } catch (err) {
       log(`  ${sessionId}: ERROR checking session — ${err.message}`);
@@ -189,7 +196,15 @@ async function run() {
 
   log(`Starting — bucket=${BUCKET} poll_interval=${POLL_INTERVAL_MS / 1000}s`);
 
-  // Start health check HTTP server
+  // Start health monitoring (port 8095, /tmp/watcher-health.json, log rotation)
+  health.start();
+  health.installSignalHandlers();
+  health.onShutdown(() => {
+    log('Finishing current work before exit...');
+    clearInterval(pollTimer);
+  });
+
+  // Start legacy health check HTTP server (port 8090, backward compat)
   const healthServer = http.createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -204,12 +219,12 @@ async function run() {
     }
   });
   healthServer.listen(HEALTH_PORT, () => {
-    log(`Health check listening on port ${HEALTH_PORT}`);
+    log(`Legacy health check listening on port ${HEALTH_PORT}`);
   });
 
   // Run immediately on start, then on interval
   await pollOnce();
-  setInterval(pollOnce, POLL_INTERVAL_MS);
+  const pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS);
 }
 
 if (!process.argv.includes('--test')) {
