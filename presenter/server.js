@@ -104,6 +104,10 @@ app.get('/api/pages', (req, res) => {
 const { createRouter: batchAnalyzeRouter } = require('./lib/batch-analyze');
 app.use(batchAnalyzeRouter({ bucket: S3_BUCKET }));
 
+// --- Screenshots API ---
+const { createRouter: screenshotsRouter } = require('./lib/screenshots');
+app.use(screenshotsRouter({ bucket: S3_BUCKET }));
+
 // --- Static files ---
 app.use(express.static(path.join(__dirname)));
 
