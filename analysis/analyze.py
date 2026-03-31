@@ -5,6 +5,7 @@ import os
 import sys
 
 from engines.analyzer import SessionAnalyzer
+from engines.competitive import analyze_transcript as analyze_competitive
 from engines.email_template import render_follow_up_email
 from engines.product_detector import detect_products
 
@@ -27,6 +28,11 @@ def parse_args():
         "--dry-run",
         action="store_true",
         help="Run analysis but do not write output files",
+    )
+    parser.add_argument(
+        "--competitive",
+        action="store_true",
+        help="Run competitive intelligence analysis on transcript",
     )
     args = parser.parse_args()
     # Support both positional and --session-dir flag
@@ -71,6 +77,8 @@ def write_output(output_dir: str, results: dict):
     json_files = [("summary.json", results["summary"]), ("follow-up.json", results["follow_up"])]
     if results.get("products"):
         json_files.append(("products.json", results["products"]))
+    if results.get("competitive_insights"):
+        json_files.append(("competitive-insights.json", results["competitive_insights"]))
 
     html_files = []
     if results.get("html"):
@@ -209,6 +217,32 @@ def main():
         )
     except Exception as e:
         print(f"Warning: follow-up email generation failed: {e}", file=sys.stderr)
+
+    # Optional: competitive intelligence analysis on transcript
+    if args.competitive:
+        try:
+            transcript_data = {}
+            if args.session_dir.startswith("s3://"):
+                import boto3
+                prefix = args.session_dir.replace("s3://", "")
+                bucket, _, key_prefix = prefix.partition("/")
+                s3 = boto3.client("s3")
+                resp = s3.get_object(Bucket=bucket, Key=f"{key_prefix}/transcript/transcript.json")
+                transcript_data = json.loads(resp["Body"].read())
+            else:
+                transcript_path = os.path.join(args.session_dir, "transcript", "transcript.json")
+                if os.path.exists(transcript_path):
+                    with open(transcript_path) as f:
+                        transcript_data = json.load(f)
+            if transcript_data:
+                competitive = analyze_competitive(transcript_data)
+                results["competitive_insights"] = competitive
+                if competitive["total_mentions"] > 0:
+                    print(f"\nCompetitive mentions detected: {competitive['total_mentions']}")
+                    for s in competitive["competitor_summary"]:
+                        print(f"  {s['competitor']}: {s['mention_count']} mention(s) -- {', '.join(s['concerns'])}")
+        except Exception as e:
+            print(f"Warning: competitive analysis failed: {e}", file=sys.stderr)
 
     print_summary(results)
 
