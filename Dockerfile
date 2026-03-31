@@ -24,5 +24,8 @@ COPY . .
 # Presenter on 3000, WebSocket on 3001
 EXPOSE 3000 3001
 
-# Start both the presenter server and the analysis watcher
-CMD node presenter/server.js & node analysis/watcher.js
+# Start both the presenter server and the analysis watcher.
+# If either process exits, the container exits so orchestration can restart it.
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+CMD ["/app/entrypoint.sh"]
