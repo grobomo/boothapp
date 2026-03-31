@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Demo Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-alt: #1c2333;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-orange: #f78166;
+  --accent-teal: #00d4aa;
+  --accent-purple: #bc8cff;
+  --glow-blue: rgba(88, 166, 255, 0.15);
+  --glow-green: rgba(63, 185, 80, 0.2);
+}
+
+html, body {
+  width: 100%; height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* -- Fullscreen button -- */
+.fs-btn {
+  position: fixed; top: 1rem; right: 1rem; z-index: 100;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 0.8rem; padding: 0.4rem 0.8rem;
+  border-radius: 6px; cursor: pointer; font-family: inherit;
+  transition: color 0.2s, border-color 0.2s;
+}
+.fs-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* -- Progress bar -- */
+.progress-bar {
+  position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+  background: var(--surface); z-index: 99;
+}
+.progress-fill {
+  height: 100%; background: var(--accent); width: 0%;
+  transition: width 0.3s linear;
+}
+
+/* -- Step indicators -- */
+.step-dots {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 0.6rem; z-index: 99;
+}
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border); transition: background 0.3s, transform 0.3s;
+}
+.step-dot.active { background: var(--accent); transform: scale(1.4); }
+.step-dot.done { background: var(--accent-green); }
+
+/* -- Stage container -- */
+.stage {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2rem;
+  opacity: 0; transform: translateY(30px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  position: absolute; top: 0; left: 0;
+  pointer-events: none;
+}
+.stage.active {
+  opacity: 1; transform: translateY(0); pointer-events: auto;
+}
+
+/* -- Shared card -- */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 2.5rem 3rem;
+  max-width: 700px; width: 100%; text-align: center;
+}
+.card h2 {
+  font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem;
+  color: var(--text);
+}
+.card .subtitle {
+  font-size: 1rem; color: var(--text-dim); margin-bottom: 1.5rem;
+}
+
+/* ============================================================
+   STEP 1: Badge Scan
+   ============================================================ */
+.scan-ring {
+  width: 180px; height: 180px; margin: 0 auto 2rem;
+  border-radius: 50%; border: 4px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  animation: scan-pulse 1.5s ease-in-out infinite;
+}
+.scan-ring::after {
+  content: ''; position: absolute; inset: -12px;
+  border-radius: 50%; border: 2px solid var(--accent);
+  opacity: 0; animation: scan-ripple 1.5s ease-out infinite;
+}
+@keyframes scan-pulse {
+  0%, 100% { box-shadow: 0 0 20px var(--glow-blue); }
+  50% { box-shadow: 0 0 50px var(--glow-blue), 0 0 80px rgba(88,166,255,0.08); }
+}
+@keyframes scan-ripple {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.scan-icon {
+  font-size: 3.5rem; color: var(--accent); line-height: 1;
+}
+.scan-line {
+  width: 120px; height: 3px; background: var(--accent);
+  position: absolute; top: 50%;
+  animation: scan-sweep 1.5s ease-in-out infinite;
+  box-shadow: 0 0 12px var(--accent);
+}
+@keyframes scan-sweep {
+  0% { transform: translateY(-50px); opacity: 0.3; }
+  50% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(50px); opacity: 0.3; }
+}
+.scan-text {
+  font-size: 1.8rem; font-weight: 700; color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.scan-dots::after {
+  content: ''; animation: dots 1.5s steps(4, end) infinite;
+}
+@keyframes dots {
+  0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; }
+}
+
+/* ============================================================
+   STEP 2: Visitor Info
+   ============================================================ */
+.visitor-avatar {
+  width: 90px; height: 90px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-teal), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; font-weight: 800; color: var(--bg);
+  margin: 0 auto 1.5rem;
+}
+.visitor-name {
+  font-size: 2.2rem; font-weight: 800; color: var(--text);
+  margin-bottom: 0.25rem;
+}
+.visitor-title {
+  font-size: 1.15rem; color: var(--accent-teal); margin-bottom: 0.15rem;
+}
+.visitor-company {
+  font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1.2rem;
+}
+.visitor-badges {
+  display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap;
+}
+.badge-tag {
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-radius: 20px; padding: 0.3rem 0.9rem;
+  font-size: 0.8rem; color: var(--text-dim);
+}
+
+/* ============================================================
+   STEP 3: Click Tracking
+   ============================================================ */
+.dashboard-mock {
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; position: relative;
+  width: 100%; max-width: 700px; aspect-ratio: 16/9;
+}
+.dashboard-header {
+  background: #1a1f2e; padding: 0.6rem 1rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.dashboard-header .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.dashboard-header .dot.r { background: #f85149; }
+.dashboard-header .dot.y { background: #d29922; }
+.dashboard-header .dot.g { background: #3fb950; }
+.dashboard-header .url-bar {
+  flex: 1; background: var(--bg); border-radius: 4px;
+  padding: 0.2rem 0.6rem; font-size: 0.7rem; color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+.dashboard-body {
+  padding: 1rem; position: relative; height: calc(100% - 38px);
+}
+.mock-sidebar {
+  position: absolute; left: 0; top: 0; width: 50px; height: 100%;
+  background: #12162b; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 0.8rem; gap: 0.8rem;
+}
+.mock-sidebar .sb-icon {
+  width: 28px; height: 28px; border-radius: 6px; background: #1e2440;
+}
+.mock-sidebar .sb-icon.active { background: var(--accent); opacity: 0.7; }
+.mock-content {
+  margin-left: 60px; display: grid;
+  grid-template-columns: 1fr 1fr; gap: 0.5rem; height: 100%;
+}
+.mock-widget {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.5rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.mock-widget .widget-title {
+  font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.08em; margin-bottom: 0.3rem;
+}
+.mock-widget .widget-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.2rem; font-weight: 700; color: var(--accent);
+}
+
+/* Click dots */
+.click-dot {
+  position: absolute; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--accent-orange);
+  box-shadow: 0 0 12px rgba(247, 129, 102, 0.5);
+  transform: translate(-50%, -50%);
+  animation: click-appear 0.4s ease-out forwards;
+  z-index: 10;
+}
+.click-dot::after {
+  content: ''; position: absolute; inset: -6px;
+  border-radius: 50%; border: 2px solid var(--accent-orange);
+  animation: click-ring 0.8s ease-out forwards;
+}
+@keyframes click-appear {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+}
+@keyframes click-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.click-counter {
+  margin-top: 1rem; font-family: 'JetBrains Mono', monospace;
+  font-size: 1.3rem; color: var(--accent-orange);
+}
+
+/* ============================================================
+   STEP 4: Audio Waveform
+   ============================================================ */
+.waveform-container {
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; height: 120px; margin: 1.5rem 0;
+}
+.wave-bar {
+  width: 4px; border-radius: 2px;
+  background: var(--accent-purple);
+  animation: wave 1.2s ease-in-out infinite;
+}
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+.audio-timer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem; font-weight: 600; color: var(--accent-purple);
+  margin-bottom: 0.5rem;
+}
+.audio-label {
+  font-size: 0.9rem; color: var(--text-dim);
+}
+.rec-indicator {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-size: 1rem; color: #f85149; font-weight: 600;
+  margin-bottom: 1rem;
+}
+.rec-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #f85149; animation: rec-blink 1s ease-in-out infinite;
+}
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.2; }
+}
+
+/* ============================================================
+   STEP 5: Analyzing
+   ============================================================ */
+.spinner-ring {
+  width: 100px; height: 100px; margin: 0 auto 2rem;
+  border: 4px solid var(--border); border-top-color: var(--accent-teal);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.analyze-steps {
+  text-align: left; max-width: 380px; margin: 0 auto;
+}
+.analyze-step {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 0.5rem 0; font-size: 1rem;
+  color: var(--text-dim); transition: color 0.3s;
+}
+.analyze-step.done { color: var(--accent-green); }
+.analyze-step.current { color: var(--text); }
+.analyze-check {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border-radius: 50%; border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; transition: all 0.3s;
+}
+.analyze-step.done .analyze-check {
+  background: var(--accent-green); border-color: var(--accent-green); color: var(--bg);
+}
+.analyze-step.current .analyze-check {
+  border-color: var(--accent-teal);
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================================
+   STEP 6: Report Card
+   ============================================================ */
+.report-card {
+  max-width: 600px; width: 100%;
+}
+.report-header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 1.5rem; text-align: left;
+}
+.report-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-teal), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; font-weight: 800; color: var(--bg); flex-shrink: 0;
+}
+.report-visitor-info h3 { font-size: 1.3rem; font-weight: 700; }
+.report-visitor-info p { font-size: 0.85rem; color: var(--text-dim); }
+
+.score-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.score-item {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem; text-align: center;
+}
+.score-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem; font-weight: 700;
+}
+.score-value.high { color: var(--accent-green); }
+.score-value.med { color: var(--accent-orange); }
+.score-label {
+  font-size: 0.7rem; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-top: 0.3rem;
+}
+
+.followup-list {
+  text-align: left; margin-top: 1rem;
+}
+.followup-list h4 {
+  font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.08em; margin-bottom: 0.6rem;
+}
+.followup-item {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.5rem 0; font-size: 0.95rem;
+  border-bottom: 1px solid var(--border);
+}
+.followup-item:last-child { border-bottom: none; }
+.followup-icon {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: var(--bg);
+}
+.followup-icon.green { background: var(--accent-green); }
+.followup-icon.blue { background: var(--accent); }
+.followup-icon.orange { background: var(--accent-orange); }
+
+/* -- Loop badge -- */
+.loop-badge {
+  position: fixed; top: 1rem; left: 1rem;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 0.75rem; padding: 0.3rem 0.7rem;
+  border-radius: 6px; font-family: 'JetBrains Mono', monospace;
+  z-index: 99;
+}
+
+/* -- Responsive -- */
+@media (max-width: 768px) {
+  .card { padding: 1.5rem; }
+  .visitor-name { font-size: 1.8rem; }
+  .score-grid { grid-template-columns: 1fr; }
+  .scan-ring { width: 140px; height: 140px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- Controls -->
+<button class="fs-btn" id="fsBtn" title="Toggle fullscreen">[ ] Fullscreen</button>
+<div class="loop-badge" id="loopBadge">DEMO 1/--</div>
+
+<!-- Step dots -->
+<div class="step-dots" id="stepDots"></div>
+
+<!-- ============================================================
+     STEP 1: Scanning Badge
+     ============================================================ -->
+<div class="stage" id="step1">
+  <div class="card">
+    <div class="scan-ring">
+      <div class="scan-line"></div>
+      <div class="scan-icon">&#9781;</div>
+    </div>
+    <div class="scan-text">Scanning Badge<span class="scan-dots"></span></div>
+    <div class="subtitle" style="margin-top:0.8rem">Hold badge near camera</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     STEP 2: Visitor Info
+     ============================================================ -->
+<div class="stage" id="step2">
+  <div class="card">
+    <div class="visitor-avatar">SC</div>
+    <div class="visitor-name">Sarah Chen</div>
+    <div class="visitor-title">VP Engineering</div>
+    <div class="visitor-company">Acme Corp</div>
+    <div class="visitor-badges">
+      <span class="badge-tag">Enterprise</span>
+      <span class="badge-tag">Cloud Security</span>
+      <span class="badge-tag">XDR</span>
+      <span class="badge-tag">Black Hat 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     STEP 3: Click Tracking
+     ============================================================ -->
+<div class="stage" id="step3">
+  <div class="subtitle" style="margin-bottom:0.8rem;font-size:1.2rem;font-weight:600;">Live Click Tracking</div>
+  <div class="dashboard-mock" id="dashboardMock">
+    <div class="dashboard-header">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <div class="url-bar">app.trendmicro.com/v1/xdr/investigation</div>
+    </div>
+    <div class="dashboard-body">
+      <div class="mock-sidebar">
+        <div class="sb-icon"></div>
+        <div class="sb-icon"></div>
+        <div class="sb-icon active"></div>
+        <div class="sb-icon"></div>
+        <div class="sb-icon"></div>
+      </div>
+      <div class="mock-content">
+        <div class="mock-widget">
+          <div class="widget-title">Detections</div>
+          <div class="widget-value">2,847</div>
+        </div>
+        <div class="mock-widget">
+          <div class="widget-title">Endpoints</div>
+          <div class="widget-value">1,205</div>
+        </div>
+        <div class="mock-widget">
+          <div class="widget-title">Risk Score</div>
+          <div class="widget-value" style="color:var(--accent-orange)">72</div>
+        </div>
+        <div class="mock-widget">
+          <div class="widget-title">Incidents</div>
+          <div class="widget-value" style="color:var(--accent-green)">14</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="click-counter">Clicks: <span id="clickCount">0</span></div>
+</div>
+
+<!-- ============================================================
+     STEP 4: Audio Waveform
+     ============================================================ -->
+<div class="stage" id="step4">
+  <div class="card">
+    <div class="rec-indicator"><div class="rec-dot"></div> RECORDING</div>
+    <div class="audio-timer" id="audioTimer">00:00</div>
+    <div class="waveform-container" id="waveform"></div>
+    <div class="audio-label">Capturing conversation audio</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     STEP 5: Analyzing
+     ============================================================ -->
+<div class="stage" id="step5">
+  <div class="card">
+    <div class="spinner-ring"></div>
+    <h2>Session Complete</h2>
+    <div class="subtitle">Analyzing with Claude AI...</div>
+    <div class="analyze-steps" id="analyzeSteps">
+      <div class="analyze-step" data-idx="0">
+        <div class="analyze-check">&#10003;</div>
+        <span>Transcribing audio</span>
+      </div>
+      <div class="analyze-step" data-idx="1">
+        <div class="analyze-check">&#10003;</div>
+        <span>Analyzing click patterns</span>
+      </div>
+      <div class="analyze-step" data-idx="2">
+        <div class="analyze-check">&#10003;</div>
+        <span>Matching product interest</span>
+      </div>
+      <div class="analyze-step" data-idx="3">
+        <div class="analyze-check">&#10003;</div>
+        <span>Generating follow-up report</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     STEP 6: Report Card
+     ============================================================ -->
+<div class="stage" id="step6">
+  <div class="card report-card">
+    <div class="report-header">
+      <div class="report-avatar">SC</div>
+      <div class="report-visitor-info">
+        <h3>Sarah Chen - Acme Corp</h3>
+        <p>VP Engineering &bull; 12 min demo &bull; 47 clicks</p>
+      </div>
+    </div>
+
+    <div class="score-grid">
+      <div class="score-item">
+        <div class="score-value high">92</div>
+        <div class="score-label">Interest</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value high">88</div>
+        <div class="score-label">Engagement</div>
+      </div>
+      <div class="score-item">
+        <div class="score-value med">75</div>
+        <div class="score-label">Buy Signal</div>
+      </div>
+    </div>
+
+    <div class="followup-list">
+      <h4>Recommended Follow-Up</h4>
+      <div class="followup-item">
+        <div class="followup-icon green">1</div>
+        <span>Send personalized XDR demo summary with V1 tenant link</span>
+      </div>
+      <div class="followup-item">
+        <div class="followup-icon blue">2</div>
+        <span>Schedule deep-dive on Cloud Security posture management</span>
+      </div>
+      <div class="followup-item">
+        <div class="followup-icon orange">3</div>
+        <span>Connect with SE team for Acme Corp POC planning</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── Config ──────────────────────────────────────────────────────────────────
+  var STEPS = [
+    { id: 'step1', duration: 3000, label: 'Badge Scan' },
+    { id: 'step2', duration: 5000, label: 'Visitor Info' },
+    { id: 'step3', duration: 5000, label: 'Click Tracking' },
+    { id: 'step4', duration: 5000, label: 'Audio Capture' },
+    { id: 'step5', duration: 5000, label: 'Analyzing' },
+    { id: 'step6', duration: 6000, label: 'Report' }
+  ];
+
+  var currentStep = -1;
+  var loopCount = 0;
+  var stepTimers = [];
+
+  // ── DOM ─────────────────────────────────────────────────────────────────────
+  var progressFill = document.getElementById('progressFill');
+  var stepDotsEl = document.getElementById('stepDots');
+  var loopBadge = document.getElementById('loopBadge');
+  var fsBtn = document.getElementById('fsBtn');
+
+  // Build step dots
+  for (var i = 0; i < STEPS.length; i++) {
+    var dot = document.createElement('div');
+    dot.className = 'step-dot';
+    dot.title = STEPS[i].label;
+    stepDotsEl.appendChild(dot);
+  }
+  var dots = stepDotsEl.querySelectorAll('.step-dot');
+
+  // ── Fullscreen ──────────────────────────────────────────────────────────────
+  fsBtn.addEventListener('click', function() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function() {});
+      fsBtn.textContent = '[X] Exit Fullscreen';
+    } else {
+      document.exitFullscreen();
+      fsBtn.textContent = '[ ] Fullscreen';
+    }
+  });
+  document.addEventListener('fullscreenchange', function() {
+    if (!document.fullscreenElement) fsBtn.textContent = '[ ] Fullscreen';
+  });
+
+  // ── Step transitions ────────────────────────────────────────────────────────
+  function clearStepTimers() {
+    for (var i = 0; i < stepTimers.length; i++) clearTimeout(stepTimers[i]);
+    stepTimers = [];
+  }
+
+  function goToStep(idx) {
+    clearStepTimers();
+    // Deactivate all
+    var stages = document.querySelectorAll('.stage');
+    for (var i = 0; i < stages.length; i++) stages[i].classList.remove('active');
+
+    // Update dots
+    for (var j = 0; j < dots.length; j++) {
+      dots[j].classList.remove('active', 'done');
+      if (j < idx) dots[j].classList.add('done');
+      if (j === idx) dots[j].classList.add('active');
+    }
+
+    currentStep = idx;
+    var step = STEPS[idx];
+    document.getElementById(step.id).classList.add('active');
+
+    // Progress
+    var pct = ((idx + 1) / STEPS.length) * 100;
+    progressFill.style.width = pct + '%';
+
+    // Step-specific animations
+    if (idx === 2) startClickTracking();
+    if (idx === 3) startAudioTimer();
+    if (idx === 4) startAnalyzeSequence();
+
+    // Auto-advance
+    stepTimers.push(setTimeout(function() {
+      if (idx < STEPS.length - 1) {
+        goToStep(idx + 1);
+      } else {
+        // Loop
+        stepTimers.push(setTimeout(function() { startLoop(); }, 2000));
+      }
+    }, step.duration));
+  }
+
+  function startLoop() {
+    loopCount++;
+    loopBadge.textContent = 'DEMO ' + loopCount + '/' + loopCount;
+    goToStep(0);
+  }
+
+  // ── Step 3: Click tracking ──────────────────────────────────────────────────
+  function startClickTracking() {
+    var mock = document.getElementById('dashboardMock');
+    var counter = document.getElementById('clickCount');
+    var count = 0;
+    // Remove old dots
+    var old = mock.querySelectorAll('.click-dot');
+    for (var i = 0; i < old.length; i++) old[i].remove();
+
+    var positions = [
+      [65, 35], [80, 60], [55, 45], [75, 30], [60, 70],
+      [85, 50], [70, 40], [55, 65], [80, 25], [65, 55]
+    ];
+
+    var idx = 0;
+    function addClick() {
+      if (idx >= positions.length || currentStep !== 2) return;
+      var dot = document.createElement('div');
+      dot.className = 'click-dot';
+      dot.style.left = positions[idx][0] + '%';
+      dot.style.top = positions[idx][1] + '%';
+      mock.querySelector('.dashboard-body').appendChild(dot);
+      count++;
+      counter.textContent = count;
+      idx++;
+      stepTimers.push(setTimeout(addClick, 400));
+    }
+    stepTimers.push(setTimeout(addClick, 300));
+  }
+
+  // ── Step 4: Audio timer ─────────────────────────────────────────────────────
+  function startAudioTimer() {
+    var timerEl = document.getElementById('audioTimer');
+    var sec = 0;
+    function tick() {
+      if (currentStep !== 3) return;
+      sec++;
+      var m = Math.floor(sec / 60);
+      var s = sec % 60;
+      timerEl.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      stepTimers.push(setTimeout(tick, 200)); // fast for demo effect
+    }
+    timerEl.textContent = '00:00';
+    stepTimers.push(setTimeout(tick, 200));
+  }
+
+  // ── Step 5: Analyze sequence ────────────────────────────────────────────────
+  function startAnalyzeSequence() {
+    var steps = document.querySelectorAll('#analyzeSteps .analyze-step');
+    for (var i = 0; i < steps.length; i++) {
+      steps[i].classList.remove('done', 'current');
+    }
+    var idx = 0;
+    function nextAnalyze() {
+      if (idx >= steps.length || currentStep !== 4) return;
+      if (idx > 0) steps[idx - 1].classList.remove('current');
+      if (idx > 0) steps[idx - 1].classList.add('done');
+      steps[idx].classList.add('current');
+      idx++;
+      stepTimers.push(setTimeout(nextAnalyze, 1100));
+    }
+    nextAnalyze();
+    // Mark last as done at end
+    stepTimers.push(setTimeout(function() {
+      if (currentStep === 4 && steps.length > 0) {
+        steps[steps.length - 1].classList.remove('current');
+        steps[steps.length - 1].classList.add('done');
+      }
+    }, 1100 * steps.length));
+  }
+
+  // ── Build waveform bars ─────────────────────────────────────────────────────
+  var waveformEl = document.getElementById('waveform');
+  for (var b = 0; b < 60; b++) {
+    var bar = document.createElement('div');
+    bar.className = 'wave-bar';
+    var h = 20 + Math.random() * 80;
+    bar.style.height = h + 'px';
+    bar.style.animationDelay = (Math.random() * 1.2).toFixed(2) + 's';
+    bar.style.animationDuration = (0.8 + Math.random() * 0.8).toFixed(2) + 's';
+    waveformEl.appendChild(bar);
+  }
+
+  // ── Keyboard controls ───────────────────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      var next = (currentStep + 1) % STEPS.length;
+      goToStep(next);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      var prev = currentStep > 0 ? currentStep - 1 : STEPS.length - 1;
+      goToStep(prev);
+    } else if (e.key === 'f' || e.key === 'F') {
+      fsBtn.click();
+    }
+  });
+
+  // ── Start ───────────────────────────────────────────────────────────────────
+  loopCount = 1;
+  loopBadge.textContent = 'DEMO 1/1';
+  goToStep(0);
+})();
+</script>
+</body>
+</html>
