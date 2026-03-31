@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": 1000,
+    "url": "https://portal.example.com/dashboard",
+    "element": "button#start-demo",
+    "x": 540,
+    "y": 320
+  },
+  {
+    "timestamp": 5000,
+    "url": "https://portal.example.com/xdr",
+    "element": "a.nav-link",
+    "x": 120,
+    "y": 80
+  },
+  {
+    "timestamp": 12000,
+    "url": "https://portal.example.com/xdr/incidents",
+    "element": "tr.incident-row",
+    "x": 400,
+    "y": 250
+  },
+  {
+    "timestamp": 18000,
+    "url": "https://portal.example.com/email-security",
+    "element": "button#show-threats",
+    "x": 600,
+    "y": 400
+  }
+]
