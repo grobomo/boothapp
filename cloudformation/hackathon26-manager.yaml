@@ -1,78 +1,365 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CCC Fleet Manager Node (hierarchical tier)
+Description: >
+  CCC manager node for hierarchical fleet orchestration. Runs manager-daemon.py
+  in Docker on a spot instance with stable EIP. Tiers: t1 (root), t2 (regional),
+  t3 (local).
+
+# ── Mappings ─────────────────────────────────────────────────────────────────
+
+Mappings:
+  RegionAMI:
+    us-east-2:
+      HVM64: ami-0cb91c7de36eed2cb
+
+# ── Parameters ───────────────────────────────────────────────────────────────
 
 Parameters:
+  ManagerName:
+    Type: String
+    Description: Unique name for this manager node (e.g. mgr-us-east-root)
+
   ManagerTier:
     Type: String
-    AllowedValues: [t1, t2, t3]
-    Description: Hierarchy tier for this manager
-  NodeId:
+    AllowedValues:
+      - t1
+      - t2
+      - t3
+    Description: Tier in the hierarchy (t1=root, t2=regional, t3=local)
+
+  ParentURL:
     Type: String
-    Description: Unique node identifier (e.g. T1-001)
-  ParentEndpoint:
-    Type: String
+    Description: API URL of the parent manager (empty string for t1 root)
     Default: ''
-    Description: HTTP endpoint of parent manager (empty for T1 nodes)
+
   InstanceType:
     Type: String
     Default: t3.medium
-  AmiId:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
-  SubnetId:
-    Type: AWS::EC2::Subnet::Id
-  VpcId:
-    Type: AWS::EC2::VPC::Id
-  Environment:
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+    Description: EC2 instance type
+
+  SpotMaxPrice:
     Type: String
-    Default: dev
+    Default: '0.02'
+    Description: Maximum spot price in USD
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: claude-portable-key
+    Description: EC2 key pair for SSH access
+
+  DockerImage:
+    Type: String
+    Description: ECR golden image URL (e.g. 123456789.dkr.ecr.us-east-2.amazonaws.com/ccc-manager:latest)
+
+# ── Resources ────────────────────────────────────────────────────────────────
 
 Resources:
-  ManagerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+
+  ManagerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      GroupDescription: !Sub 'CCC Manager ${NodeId} SG'
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 10.0.0.0/8
-      Tags:
-        - Key: Name
-          Value: !Sub 'ccc-manager-${NodeId}'
+      LaunchTemplateName: !Sub 'hackathon26-mgr-${ManagerName}'
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPairName
+        ImageId: !FindInMap [RegionAMI, !Ref 'AWS::Region', HVM64]
+        IamInstanceProfile:
+          Name: !ImportValue hackathon26-instance-profile
+        SecurityGroupIds:
+          - !ImportValue hackathon26-sg-internal
+          - !ImportValue hackathon26-sg-worker
+        InstanceMarketOptions:
+          MarketType: spot
+          SpotOptions:
+            MaxPrice: !Ref SpotMaxPrice
+            SpotInstanceType: persistent
+            InstanceInterruptionBehavior: stop
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 30
+              VolumeType: gp3
+              Encrypted: true
+              DeleteOnTermination: true
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub 'hackathon26-mgr-${ManagerName}'
+              - Key: Project
+                Value: hackathon26
+              - Key: NIST-Control
+                Value: PR.DS-01
+              - Key: Role
+                Value: manager
+              - Key: Tier
+                Value: !Ref ManagerTier
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: !Sub 'hackathon26-mgr-${ManagerName}-vol'
+              - Key: Project
+                Value: hackathon26
+              - Key: NIST-Control
+                Value: PR.DS-01
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -euo pipefail
+            exec > /var/log/manager-userdata.log 2>&1
+
+            echo "=== CCC Manager UserData — $(date -u) ==="
+
+            # ── Install Docker CE ────────────────────────────────────────
+            yum update -y
+            yum install -y docker
+            systemctl enable docker
+            systemctl start docker
+            usermod -aG docker ec2-user
+
+            # ── Install AWS CLI v2 ───────────────────────────────────────
+            if ! command -v aws &>/dev/null; then
+              curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+              cd /tmp && unzip -qo awscliv2.zip && ./aws/install
+              rm -rf /tmp/aws /tmp/awscliv2.zip
+            fi
+
+            # ── ECR login & pull image ───────────────────────────────────
+            REGION=$(ec2-metadata --availability-zone | sed 's/placement: \(.*\).$/\1/')
+            ACCOUNT=$(echo "${DockerImage}" | cut -d. -f1)
+            aws ecr get-login-password --region "$REGION" \
+              | docker login --username AWS --password-stdin "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com"
+            docker pull "${DockerImage}"
+
+            # ── Write manager-daemon.py into a host volume ───────────────
+            mkdir -p /opt/ccc-manager
+            cat > /opt/ccc-manager/manager-daemon.py << 'DAEMON_EOF'
+            #!/usr/bin/env python3
+            """CCC Manager Daemon — HTTP control plane for hierarchical fleet management."""
+            import http.server
+            import json
+            import os
+            import subprocess
+            import threading
+            import time
+            import urllib.request
+
+            ROLE = os.environ.get("ROLE", "manager")
+            MANAGER_NAME = os.environ.get("MANAGER_NAME", "unknown")
+            MANAGER_TIER = os.environ.get("MANAGER_TIER", "t3")
+            PARENT_URL = os.environ.get("PARENT_URL", "")
+            PORT = int(os.environ.get("PORT", "8080"))
+
+            children = {}   # name -> {url, tier, last_heartbeat}
+            tasks = []      # pending task queue
+            status = {"state": "idle", "current_task": None, "uptime_start": time.time()}
+
+
+            class ManagerHandler(http.server.BaseHTTPRequestHandler):
+                def _json(self, code, data):
+                    self.send_response(code)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(data).encode())
+
+                def do_GET(self):
+                    if self.path == "/health":
+                        self._json(200, {
+                            "status": "ok",
+                            "name": MANAGER_NAME,
+                            "tier": MANAGER_TIER,
+                            "role": ROLE,
+                            "uptime": int(time.time() - status["uptime_start"]),
+                            "children": len(children),
+                            "pending_tasks": len(tasks),
+                        })
+                    elif self.path == "/children":
+                        self._json(200, children)
+                    elif self.path == "/tasks":
+                        self._json(200, tasks)
+                    elif self.path == "/status":
+                        self._json(200, status)
+                    else:
+                        self._json(404, {"error": "not found"})
+
+                def do_POST(self):
+                    length = int(self.headers.get("Content-Length", 0))
+                    body = json.loads(self.rfile.read(length)) if length else {}
+
+                    if self.path == "/register":
+                        name = body.get("name", "")
+                        children[name] = {
+                            "url": body.get("url", ""),
+                            "tier": body.get("tier", ""),
+                            "last_heartbeat": time.time(),
+                        }
+                        self._json(200, {"registered": name})
+
+                    elif self.path == "/heartbeat":
+                        name = body.get("name", "")
+                        if name in children:
+                            children[name]["last_heartbeat"] = time.time()
+                        self._json(200, {"ack": True})
+
+                    elif self.path == "/task":
+                        tasks.append(body)
+                        self._json(201, {"queued": len(tasks)})
+
+                    else:
+                        self._json(404, {"error": "not found"})
+
+                def log_message(self, format, *args):
+                    pass  # suppress default logging
+
+
+            def heartbeat_to_parent():
+                """Send heartbeat to parent manager every 30 seconds."""
+                while True:
+                    if PARENT_URL:
+                        try:
+                            data = json.dumps({
+                                "name": MANAGER_NAME,
+                                "tier": MANAGER_TIER,
+                            }).encode()
+                            req = urllib.request.Request(
+                                f"{PARENT_URL}/heartbeat",
+                                data=data,
+                                headers={"Content-Type": "application/json"},
+                                method="POST",
+                            )
+                            urllib.request.urlopen(req, timeout=5)
+                        except Exception:
+                            pass
+                    time.sleep(30)
+
+
+            def register_with_parent():
+                """Register this manager with its parent on startup."""
+                if not PARENT_URL:
+                    return
+                try:
+                    data = json.dumps({
+                        "name": MANAGER_NAME,
+                        "url": f"http://0.0.0.0:{PORT}",
+                        "tier": MANAGER_TIER,
+                    }).encode()
+                    req = urllib.request.Request(
+                        f"{PARENT_URL}/register",
+                        data=data,
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    urllib.request.urlopen(req, timeout=10)
+                    print(f"Registered with parent: {PARENT_URL}")
+                except Exception as e:
+                    print(f"Failed to register with parent: {e}")
+
+
+            if __name__ == "__main__":
+                print(f"CCC Manager Daemon starting: name={MANAGER_NAME} tier={MANAGER_TIER} port={PORT}")
+                register_with_parent()
+                threading.Thread(target=heartbeat_to_parent, daemon=True).start()
+                server = http.server.HTTPServer(("0.0.0.0", PORT), ManagerHandler)
+                print(f"Listening on port {PORT}")
+                server.serve_forever()
+            DAEMON_EOF
+            chmod +x /opt/ccc-manager/manager-daemon.py
+
+            # ── Start container ──────────────────────────────────────────
+            docker run -d \
+              --name ccc-manager \
+              --restart unless-stopped \
+              -p 8080:8080 \
+              -v /opt/ccc-manager:/opt/ccc-manager:ro \
+              -e ROLE=manager \
+              -e MANAGER_NAME="${ManagerName}" \
+              -e MANAGER_TIER="${ManagerTier}" \
+              -e PARENT_URL="${ParentURL}" \
+              -e PORT=8080 \
+              "${DockerImage}" \
+              python3 /opt/ccc-manager/manager-daemon.py
+
+            # ── Host heartbeat script ────────────────────────────────────
+            cat > /opt/ccc-manager/heartbeat.sh << 'HB_EOF'
+            #!/bin/bash
+            # Host-level heartbeat: checks container health every 60s, restarts if down.
+            while true; do
+              if ! curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "$(date -u) Manager unhealthy, restarting container..."
+                docker restart ccc-manager
+              fi
+              sleep 60
+            done
+            HB_EOF
+            chmod +x /opt/ccc-manager/heartbeat.sh
+            nohup /opt/ccc-manager/heartbeat.sh > /var/log/manager-heartbeat.log 2>&1 &
+
+            echo "=== CCC Manager UserData complete — $(date -u) ==="
 
   ManagerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: !Ref InstanceType
-      ImageId: !Ref AmiId
-      SubnetId: !Ref SubnetId
-      SecurityGroupIds:
-        - !Ref ManagerSecurityGroup
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ManagerLaunchTemplate
+        Version: !GetAtt ManagerLaunchTemplate.LatestVersionNumber
       Tags:
         - Key: Name
-          Value: !Sub 'ccc-manager-${NodeId}'
-        - Key: ManagerTier
+          Value: !Sub 'hackathon26-mgr-${ManagerName}'
+        - Key: Project
+          Value: hackathon26
+        - Key: NIST-Control
+          Value: PR.DS-01
+        - Key: Role
+          Value: manager
+        - Key: Tier
           Value: !Ref ManagerTier
-        - Key: Environment
-          Value: !Ref Environment
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum install -y docker
-          systemctl enable --now docker
-          docker run -d --name ccc-manager \
-            -p 8080:8080 \
-            -e NODE_ID=${NodeId} \
-            -e MANAGER_TIER=${ManagerTier} \
-            -e PARENT_ENDPOINT=${ParentEndpoint} \
-            ghcr.io/altarr/ccc-manager:latest
+
+  ManagerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'hackathon26-mgr-${ManagerName}-eip'
+        - Key: Project
+          Value: hackathon26
+        - Key: NIST-Control
+          Value: PR.DS-01
+
+  ManagerEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ManagerEIP.AllocationId
+      InstanceId: !Ref ManagerInstance
+
+# ── Outputs ──────────────────────────────────────────────────────────────────
 
 Outputs:
   InstanceId:
+    Description: Manager EC2 instance ID
     Value: !Ref ManagerInstance
-  PrivateIp:
-    Value: !GetAtt ManagerInstance.PrivateIp
-  Endpoint:
-    Value: !Sub 'http://${ManagerInstance.PrivateIp}:8080'
+    Export:
+      Name: !Sub 'hackathon26-mgr-${ManagerName}-instance-id'
+
+  PublicIP:
+    Description: Manager Elastic IP
+    Value: !Ref ManagerEIP
+    Export:
+      Name: !Sub 'hackathon26-mgr-${ManagerName}-public-ip'
+
+  PrivateIP:
+    Description: Manager private IP
+    Value: !GetAtt ManagerInstance.PrivateIpAddress
+    Export:
+      Name: !Sub 'hackathon26-mgr-${ManagerName}-private-ip'
+
+  ManagerName:
+    Description: Manager node name
+    Value: !Ref ManagerName
+
+  Tier:
+    Description: Manager tier in hierarchy
+    Value: !Ref ManagerTier
