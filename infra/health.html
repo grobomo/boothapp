@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp - Health Check</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Courier New', monospace;
+    background: #0d1117;
+    color: #c9d1d9;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #30363d;
+    padding-bottom: 1rem;
+  }
+  h1 { color: #58a6ff; font-size: 1.4rem; }
+  .meta { font-size: 0.8rem; color: #8b949e; }
+  .meta span { margin-left: 1.5rem; }
+  #countdown { color: #58a6ff; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 1.2rem;
+    transition: border-color 0.3s;
+  }
+  .card.up    { border-left: 3px solid #3fb950; }
+  .card.down  { border-left: 3px solid #f85149; }
+  .card.unknown { border-left: 3px solid #d29922; }
+  .card.checking { border-left: 3px solid #58a6ff; }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+  .card-name { font-weight: bold; font-size: 1rem; }
+  .badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .badge.up      { background: #238636; color: #fff; }
+  .badge.down    { background: #da3633; color: #fff; }
+  .badge.unknown { background: #9e6a03; color: #fff; }
+  .badge.checking { background: #1f6feb; color: #fff; }
+
+  .card-detail {
+    font-size: 0.75rem;
+    color: #8b949e;
+    margin-top: 0.3rem;
+  }
+  .card-detail .label { color: #6e7681; }
+  .card-detail .val   { color: #c9d1d9; }
+  .card-detail .err   { color: #f85149; }
+
+  .summary {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #30363d;
+    font-size: 0.8rem;
+    color: #8b949e;
+    display: flex;
+    gap: 2rem;
+  }
+  .summary .count { color: #c9d1d9; font-weight: bold; }
+  .summary .up-count   { color: #3fb950; }
+  .summary .down-count { color: #f85149; }
+
+  .config-panel {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+  .config-panel summary { cursor: pointer; color: #58a6ff; }
+  .config-panel label { display: block; margin: 0.5rem 0 0.2rem; color: #8b949e; }
+  .config-panel input {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    width: 100%;
+    max-width: 500px;
+  }
+  .config-panel button {
+    margin-top: 0.8rem;
+    background: #238636;
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+  }
+  .config-panel button:hover { background: #2ea043; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>[boothapp] health check</h1>
+  <div class="meta">
+    <span>last check: <strong id="lastCheck">--</strong></span>
+    <span>next in: <strong id="countdown">10</strong>s</span>
+    <span id="autoLabel">auto-refresh: ON</span>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div class="summary" id="summary"></div>
+
+<div class="config-panel">
+  <details>
+    <summary>endpoint configuration</summary>
+    <div id="configFields"></div>
+    <button onclick="saveConfig()">save & recheck</button>
+  </details>
+</div>
+
+<script>
+// =========================================================================
+// Component definitions -- edit endpoints here or via the config panel
+// =========================================================================
+var DEFAULT_CONFIG = {
+  s3: {
+    name: 'S3 Bucket',
+    desc: 'Static assets & recordings storage',
+    url: '',
+    method: 'HEAD'
+  },
+  lambda: {
+    name: 'Lambda API',
+    desc: 'Backend processing functions',
+    url: '',
+    method: 'GET'
+  },
+  watcher: {
+    name: 'Watcher',
+    desc: 'File watcher / event processor',
+    url: '',
+    method: 'GET'
+  },
+  extension: {
+    name: 'Extension',
+    desc: 'Browser extension bridge',
+    url: '',
+    method: 'GET'
+  },
+  audio: {
+    name: 'Audio Service',
+    desc: 'Audio capture & streaming',
+    url: '',
+    method: 'GET'
+  }
+};
+
+var REFRESH_INTERVAL = 10; // seconds
+var state = {};
+var countdown = REFRESH_INTERVAL;
+var timer = null;
+
+// =========================================================================
+// Config persistence (localStorage)
+// =========================================================================
+function loadConfig() {
+  try {
+    var saved = localStorage.getItem('boothapp_health_config');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      for (var k in DEFAULT_CONFIG) {
+        if (parsed[k] && parsed[k].url) {
+          DEFAULT_CONFIG[k].url = parsed[k].url;
+        }
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function saveConfig() {
+  var toSave = {};
+  for (var k in DEFAULT_CONFIG) {
+    var input = document.getElementById('cfg-' + k);
+    if (input) {
+      DEFAULT_CONFIG[k].url = input.value.trim();
+      toSave[k] = { url: DEFAULT_CONFIG[k].url };
+    }
+  }
+  localStorage.setItem('boothapp_health_config', JSON.stringify(toSave));
+  runChecks();
+}
+
+function renderConfigFields() {
+  var html = '';
+  for (var k in DEFAULT_CONFIG) {
+    var c = DEFAULT_CONFIG[k];
+    html += '<label>' + c.name + ' endpoint</label>';
+    html += '<input id="cfg-' + k + '" value="' + escHtml(c.url) + '" placeholder="https://..." />';
+  }
+  document.getElementById('configFields').innerHTML = html;
+}
+
+// =========================================================================
+// Health checks
+// =========================================================================
+function checkComponent(key) {
+  var cfg = DEFAULT_CONFIG[key];
+  state[key] = {
+    name: cfg.name,
+    desc: cfg.desc,
+    status: 'checking',
+    latency: null,
+    error: null,
+    checkedAt: new Date()
+  };
+  renderGrid();
+
+  if (!cfg.url) {
+    state[key].status = 'unknown';
+    state[key].error = 'no endpoint configured';
+    renderGrid();
+    return;
+  }
+
+  var start = performance.now();
+  var ctrl = new AbortController();
+  var timeoutId = setTimeout(function() { ctrl.abort(); }, 8000);
+
+  fetch(cfg.url, {
+    method: cfg.method || 'GET',
+    mode: 'no-cors',
+    signal: ctrl.signal
+  }).then(function(res) {
+    clearTimeout(timeoutId);
+    var ms = Math.round(performance.now() - start);
+    // no-cors gives opaque response (status 0) -- treat as up if no error
+    if (res.ok || res.type === 'opaque') {
+      state[key].status = 'up';
+      state[key].latency = ms;
+    } else {
+      state[key].status = 'down';
+      state[key].error = 'HTTP ' + res.status;
+      state[key].latency = ms;
+    }
+    renderGrid();
+  }).catch(function(err) {
+    clearTimeout(timeoutId);
+    var ms = Math.round(performance.now() - start);
+    state[key].status = 'down';
+    state[key].latency = ms;
+    state[key].error = err.name === 'AbortError' ? 'timeout (8s)' : err.message;
+    renderGrid();
+  });
+}
+
+function runChecks() {
+  for (var k in DEFAULT_CONFIG) {
+    checkComponent(k);
+  }
+  document.getElementById('lastCheck').textContent = formatTime(new Date());
+  countdown = REFRESH_INTERVAL;
+}
+
+// =========================================================================
+// Rendering
+// =========================================================================
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatTime(d) {
+  return d.toLocaleTimeString('en-US', { hour12: false });
+}
+
+function renderGrid() {
+  var html = '';
+  for (var k in DEFAULT_CONFIG) {
+    var s = state[k] || { name: DEFAULT_CONFIG[k].name, desc: DEFAULT_CONFIG[k].desc, status: 'unknown' };
+    html += '<div class="card ' + s.status + '">';
+    html += '  <div class="card-header">';
+    html += '    <span class="card-name">' + escHtml(s.name) + '</span>';
+    html += '    <span class="badge ' + s.status + '">' + s.status + '</span>';
+    html += '  </div>';
+    html += '  <div class="card-detail"><span class="label">desc: </span><span class="val">' + escHtml(s.desc) + '</span></div>';
+    if (s.latency !== null) {
+      html += '  <div class="card-detail"><span class="label">latency: </span><span class="val">' + s.latency + 'ms</span></div>';
+    }
+    if (s.error) {
+      html += '  <div class="card-detail"><span class="label">error: </span><span class="err">' + escHtml(s.error) + '</span></div>';
+    }
+    if (s.checkedAt) {
+      html += '  <div class="card-detail"><span class="label">checked: </span><span class="val">' + formatTime(s.checkedAt) + '</span></div>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('grid').innerHTML = html;
+  renderSummary();
+}
+
+function renderSummary() {
+  var up = 0, down = 0, unknown = 0, checking = 0;
+  for (var k in state) {
+    if (state[k].status === 'up') up++;
+    else if (state[k].status === 'down') down++;
+    else if (state[k].status === 'checking') checking++;
+    else unknown++;
+  }
+  var total = Object.keys(DEFAULT_CONFIG).length;
+  var html = '<span>total: <span class="count">' + total + '</span></span>';
+  html += '<span>up: <span class="count up-count">' + up + '</span></span>';
+  html += '<span>down: <span class="count down-count">' + down + '</span></span>';
+  html += '<span>unknown: <span class="count">' + (unknown + checking) + '</span></span>';
+  document.getElementById('summary').innerHTML = html;
+}
+
+// =========================================================================
+// Timer
+// =========================================================================
+function tick() {
+  countdown--;
+  if (countdown <= 0) {
+    runChecks();
+  }
+  document.getElementById('countdown').textContent = countdown;
+}
+
+// =========================================================================
+// Init
+// =========================================================================
+loadConfig();
+renderConfigFields();
+runChecks();
+timer = setInterval(tick, 1000);
+</script>
+</body>
+</html>
