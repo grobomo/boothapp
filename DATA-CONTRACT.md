@@ -21,6 +21,7 @@ sessions/<session-id>/
 │   └── ...
 ├── v1-tenant/
 │   └── tenant.json            # WHO: Tenant pool manager
+├── feedback.json              # WHO: Presenter (visitor feedback form)
 └── output/
     ├── summary.html           # WHO: Workstream C (Analysis)
     ├── summary.json           # WHO: Workstream C (structured)
@@ -140,6 +141,20 @@ sessions/<session-id>/
   "priority": "high",
   "tags": ["endpoint", "xdr", "enterprise"],
   "sdr_notes": "Visitor is a CISO, 5000 endpoints, comparing with Palo Alto"
+}
+```
+
+## Schema: feedback.json
+```json
+{
+  "session_id": "A726594",
+  "rating": 4,
+  "rating_label": "Very Good",
+  "products_interested": ["Endpoint Security", "XDR / Detection & Response", "Cloud Security"],
+  "additional_comments": "Would love to see a BYOD policy walkthrough",
+  "contact_preference": "email",
+  "consent_to_contact": true,
+  "submitted_at": "2026-08-05T15:10:00Z"
 }
 ```
 
