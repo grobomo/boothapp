@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Booth Session Dashboard</title>
+<link rel="stylesheet" href="../presenter/styles/mobile.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -164,6 +165,41 @@
 
   /* -- Empty state -- */
   .empty { color: var(--text-muted); font-style: italic; text-align: center; padding: 40px 0; font-size: 1.2rem; }
+
+  /* -- Responsive: 768px -- */
+  @media (max-width: 768px) {
+    body { padding: 16px; font-size: 16px; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; }
+    .grid { grid-template-columns: 1fr; }
+    .card.full { grid-column: 1; }
+    .config-bar { flex-direction: column; align-items: stretch; }
+    .config-bar input { width: 100%; min-height: 44px; font-size: 16px; }
+    .config-bar button { width: 100%; min-height: 48px; }
+    .visitor-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .visitor-header .duration { margin-left: 0; font-size: 1.8rem; }
+    .visitor-header .name { font-size: 1.5rem; }
+    .score-ring { width: 100px; height: 100px; font-size: 2.2rem; }
+    .follow-ups { flex-direction: column; }
+    .follow-card { flex: 1 1 100%; }
+    .crm-btns { flex-direction: column; }
+    .crm-btn { width: 100%; min-height: 48px; justify-content: center; }
+    .sent-bar { height: 24px; }
+    .interest-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+
+  /* -- Responsive: 480px -- */
+  @media (max-width: 480px) {
+    body { padding: 8px; }
+    h1 { font-size: 1.2rem; }
+    .visitor-header .name { font-size: 1.2rem; }
+    .visitor-header .duration { font-size: 1.4rem; }
+    .score-ring { width: 80px; height: 80px; font-size: 1.8rem; border-width: 4px; }
+    .timeline li { padding-left: 14px; font-size: 0.9rem; }
+    .sent-bar { height: 20px; }
+    .sent-seg-ts { display: none; }
+    .pill { font-size: 0.8rem; padding: 3px 8px; }
+  }
 </style>
 </head>
 <body>

@@ -959,7 +959,42 @@
     font-family: monospace;
   }
   #app.demo-transition {
-    transition: opacity 0.6s ease;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                filter 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #app.demo-fade-out {
+    opacity: 0;
+    filter: blur(6px);
+    transform: scale(0.98);
+  }
+
+  /* ── Lightbox Backdrop Blur ───────────────────────── */
+  .lightbox {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ── Notes Focus Glow ─────────────────────────────── */
+  .notes-textarea {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .notes-textarea:focus {
+    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15), 0 0 20px rgba(31, 111, 235, 0.08);
+  }
+
+  /* ── Smooth Scroll Behavior ───────────────────────── */
+  .timeline-scroll, .transcript-scroll, .analysis-scroll, .feed-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* ── Visitor Details Slide ────────────────────────── */
+  @keyframes fadeSlideRight {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .visitor-details.v-animate {
+    animation: fadeSlideRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
   }
 
   /* ── Skeleton-to-App Crossfade ────────────────────── */
@@ -1609,17 +1644,16 @@ if (!BoothAuth.requireAwsCreds()) {
     }
 
     function cycleDemoSession() {
-      // Fade out
-      appEl.style.opacity = "0";
+      // Cinematic fade out with blur + scale
       appEl.classList.add("demo-transition");
+      appEl.classList.add("demo-fade-out");
 
       setTimeout(function () {
         demoIndex = (demoIndex + 1) % DEMO_SESSIONS.length;
         renderDemoSession(demoIndex);
-        // Scroll to top for each new session
         window.scrollTo({ top: 0, behavior: "instant" });
-        // Fade in
-        appEl.style.opacity = "1";
+        // Fade back in
+        appEl.classList.remove("demo-fade-out");
       }, FADE_DURATION);
     }
 
@@ -1712,6 +1746,13 @@ if (!BoothAuth.requireAwsCreds()) {
     avatarEl.classList.remove("avatar-animated");
     void avatarEl.offsetWidth;
     avatarEl.classList.add("avatar-animated");
+    // Slide-in visitor details
+    var detailsEl = document.querySelector(".visitor-details");
+    if (detailsEl) {
+      detailsEl.classList.remove("v-animate");
+      void detailsEl.offsetWidth;
+      detailsEl.classList.add("v-animate");
+    }
     var initials = (meta.visitor_name || "?").split(" ").map(function (w) { return w[0]; }).join("").substring(0, 2).toUpperCase();
     avatarEl.textContent = initials;
     var avatarColors = ["#1f6feb", "#8b5cf6", "#d97706", "#059669", "#dc2626", "#0891b2", "#7c3aed", "#c026d3"];

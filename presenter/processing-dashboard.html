@@ -3,8 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/error-boundary.js"></script>
+<script src="components/nav.js"></script>
 <title>BoothApp — AI Processing Pipeline</title>
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<script src="auth.js"></script>
+<link rel="stylesheet" href="styles/mobile.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -384,20 +388,10 @@
 </style>
 </head>
 <body>
-<script src="auth.js"></script>
 <script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
 else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
-<div style="max-width:720px;width:100%;margin:0 auto 1rem;display:flex;justify-content:flex-end;gap:1rem;font-size:0.85rem;">
-  <span id="auth-user" style="color:#8b949e;font-family:monospace;"></span>
-  <a href="sessions.html" style="color:#8b949e;text-decoration:none;">Sessions</a>
-  <a href="index.html" style="color:#8b949e;text-decoration:none;">Presenter</a>
-  <a href="#" id="logout-link" style="color:#8b949e;text-decoration:none;">Logout</a>
-</div>
-<script>
-  document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
-  document.getElementById("logout-link").addEventListener("click", function(e) { e.preventDefault(); BoothAuth.logout(); });
-</script>
+<!-- Navigation handled by nav.js -->
 
 <!-- Setup: enter session ID if not in URL -->
 <div id="setup" class="setup">
