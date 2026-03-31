@@ -27,7 +27,7 @@ async function triggerPipeline(sessionId, bucket) {
   return { sessionId, status: 'queued-stub' };
 }
 
-const PIPELINE_TIMEOUT_MS = 120_000;
+const PIPELINE_TIMEOUT_MS = 300_000;
 
 function runScript(script, args) {
   return new Promise((resolve, reject) => {

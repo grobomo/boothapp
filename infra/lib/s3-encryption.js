@@ -6,12 +6,11 @@
  * that deny unencrypted uploads (NIST CSF 2.0 PR.DS-10).
  */
 
-const KMS_KEY_ALIAS = process.env.KMS_KEY_ALIAS || 'alias/hackathon26-cmk';
+const KMS_KEY_ALIAS = process.env.KMS_KEY_ALIAS || '';
 
-const SSE_PARAMS = {
-  ServerSideEncryption: 'aws:kms',
-  SSEKMSKeyId: KMS_KEY_ALIAS,
-};
+const SSE_PARAMS = KMS_KEY_ALIAS
+  ? { ServerSideEncryption: 'aws:kms', SSEKMSKeyId: KMS_KEY_ALIAS }
+  : { ServerSideEncryption: 'AES256' };
 
 /**
  * Merge SSE-KMS params into an existing PutObject params object.

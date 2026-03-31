@@ -71,7 +71,7 @@ function buildChildEnv() {
   return env;
 }
 
-const PIPELINE_TIMEOUT_MS = 120_000;
+const PIPELINE_TIMEOUT_MS = 300_000;
 const STAGE_TIMEOUT_MS = 300_000; // 5 minutes per stage
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
@@ -202,6 +202,21 @@ async function run() {
     errors.push({ step: 'write-timeline', error: err.message, timestamp: new Date().toISOString() });
     log(`ERROR: Failed to write timeline.json — ${err.message}`);
     // Non-fatal: continue to analysis
+  }
+
+  // --- Step 3b: Install Python dependencies ---
+  try {
+    const requirementsFile = path.join(__dirname, 'requirements.txt');
+    log('Installing Python dependencies (pip install -r requirements.txt)...');
+    execFileSync('pip', ['install', '-q', '-r', requirementsFile], {
+      env: buildChildEnv(),
+      stdio: 'inherit',
+      timeout: 60_000,
+    });
+    log('Python dependencies installed');
+  } catch (err) {
+    errors.push({ step: 'pip-install', error: err.message, timestamp: new Date().toISOString() });
+    log(`WARNING: pip install failed: ${err.message}`);
   }
 
   // --- Step 4: Annotate screenshots with click markers ---
