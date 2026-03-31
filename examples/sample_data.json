@@ -32,6 +32,58 @@
             "note": "Recent BEC incidents, wants AI-powered detection"
         }
     ],
+    "sentiment_timeline": [
+        {
+            "timestamp": "14:00",
+            "text": "Welcome, great to have you here today",
+            "sentiment": "positive"
+        },
+        {
+            "timestamp": "14:03",
+            "text": "Tell me more about how XDR correlates across endpoints",
+            "sentiment": "positive"
+        },
+        {
+            "timestamp": "14:06",
+            "text": "That's interesting, but how does it compare to our current SIEM?",
+            "sentiment": "skepticism"
+        },
+        {
+            "timestamp": "14:09",
+            "text": "OK, I see the value in the unified console approach",
+            "sentiment": "neutral"
+        },
+        {
+            "timestamp": "14:12",
+            "text": "We're running EKS -- I'm not sure if container runtime protection is mature enough",
+            "sentiment": "hesitation"
+        },
+        {
+            "timestamp": "14:15",
+            "text": "Wow, the runtime detection for container drift is impressive",
+            "sentiment": "positive"
+        },
+        {
+            "timestamp": "14:18",
+            "text": "We're evaluating three ZTNA vendors, what makes yours different?",
+            "sentiment": "skepticism"
+        },
+        {
+            "timestamp": "14:21",
+            "text": "The integration with Vision One is definitely a differentiator",
+            "sentiment": "positive"
+        },
+        {
+            "timestamp": "14:24",
+            "text": "After our BEC incident last month, email security is a priority",
+            "sentiment": "neutral"
+        },
+        {
+            "timestamp": "14:27",
+            "text": "This is exactly what we need -- sign me up for the deep dive",
+            "sentiment": "positive"
+        }
+    ],
     "interests": [
         {
             "topic": "XDR / SOC Modernization",
