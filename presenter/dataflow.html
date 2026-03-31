@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Data Flow Diagram</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --bg:        #0B0E14;
+            --surface:   #141820;
+            --surface2:  #1C2028;
+            --border:    #252A34;
+            --text:      #F0F2F5;
+            --text-dim:  #8A92A0;
+            --success:   #2ECC71;
+            --blue:      #3498DB;
+            --amber:     #F39C12;
+            --purple:    #9B59B6;
+            --cyan:      #1ABC9C;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(rgba(215,25,32,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(215,25,32,.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: gridPulse 8s ease-in-out infinite;
+        }
+        @keyframes gridPulse {
+            0%, 100% { opacity: .4; }
+            50%      { opacity: .8; }
+        }
+
+        .bg-glow {
+            position: fixed; z-index: 0;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: .15;
+            animation: drift 20s ease-in-out infinite;
+        }
+        .bg-glow--1 { top: -200px; left: -100px; background: var(--red); }
+        .bg-glow--2 { bottom: -200px; right: -100px; background: var(--red); animation-delay: -10s; }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0); }
+            50%      { transform: translate(40px, 30px); }
+        }
+
+        .container {
+            position: relative; z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 48px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .header h1 span { color: var(--red); }
+        .header p {
+            color: var(--text-dim);
+            margin-top: 6px;
+            font-size: 14px;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Canvas */
+        #diagram {
+            display: block;
+            width: 100%;
+            cursor: default;
+        }
+
+        /* Detail panel */
+        .detail-panel {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            height: 100vh;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            z-index: 100;
+            transition: right .3s ease;
+            overflow-y: auto;
+            padding: 32px 24px;
+        }
+        .detail-panel.open { right: 0; }
+
+        .detail-panel .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .detail-panel .close-btn:hover { color: var(--text); }
+
+        .detail-panel h2 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        .detail-panel .subtitle {
+            color: var(--text-dim);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .detail-panel .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin: 16px 0 8px;
+        }
+        .detail-panel .file-list {
+            list-style: none;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 13px;
+        }
+        .detail-panel .file-list li {
+            padding: 4px 8px;
+            background: var(--surface2);
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+        .detail-panel .desc {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+        .detail-panel .io-block {
+            background: var(--surface2);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .detail-panel .io-block .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .detail-panel .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin: 2px 2px;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.4);
+            z-index: 99;
+            display: none;
+        }
+        .overlay.open { display: block; }
+
+        /* Controls bar */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .controls button {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .controls button:hover {
+            border-color: var(--red);
+            background: var(--surface);
+        }
+        .controls button.active {
+            border-color: var(--red);
+            background: rgba(215,25,32,.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow--1"></div>
+    <div class="bg-glow bg-glow--2"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1><span>BoothApp</span> Data Flow</h1>
+            <p>Interactive pipeline diagram -- click any node for details</p>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#D71920"></div> Capture</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#F39C12"></div> Storage</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#3498DB"></div> Processing</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#9B59B6"></div> Analysis</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#2ECC71"></div> Output</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#555"></div> Animated particles = data flow</div>
+        </div>
+
+        <div class="controls">
+            <button id="btnPlay" class="active">&#9654; Animate</button>
+            <button id="btnPause">&#9646;&#9646; Pause</button>
+            <button id="btnReset">&#8634; Reset View</button>
+        </div>
+
+        <canvas id="diagram"></canvas>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="detail-panel" id="detailPanel">
+        <button class="close-btn" id="closePanel">&times;</button>
+        <div id="panelContent"></div>
+    </div>
+
+<script>
+// ============================================================
+// DATA MODEL
+// ============================================================
+
+const COLORS = {
+    capture:    '#D71920',
+    storage:    '#F39C12',
+    processing: '#3498DB',
+    analysis:   '#9B59B6',
+    output:     '#2ECC71',
+};
+
+const NODES = [
+    {
+        id: 'extension',
+        label: 'Chrome Extension',
+        group: 'capture',
+        x: 0.08, y: 0.30,
+        icon: '🖱',
+        detail: {
+            title: 'Chrome Extension',
+            subtitle: 'V1-Helper Content & Background Scripts',
+            files: ['extension/content.js', 'extension/background.js', 'extension/popup.html'],
+            desc: 'Captures user interactions on the Vision One console during booth demos. Content script intercepts clicks, extracts DOM paths and element metadata. Background worker captures screenshots on each click + periodic 10-second intervals. All data buffered in chrome.storage.local and IndexedDB.',
+            inputs: ['User clicks on V1 console', 'DOM events (capture phase)'],
+            outputs: ['Click events (timestamp, URL, DOM path, element info)', 'Screenshots (JPEG, resized to 1920x1080)'],
+            tags: ['Chrome MV3', 'Service Worker', 'IndexedDB', 'SigV4 signing'],
+        },
+    },
+    {
+        id: 's3',
+        label: 'S3 Bucket',
+        group: 'storage',
+        x: 0.35, y: 0.18,
+        icon: '☁',
+        detail: {
+            title: 'S3 Bucket',
+            subtitle: 'boothapp-sessions / boothapp-recordings',
+            files: ['(AWS S3)'],
+            desc: 'Central storage for all session data. Extension uploads clicks.json and screenshots via signed S3 PUT. Watcher downloads recordings. Active session state managed via active-session.json. The presenter server reads session metadata and summaries.',
+            inputs: ['clicks.json from extension', 'screenshots/*.jpg from extension', 'audio.webm recordings', 'active-session.json (session control)'],
+            outputs: ['Session data to watcher', 'Summaries to presenter', 'Error JSON for dashboard'],
+            tags: ['S3', 'IAM', 'Session State'],
+        },
+    },
+    {
+        id: 'watcher',
+        label: 'Watcher',
+        group: 'processing',
+        x: 0.58, y: 0.12,
+        icon: '👁',
+        detail: {
+            title: 'Watcher Service',
+            subtitle: 'Session directory monitor + health endpoint',
+            files: ['analysis/watcher.js'],
+            desc: 'Polls the sessions directory every 5 seconds for new recordings. When a session has a "ready" trigger file but no output, it kicks off the analysis pipeline. Includes HTTP health endpoint on port 8080 reporting uptime and pending session count. Errors are classified, written locally, and uploaded to S3.',
+            inputs: ['Session directories with "ready" trigger files'],
+            outputs: ['Pipeline invocation per session', 'result.json on success', 'error.json on failure', 'Health endpoint JSON'],
+            tags: ['Polling', 'Health Check', 'Error Classification', 'Retry'],
+        },
+    },
+    {
+        id: 'pipeline',
+        label: 'Pipeline',
+        group: 'processing',
+        x: 0.58, y: 0.45,
+        icon: '⚙',
+        detail: {
+            title: 'Analysis Pipeline',
+            subtitle: '3-stage processing with retry and timeout',
+            files: ['analysis/lib/pipeline.js', 'analysis/pipeline-run.js'],
+            desc: 'Three sequential stages: (1) Download recording from S3, (2) Transcribe audio via Bedrock Titan, (3) Analyze transcript via Bedrock Claude. Each stage wrapped with exponential backoff retry (max 3 retries). Pipeline-run adds per-stage timeout (default 5 min). Errors classified as transient vs permanent.',
+            inputs: ['Session ID', 'S3 client + Bedrock client', 'Config (bucket, model ID, retry settings)'],
+            outputs: ['Analysis result object (transcript + insights)', 'error.json on permanent failure'],
+            tags: ['Bedrock', 'S3', 'Retry', 'Timeout', 'Transcription'],
+        },
+    },
+    {
+        id: 'correlator',
+        label: 'Correlator',
+        group: 'analysis',
+        x: 0.35, y: 0.62,
+        icon: '🔗',
+        detail: {
+            title: 'Event Correlator',
+            subtitle: 'Merges clicks + transcript + screenshots into enriched timeline',
+            files: ['analysis/lib/correlator.js'],
+            desc: 'Takes raw clicks, transcript segments, and screenshots and merges them into 30-second timeline segments. Each segment gets an engagement score (high/medium/low) based on click + dialogue presence. Screenshots matched to clicks within a 2-second window. Product topics detected via regex patterns across 10 categories (XDR, Endpoint, Cloud, etc.). Also builds a product coverage matrix with interest levels and follow-up relevance.',
+            inputs: ['clicks[] (timestamp, url, element)', 'transcript[] (start, end, text)', 'screenshots[] (timestamp, url)'],
+            outputs: ['segments[] with engagement scores + topics', 'summary (topic list, avg engagement)', 'Coverage matrix (product x interest level)'],
+            tags: ['Timeline', 'Engagement Scoring', 'Topic Detection', 'Coverage Matrix'],
+        },
+    },
+    {
+        id: 'email',
+        label: 'Email Generator',
+        group: 'output',
+        x: 0.12, y: 0.72,
+        icon: '✉',
+        detail: {
+            title: 'Email Follow-up Generator',
+            subtitle: 'Personalized templates from correlator output',
+            files: ['analysis/lib/email-template.js'],
+            desc: 'Generates personalized follow-up email templates for sales reps. Engagement tier (high/medium/low) determines greeting tone and whether transcript highlights are included. Topic blocks provide product-specific blurbs, CTAs, and resource links for 5 product areas (XDR, Endpoint, Zero Trust, Cloud, Email). Outputs structured template object and plain-text rendering.',
+            inputs: ['Correlator output (segments + summary)', 'Optional visitor info (name, company)'],
+            outputs: ['Email template (subject, greeting, topic blocks, CTA)', 'Plain text rendering'],
+            tags: ['Personalization', 'Engagement Tiers', 'Topic Content'],
+        },
+    },
+    {
+        id: 'presenter',
+        label: 'Presenter',
+        group: 'output',
+        x: 0.82, y: 0.30,
+        icon: '📊',
+        detail: {
+            title: 'Presenter Server',
+            subtitle: 'Express.js dashboard + API',
+            files: ['presenter/server.js', 'presenter/demo.html', 'presenter/sessions.html', 'presenter/coverage.html'],
+            desc: 'Express server serving static HTML pages and a REST API. GET /api/sessions lists all sessions with metadata and analysis status from S3. GET /api/sessions/:id/summary proxies the summary HTML. Static pages include the demo landing page, session list, coverage heatmap, and this data flow diagram.',
+            inputs: ['S3 session data (metadata.json, summary.html)', 'HTTP requests from browser'],
+            outputs: ['JSON API responses', 'HTML dashboard pages', 'Session summaries'],
+            tags: ['Express', 'REST API', 'S3 Proxy', 'Static HTML'],
+        },
+    },
+    {
+        id: 'errors',
+        label: 'Error Handler',
+        group: 'processing',
+        x: 0.82, y: 0.65,
+        icon: '⚠',
+        detail: {
+            title: 'Error Classification & Retry',
+            subtitle: 'Typed errors with exponential backoff',
+            files: ['analysis/lib/errors.js', 'analysis/lib/error-writer.js', 'analysis/lib/retry.js'],
+            desc: 'Classifies errors into typed categories: s3_access_denied, missing_file, throttling, bedrock_validation, timeout, network, unknown. Each type has a retryable flag. Retry module implements exponential backoff with jitter. Error writer persists structured error.json to session output directories.',
+            inputs: ['Raw Error objects from pipeline stages'],
+            outputs: ['Classified error objects (type, retryable, code, detail)', 'error.json files', 'Retry decisions'],
+            tags: ['Error Types', 'Backoff', 'Jitter', 'Persistence'],
+        },
+    },
+];
+
+const EDGES = [
+    { from: 'extension', to: 's3',         label: 'clicks + screenshots' },
+    { from: 's3',        to: 'watcher',    label: 'session trigger' },
+    { from: 'watcher',   to: 'pipeline',   label: 'runPipeline()' },
+    { from: 's3',        to: 'pipeline',   label: 'download recording' },
+    { from: 'pipeline',  to: 'correlator', label: 'transcript + analysis' },
+    { from: 'extension', to: 'correlator', label: 'click events' },
+    { from: 'correlator',to: 'email',      label: 'segments + summary' },
+    { from: 'correlator',to: 'presenter',  label: 'coverage matrix' },
+    { from: 's3',        to: 'presenter',  label: 'session data' },
+    { from: 'pipeline',  to: 'errors',     label: 'error classification' },
+    { from: 'errors',    to: 'pipeline',   label: 'retry decision' },
+    { from: 'watcher',   to: 'errors',     label: 'error upload' },
+];
+
+// ============================================================
+// CANVAS SETUP
+// ============================================================
+
+const canvas = document.getElementById('diagram');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+let animating = true;
+let hoveredNode = null;
+let frame = 0;
+
+function resize() {
+    dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    W = rect.width;
+    H = Math.max(560, Math.min(W * 0.55, 700));
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener('resize', () => { resize(); });
+resize();
+
+// ============================================================
+// GEOMETRY HELPERS
+// ============================================================
+
+function nodePos(n) {
+    return { x: n.x * W, y: n.y * H };
+}
+
+const NODE_RADIUS = 38;
+
+function hitTest(mx, my) {
+    for (const n of NODES) {
+        const p = nodePos(n);
+        const dx = mx - p.x, dy = my - p.y;
+        if (dx * dx + dy * dy < (NODE_RADIUS + 8) * (NODE_RADIUS + 8)) return n;
+    }
+    return null;
+}
+
+// ============================================================
+// PARTICLES
+// ============================================================
+
+const particles = [];
+const PARTICLE_SPEED = 0.004;
+
+function spawnParticles() {
+    for (const edge of EDGES) {
+        const count = 2;
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                edge,
+                t: Math.random(),
+                speed: PARTICLE_SPEED + Math.random() * 0.002,
+            });
+        }
+    }
+}
+spawnParticles();
+
+// ============================================================
+// DRAWING
+// ============================================================
+
+function drawEdge(from, to, highlight) {
+    const p1 = nodePos(from);
+    const p2 = nodePos(to);
+
+    // Offset endpoints to node border
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nx = dx / dist, ny = dy / dist;
+    const x1 = p1.x + nx * NODE_RADIUS;
+    const y1 = p1.y + ny * NODE_RADIUS;
+    const x2 = p2.x - nx * NODE_RADIUS;
+    const y2 = p2.y - ny * NODE_RADIUS;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = highlight ? 'rgba(215,25,32,.5)' : 'rgba(255,255,255,.08)';
+    ctx.lineWidth = highlight ? 2 : 1;
+    ctx.stroke();
+
+    // Arrowhead
+    const aLen = 10;
+    const ax = x2 - nx * aLen;
+    const ay = y2 - ny * aLen;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(ax - ny * 4, ay + nx * 4);
+    ctx.lineTo(ax + ny * 4, ay - nx * 4);
+    ctx.closePath();
+    ctx.fillStyle = highlight ? 'rgba(215,25,32,.6)' : 'rgba(255,255,255,.15)';
+    ctx.fill();
+}
+
+function drawEdgeLabel(edge) {
+    const fromNode = NODES.find(n => n.id === edge.from);
+    const toNode = NODES.find(n => n.id === edge.to);
+    const p1 = nodePos(fromNode);
+    const p2 = nodePos(toNode);
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+
+    ctx.font = '10px "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(edge.label, mx, my - 8);
+}
+
+function drawParticle(p) {
+    if (!animating) return;
+    const fromNode = NODES.find(n => n.id === p.edge.from);
+    const toNode = NODES.find(n => n.id === p.edge.to);
+    const p1 = nodePos(fromNode);
+    const p2 = nodePos(toNode);
+    const color = COLORS[fromNode.group] || '#fff';
+
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nx = dx / dist, ny = dy / dist;
+    const x1 = p1.x + nx * NODE_RADIUS;
+    const y1 = p1.y + ny * NODE_RADIUS;
+    const x2 = p2.x - nx * NODE_RADIUS;
+    const y2 = p2.y - ny * NODE_RADIUS;
+
+    const x = x1 + (x2 - x1) * p.t;
+    const y = y1 + (y2 - y1) * p.t;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    const grd = ctx.createRadialGradient(x, y, 2, x, y, 7);
+    grd.addColorStop(0, color + '60');
+    grd.addColorStop(1, color + '00');
+    ctx.fillStyle = grd;
+    ctx.fill();
+}
+
+function drawNode(n, hovered) {
+    const p = nodePos(n);
+    const color = COLORS[n.group];
+    const r = NODE_RADIUS;
+
+    // Outer glow on hover
+    if (hovered) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 12, 0, Math.PI * 2);
+        const glow = ctx.createRadialGradient(p.x, p.y, r, p.x, p.y, r + 12);
+        glow.addColorStop(0, color + '40');
+        glow.addColorStop(1, color + '00');
+        ctx.fillStyle = glow;
+        ctx.fill();
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#141820';
+    ctx.fill();
+    ctx.lineWidth = hovered ? 2.5 : 1.5;
+    ctx.strokeStyle = hovered ? color : color + '80';
+    ctx.stroke();
+
+    // Pulse ring (animated)
+    if (animating) {
+        const pulse = (Math.sin(frame * 0.03 + NODES.indexOf(n) * 1.2) + 1) / 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 2 + pulse * 4, 0, Math.PI * 2);
+        ctx.strokeStyle = color + '20';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // Icon
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(n.icon, p.x, p.y - 4);
+
+    // Label
+    ctx.font = 'bold 11px "Segoe UI", sans-serif';
+    ctx.fillStyle = hovered ? '#fff' : var_text_dim();
+    ctx.fillText(n.label, p.x, p.y + r + 14);
+}
+
+function var_text_dim() { return '#8A92A0'; }
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Edges
+    for (const edge of EDGES) {
+        const fromNode = NODES.find(n => n.id === edge.from);
+        const toNode = NODES.find(n => n.id === edge.to);
+        const hl = hoveredNode && (hoveredNode.id === edge.from || hoveredNode.id === edge.to);
+        drawEdge(fromNode, toNode, hl);
+    }
+
+    // Edge labels
+    for (const edge of EDGES) {
+        drawEdgeLabel(edge);
+    }
+
+    // Particles
+    for (const p of particles) {
+        drawParticle(p);
+        if (animating) {
+            p.t += p.speed;
+            if (p.t > 1) p.t -= 1;
+        }
+    }
+
+    // Nodes (draw last so they're on top)
+    for (const n of NODES) {
+        drawNode(n, hoveredNode === n);
+    }
+
+    frame++;
+    requestAnimationFrame(draw);
+}
+
+draw();
+
+// ============================================================
+// INTERACTION
+// ============================================================
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const hit = hitTest(mx, my);
+    hoveredNode = hit;
+    canvas.style.cursor = hit ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mouseleave', () => {
+    hoveredNode = null;
+});
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const hit = hitTest(mx, my);
+    if (hit) openDetail(hit);
+});
+
+// ============================================================
+// DETAIL PANEL
+// ============================================================
+
+const panel = document.getElementById('detailPanel');
+const overlay = document.getElementById('overlay');
+const panelContent = document.getElementById('panelContent');
+
+function openDetail(node) {
+    const d = node.detail;
+    const color = COLORS[node.group];
+    let html = '';
+    html += `<h2 style="color:${color}">${d.title}</h2>`;
+    html += `<div class="subtitle">${d.subtitle}</div>`;
+
+    html += '<div class="section-title">Files</div>';
+    html += '<ul class="file-list">';
+    for (const f of d.files) html += `<li>${f}</li>`;
+    html += '</ul>';
+
+    html += '<div class="section-title">Description</div>';
+    html += `<p class="desc">${d.desc}</p>`;
+
+    html += '<div class="section-title">Inputs</div>';
+    for (const inp of d.inputs) {
+        html += `<div class="io-block"><div class="label">IN</div>${inp}</div>`;
+    }
+
+    html += '<div class="section-title">Outputs</div>';
+    for (const out of d.outputs) {
+        html += `<div class="io-block"><div class="label">OUT</div>${out}</div>`;
+    }
+
+    html += '<div class="section-title">Tech</div>';
+    html += '<div>';
+    for (const t of d.tags) {
+        html += `<span class="tag" style="background:${color}22;color:${color}">${t}</span>`;
+    }
+    html += '</div>';
+
+    panelContent.innerHTML = html;
+    panel.classList.add('open');
+    overlay.classList.add('open');
+}
+
+function closeDetail() {
+    panel.classList.remove('open');
+    overlay.classList.remove('open');
+}
+
+document.getElementById('closePanel').addEventListener('click', closeDetail);
+overlay.addEventListener('click', closeDetail);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDetail();
+});
+
+// ============================================================
+// CONTROLS
+// ============================================================
+
+const btnPlay = document.getElementById('btnPlay');
+const btnPause = document.getElementById('btnPause');
+const btnReset = document.getElementById('btnReset');
+
+btnPlay.addEventListener('click', () => {
+    animating = true;
+    btnPlay.classList.add('active');
+    btnPause.classList.remove('active');
+});
+
+btnPause.addEventListener('click', () => {
+    animating = false;
+    btnPause.classList.add('active');
+    btnPlay.classList.remove('active');
+});
+
+btnReset.addEventListener('click', () => {
+    // Reset particle positions
+    for (const p of particles) p.t = Math.random();
+    animating = true;
+    btnPlay.classList.add('active');
+    btnPause.classList.remove('active');
+});
+
+</script>
+</body>
+</html>
