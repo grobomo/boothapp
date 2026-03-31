@@ -1,0 +1,14 @@
+{
+  "dispatcher_url": "http://localhost:3100",
+  "ratios": {
+    "workers_per_pending_task": 2,
+    "min_workers": 10,
+    "workers_per_monitor": 20,
+    "min_monitors": 1,
+    "dispatchers": 1
+  },
+  "thresholds": {
+    "drift_percent": 20,
+    "critical_percent": 50
+  }
+}
