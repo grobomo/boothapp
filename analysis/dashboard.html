@@ -146,6 +146,22 @@
   .crm-btn:hover { border-color: var(--accent); color: var(--accent); }
   .crm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* -- Sentiment Timeline -- */
+  .sent-bar { display: flex; height: 28px; border-radius: 14px; overflow: hidden; gap: 2px; margin-bottom: 14px; }
+  .sent-seg { flex: 1; position: relative; cursor: default; transition: opacity 0.15s; min-width: 20px; display: flex; align-items: center; justify-content: center; }
+  .sent-seg:hover { opacity: 0.8; }
+  .sent-seg-ts { font-size: 9px; color: rgba(0,0,0,0.6); font-weight: 700; }
+  .sent-legend { display: flex; gap: 18px; margin-bottom: 18px; flex-wrap: wrap; }
+  .sent-leg-item { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+  .sent-leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .sent-details { display: flex; flex-direction: column; gap: 6px; }
+  .sent-detail-row { display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .sent-detail-row:last-child { border-bottom: none; }
+  .sent-detail-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .sent-detail-ts { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); min-width: 50px; flex-shrink: 0; }
+  .sent-detail-text { color: var(--text); flex: 1; }
+  .sent-detail-quote { display: block; color: var(--text-muted); font-style: italic; margin-top: 2px; font-size: 0.8rem; }
+
   /* -- Empty state -- */
   .empty { color: var(--text-muted); font-style: italic; text-align: center; padding: 40px 0; font-size: 1.2rem; }
 </style>
@@ -213,7 +229,17 @@
     </div>
   </div>
 
-  <!-- Row 3: Follow-ups -->
+  <!-- Row 3: Sentiment Timeline -->
+  <div class="grid" style="margin-top:20px">
+    <div class="card full" id="sentimentCard" style="display:none">
+      <h2>Visitor Sentiment</h2>
+      <div id="sentimentBar"></div>
+      <div id="sentimentLegend"></div>
+      <div id="sentimentDetails"></div>
+    </div>
+  </div>
+
+  <!-- Row 4: Follow-ups -->
   <div class="grid" style="margin-top:20px">
     <div class="card full">
       <h2>Follow-Up Recommendations</h2>
@@ -221,7 +247,7 @@
     </div>
   </div>
 
-  <!-- Row 4: Export to CRM -->
+  <!-- Row 5: Export to CRM -->
   <div class="grid" style="margin-top:20px">
     <div class="card full">
       <h2>Export to CRM</h2>
@@ -360,11 +386,62 @@ function render(data) {
     fu.appendChild(card);
   });
 
+  // Sentiment timeline
+  renderSentiment(data.sentiment_timeline || []);
+
   // Enable CRM export buttons
   document.getElementById('btnVcard').disabled = false;
   document.getElementById('btnCsv').disabled = false;
   document.getElementById('btnSalesforce').disabled = false;
   window._crmData = data;
+}
+
+var SENT_COLORS = { positive: '#3fb950', neutral: '#58a6ff', hesitation: '#d29922', skepticism: '#f85149' };
+var SENT_LABELS = { positive: 'Positive', neutral: 'Neutral', hesitation: 'Hesitation', skepticism: 'Skepticism' };
+
+function renderSentiment(items) {
+  var card = document.getElementById('sentimentCard');
+  var barEl = document.getElementById('sentimentBar');
+  var legendEl = document.getElementById('sentimentLegend');
+  var detailsEl = document.getElementById('sentimentDetails');
+  if (!items || items.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  // Bar
+  var barHtml = '<div class="sent-bar">';
+  items.forEach(function(s) {
+    var sent = (s.sentiment || 'neutral').toLowerCase();
+    var color = SENT_COLORS[sent] || SENT_COLORS.neutral;
+    var ts = esc(s.timestamp_rel || '');
+    var tip = ts + ' -- ' + esc(s.indicator || '');
+    if (s.speaker_text) tip += ': "' + esc(s.speaker_text) + '"';
+    barHtml += '<div class="sent-seg" style="background:' + color + '" title="' + tip + '"><span class="sent-seg-ts">' + ts + '</span></div>';
+  });
+  barHtml += '</div>';
+  barEl.innerHTML = barHtml;
+
+  // Legend
+  var legHtml = '<div class="sent-legend">';
+  ['positive', 'neutral', 'hesitation', 'skepticism'].forEach(function(key) {
+    legHtml += '<span class="sent-leg-item"><span class="sent-leg-dot" style="background:' + SENT_COLORS[key] + '"></span>' + SENT_LABELS[key] + '</span>';
+  });
+  legHtml += '</div>';
+  legendEl.innerHTML = legHtml;
+
+  // Detail rows
+  var detHtml = '<div class="sent-details">';
+  items.forEach(function(s) {
+    var sent = (s.sentiment || 'neutral').toLowerCase();
+    var color = SENT_COLORS[sent] || SENT_COLORS.neutral;
+    detHtml += '<div class="sent-detail-row">';
+    detHtml += '<span class="sent-detail-dot" style="background:' + color + '"></span>';
+    detHtml += '<span class="sent-detail-ts">' + esc(s.timestamp_rel || '') + '</span>';
+    detHtml += '<span class="sent-detail-text">' + esc(s.indicator || '');
+    if (s.speaker_text) detHtml += '<span class="sent-detail-quote">"' + esc(s.speaker_text) + '"</span>';
+    detHtml += '</span></div>';
+  });
+  detHtml += '</div>';
+  detailsEl.innerHTML = detHtml;
 }
 
 function generateVcard(data) {
@@ -445,6 +522,7 @@ function downloadCrm(format) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
+}
 
 function loadSession() {
   var url = buildUrl();
