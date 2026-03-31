@@ -318,6 +318,76 @@
   .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   .messages::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
+  /* -- Active session banner -- */
+  .active-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(31, 111, 235, 0.12);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .active-banner.visible { display: flex; }
+
+  .active-banner .banner-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .active-banner .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); }
+  }
+
+  .active-banner .banner-id { color: var(--accent); font-weight: 600; }
+  .active-banner .banner-name { color: var(--text2); }
+  .active-banner .banner-timer { color: var(--text2); font-family: monospace; font-size: 0.8rem; }
+
+  .active-banner .end-btn {
+    background: rgba(248, 81, 73, 0.15);
+    border: 1px solid rgba(248, 81, 73, 0.3);
+    color: var(--red);
+    padding: 0.3rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .active-banner .end-btn:hover {
+    background: rgba(248, 81, 73, 0.25);
+  }
+
+  /* -- Quick action groups -- */
+  .quick-group-label {
+    font-size: 0.7rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 0.25rem;
+  }
+
+  .quick-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 0.25rem;
+  }
+
   /* -- Empty state -- */
   .empty-state {
     text-align: center;
@@ -344,21 +414,37 @@
 <div class="chat-container">
   <div class="chat-header">
     <h1>BoothApp Chat</h1>
-    <p>Query sessions, search visitors, tag leads -- all from one place</p>
+    <p>Start sessions, tag leads, add notes -- all from one place</p>
+  </div>
+
+  <div class="active-banner" id="activeBanner">
+    <div class="banner-left">
+      <div class="pulse"></div>
+      <span class="banner-id" id="bannerId">--</span>
+      <span class="banner-name" id="bannerName">--</span>
+      <span class="banner-timer" id="bannerTimer">00:00</span>
+    </div>
+    <button class="end-btn" id="bannerEndBtn">End Session</button>
   </div>
 
   <div class="messages" id="messages">
     <div class="empty-state" id="emptyState">
-      <h2>What can I help with?</h2>
-      <p>Ask about sessions, search for visitors, check stats, or manage tags. Type "help" for all commands.</p>
+      <h2>Ready for visitors</h2>
+      <p>Say "start session for [name]" to begin a demo, or "help" for all commands.</p>
     </div>
   </div>
 
   <div class="quick-actions" id="quickActions">
-    <button class="quick-btn" data-msg="show sessions">Sessions</button>
-    <button class="quick-btn" data-msg="stats">Stats</button>
+    <span class="quick-group-label">Session</span>
+    <button class="quick-btn" data-msg="show sessions">List</button>
     <button class="quick-btn" data-msg="last 5">Recent</button>
-    <button class="quick-btn" data-msg="status">Status</button>
+    <button class="quick-btn" data-msg="active">Active</button>
+    <div class="quick-divider"></div>
+    <span class="quick-group-label">Tag</span>
+    <button class="quick-btn" data-msg="hot lead">Hot Lead</button>
+    <button class="quick-btn" data-msg="follow up">Follow Up</button>
+    <div class="quick-divider"></div>
+    <button class="quick-btn" data-msg="stats">Stats</button>
     <button class="quick-btn" data-msg="help">Help</button>
   </div>
 
@@ -385,7 +471,15 @@
   var typingEl = document.getElementById('typing');
   var emptyState = document.getElementById('emptyState');
   var quickActions = document.getElementById('quickActions');
+  var activeBanner = document.getElementById('activeBanner');
+  var bannerId = document.getElementById('bannerId');
+  var bannerName = document.getElementById('bannerName');
+  var bannerTimer = document.getElementById('bannerTimer');
+  var bannerEndBtn = document.getElementById('bannerEndBtn');
   var sending = false;
+  var activeSession = null;
+  var sessionStartTime = null;
+  var timerInterval = null;
 
   // --- Markdown-lite renderer ---
   function renderMarkdown(text) {
@@ -459,6 +553,49 @@
   function showTyping() { typingEl.classList.add('active'); scrollToBottom(); }
   function hideTyping() { typingEl.classList.remove('active'); }
 
+  // --- Active session banner ---
+  function updateBanner(sessionId, visitorName, startedAt) {
+    if (sessionId) {
+      activeSession = sessionId;
+      sessionStartTime = startedAt ? new Date(startedAt).getTime() : Date.now();
+      bannerId.textContent = sessionId;
+      bannerName.textContent = visitorName || '';
+      activeBanner.classList.add('visible');
+      inputEl.placeholder = 'Add notes, tag lead, or "end" when done...';
+      startTimer();
+    } else {
+      activeSession = null;
+      sessionStartTime = null;
+      activeBanner.classList.remove('visible');
+      inputEl.placeholder = 'Say "start session for [name]" to begin...';
+      stopTimer();
+    }
+  }
+
+  function startTimer() {
+    stopTimer();
+    updateTimerDisplay();
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  function updateTimerDisplay() {
+    if (!sessionStartTime) return;
+    var elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+    var m = Math.floor(elapsed / 60);
+    var s = elapsed % 60;
+    bannerTimer.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  // End session from banner button
+  bannerEndBtn.addEventListener('click', function() {
+    inputEl.value = 'end session';
+    sendMessage();
+  });
+
   // --- Send message ---
   async function sendMessage() {
     var text = inputEl.value.trim();
@@ -489,6 +626,15 @@
 
       var data = await resp.json();
       addMessage('system', data.text, { duration_ms: data.duration_ms });
+
+      // Update active session banner based on response
+      if (data.data && data.data.type === 'session_started') {
+        updateBanner(data.data.sessionId, data.data.metadata.visitor_name, data.data.metadata.started_at);
+      } else if (data.data && data.data.type === 'session_ended') {
+        updateBanner(null);
+      } else if (data.data && data.data.type === 'session_switched') {
+        updateBanner(data.data.sessionId, null, null);
+      }
 
     } catch (e) {
       hideTyping();
@@ -529,7 +675,7 @@
     }
   });
 
-  // Load history on page load
+  // Load history and restore active session on page load
   fetch('/api/chat/history?limit=20')
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -539,6 +685,10 @@
           addMessage('user', m.user_message);
           addMessage('system', m.response_text, { duration_ms: m.duration_ms });
         });
+      }
+      // Restore active session banner
+      if (data.active_session) {
+        updateBanner(data.active_session, null, null);
       }
     })
     .catch(function() { /* no history, that's fine */ });
