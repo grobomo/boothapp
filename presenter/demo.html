@@ -487,6 +487,181 @@
             .logo-text { font-size: 36px; }
             .tagline { font-size: 14px; letter-spacing: 3px; }
         }
+
+        /* ============================================================
+           SESSION ANALYSIS OVERLAY
+           ============================================================ */
+        .analysis-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(0,0,0,.7);
+            backdrop-filter: blur(8px);
+            overflow-y: auto;
+            animation: fadeIn .25s ease;
+        }
+        .analysis-overlay.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .analysis-panel {
+            max-width: 800px;
+            margin: 40px auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .analysis-header {
+            background: linear-gradient(135deg, #1A1A2E 0%, #12121F 100%);
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .analysis-header-brand { display: flex; align-items: center; gap: 14px; }
+        .analysis-header-logo {
+            width: 40px; height: 40px;
+            background: var(--red);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 16px; color: #fff;
+        }
+        .analysis-header-title { font-size: 18px; font-weight: 600; }
+        .analysis-header-title span { color: var(--red); }
+        .analysis-header-sub { font-size: 13px; opacity: .8; }
+        .analysis-header-meta { text-align: right; font-size: 13px; opacity: .85; }
+        .analysis-header-meta .visitor-name { font-size: 16px; font-weight: 600; opacity: 1; }
+        .analysis-header-meta .report-id { font-family: Consolas, monospace; font-size: 11px; opacity: .6; }
+
+        .analysis-body { padding: 24px 32px; }
+        .analysis-section-title {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--text-dim);
+            margin: 20px 0 10px; padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        .analysis-section-title:first-child { margin-top: 0; }
+
+        .analysis-kv {
+            display: grid; grid-template-columns: 130px 1fr 130px 1fr;
+            gap: 6px 16px; font-size: 13px;
+        }
+        .analysis-kv .kv-label { color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+        .analysis-kv .kv-value { color: var(--text); }
+
+        .analysis-summary {
+            font-size: 13px; line-height: 1.6; color: var(--text);
+            background: var(--surface2); border-radius: 10px; padding: 14px 18px;
+        }
+        .analysis-interest {
+            display: flex; align-items: center; gap: 12px;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px;
+        }
+        .analysis-interest:last-child { border-bottom: none; }
+        .analysis-interest-name { font-weight: 600; min-width: 160px; }
+        .analysis-interest-badge {
+            padding: 2px 10px; border-radius: 12px; font-size: 10px;
+            font-weight: 700; letter-spacing: .8px; text-transform: uppercase; flex-shrink: 0;
+        }
+        .analysis-interest-badge--high   { background: #2D936C; color: #fff; }
+        .analysis-interest-badge--medium { background: #E9C46A; color: #1A1A2E; }
+        .analysis-interest-badge--low    { background: #E63946; color: #fff; }
+        .analysis-interest-detail { color: var(--text-dim); font-size: 12px; flex: 1; }
+
+        .analysis-action {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px;
+        }
+        .analysis-action:last-child { border-bottom: none; }
+        .analysis-action-num {
+            width: 20px; height: 20px; background: var(--red); color: #fff;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+        }
+        .analysis-action-text { flex: 1; }
+        .analysis-action-priority { flex-shrink: 0; }
+
+        .analysis-score {
+            display: flex; align-items: center; justify-content: center; gap: 24px;
+            padding: 16px; background: var(--surface2); border-radius: 10px;
+        }
+        .analysis-score-ring { position: relative; width: 90px; height: 90px; }
+        .analysis-score-ring svg { width: 90px; height: 90px; }
+        .analysis-score-value {
+            position: absolute; inset: 0; display: flex; align-items: center;
+            justify-content: center; font-size: 26px; font-weight: 800;
+        }
+        .analysis-score-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .analysis-score-breakdown { font-size: 12px; line-height: 1.8; }
+        .analysis-score-breakdown span { color: var(--text-dim); }
+
+        .analysis-toolbar {
+            display: flex; gap: 12px; padding: 16px 32px;
+            border-top: 1px solid var(--border); justify-content: flex-end;
+        }
+        .btn-export-pdf {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 24px; background: var(--red); color: #fff;
+            border: none; border-radius: 10px; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: background .2s, transform .15s;
+        }
+        .btn-export-pdf:hover { background: var(--red-dark); transform: translateY(-1px); }
+        .btn-export-pdf svg { width: 16px; height: 16px; fill: #fff; }
+        .btn-close-analysis {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 24px; background: var(--surface2); color: var(--text);
+            border: 1px solid var(--border); border-radius: 10px; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: background .2s;
+        }
+        .btn-close-analysis:hover { background: var(--border); }
+
+        .feed-item { cursor: pointer; transition: background .15s; }
+        .feed-item:hover { background: rgba(255,255,255,.03); }
+
+        /* ============================================================
+           PRINT STYLES
+           ============================================================ */
+        @media print {
+            body { background: #fff !important; color: #2D3436 !important; }
+            #particles, .bg-grid, .bg-glow, .container { display: none !important; }
+
+            .analysis-overlay {
+                display: block !important; position: static !important;
+                background: none !important; backdrop-filter: none !important;
+                overflow: visible !important;
+            }
+            .analysis-panel {
+                margin: 0 !important; border: none !important; border-radius: 0 !important;
+                box-shadow: none !important; max-width: 100% !important; background: #fff !important;
+            }
+            .analysis-header {
+                background: #1A1A2E !important; padding: 16px 20px !important;
+                -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            }
+            .analysis-body { padding: 12px 20px !important; }
+            .analysis-section-title { margin: 12px 0 6px !important; color: #636E72 !important; border-color: #DFE6E9 !important; }
+            .analysis-kv { font-size: 11px !important; }
+            .analysis-kv .kv-label { color: #636E72 !important; }
+            .analysis-kv .kv-value { color: #2D3436 !important; }
+            .analysis-summary { background: #F8F9FA !important; color: #2D3436 !important; font-size: 11px !important; padding: 10px 14px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .analysis-interest { font-size: 11px !important; padding: 5px 0 !important; border-color: #DFE6E9 !important; }
+            .analysis-interest-name { color: #2D3436 !important; min-width: 140px !important; }
+            .analysis-interest-detail { color: #636E72 !important; }
+            .analysis-interest-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .analysis-action { font-size: 11px !important; padding: 5px 0 !important; border-color: #DFE6E9 !important; }
+            .analysis-action-num { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .analysis-action-text { color: #2D3436 !important; }
+            .analysis-score { background: #F8F9FA !important; padding: 12px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .analysis-score-value { color: #2D3436 !important; }
+            .analysis-score-label { color: #636E72 !important; }
+            .analysis-score-breakdown { color: #2D3436 !important; font-size: 11px !important; }
+            .analysis-score-breakdown span { color: #636E72 !important; }
+            .analysis-score-ring svg circle { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .analysis-toolbar { display: none !important; }
+            @page { size: A4; margin: 10mm; }
+            .analysis-panel { page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
@@ -619,6 +794,49 @@
         <span id="clock"></span>
     </div>
 
+</div>
+
+<!-- ============ SESSION ANALYSIS OVERLAY ============ -->
+<div class="analysis-overlay" id="analysisOverlay">
+    <div class="analysis-panel">
+        <div class="analysis-header">
+            <div class="analysis-header-brand">
+                <div class="analysis-header-logo">V1</div>
+                <div>
+                    <div class="analysis-header-title">Trend Micro <span>Vision One</span></div>
+                    <div class="analysis-header-sub">Session Analysis Summary</div>
+                </div>
+            </div>
+            <div class="analysis-header-meta">
+                <div class="visitor-name" id="analysisVisitorName"></div>
+                <div id="analysisDate"></div>
+                <div class="report-id" id="analysisReportId"></div>
+            </div>
+        </div>
+        <div class="analysis-body">
+            <div class="analysis-section-title">Visitor Information</div>
+            <div class="analysis-kv" id="analysisVisitorInfo"></div>
+
+            <div class="analysis-section-title">Executive Summary</div>
+            <div class="analysis-summary" id="analysisSummary"></div>
+
+            <div class="analysis-section-title">Top Key Interests</div>
+            <div id="analysisInterests"></div>
+
+            <div class="analysis-section-title">Follow-Up Actions</div>
+            <div id="analysisActions"></div>
+
+            <div class="analysis-section-title">Session Score</div>
+            <div class="analysis-score" id="analysisScore"></div>
+        </div>
+        <div class="analysis-toolbar">
+            <button class="btn-close-analysis" onclick="closeAnalysis()">Close</button>
+            <button class="btn-export-pdf" onclick="exportPDF()">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                Export PDF
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -864,6 +1082,9 @@
                     '<div class="feed-text">' + ev.text + '</div>' +
                     '<div class="feed-time">' + timeAgo(ev.ts) + '</div>' +
                 '</div>';
+            li.addEventListener('click', (function (e) {
+                return function () { showSessionAnalysis(e); };
+            })(ev));
             list.appendChild(li);
         });
     }
@@ -942,6 +1163,182 @@
     renderClock();
     setInterval(renderClock, 1000);
     setInterval(tickCountdown, 1000);
+
+    // ------------------------------------------------------------------
+    // SESSION ANALYSIS (mock data + overlay)
+    // ------------------------------------------------------------------
+    var TITLES = [
+        'VP of Information Security', 'CISO', 'Director of IT',
+        'Security Architect', 'Head of Cloud Security', 'IT Manager',
+        'SOC Manager', 'VP of Engineering', 'CTO', 'Security Analyst Lead'
+    ];
+    var INDUSTRIES = [
+        'Financial Services', 'Healthcare', 'Manufacturing', 'Technology',
+        'Energy', 'Retail', 'Government', 'Education'
+    ];
+    var SIZES = [
+        '500 - 1,000 employees', '1,000 - 5,000 employees',
+        '5,000 - 10,000 employees', '10,000+ employees'
+    ];
+    var INTEREST_TOPICS = [
+        { topic: 'XDR / SOC Modernization', detail: 'Consolidating point products into unified platform' },
+        { topic: 'Cloud Workload Security', detail: 'Evaluating runtime protection for containerized workloads' },
+        { topic: 'Zero Trust Network Access', detail: 'Evaluating ZTNA for remote workforce security' },
+        { topic: 'Email Threat Protection', detail: 'AI-powered BEC and phishing detection' },
+        { topic: 'Managed Detection & Response', detail: 'Augmenting internal SOC with managed services' },
+        { topic: 'Endpoint Protection', detail: 'Next-gen endpoint with behavioral analysis' },
+        { topic: 'Attack Surface Management', detail: 'Visibility into external-facing assets and risks' }
+    ];
+    var ACTIONS = [
+        'Schedule technical deep-dive with security team',
+        'Send product datasheet and pricing comparison',
+        'Connect with SE for proof-of-concept discussion',
+        'Share relevant case study and ROI calculator',
+        'Follow up in 2 weeks with consolidated proposal',
+        'Add to upcoming product webinar invite list',
+        'Arrange executive briefing with regional VP'
+    ];
+    var SUMMARIES = [
+        'Highly engaged visitor with a clear mandate to consolidate security tooling. Primary interest in platform-level XDR capabilities with strong secondary interest in cloud workload protection. Currently evaluating multiple vendors -- timing is favorable for a proof-of-concept engagement.',
+        'Security leader actively modernizing their SOC operations. Expressed strong interest in AI-driven threat detection and automated response workflows. Budget approved for Q2 implementation. Key decision-maker with authority to greenlight POC.',
+        'Visitor focused on cloud-native security for multi-cloud environment. Running production Kubernetes workloads and seeking runtime protection. Also interested in ZTNA to replace legacy VPN infrastructure. Evaluation timeline is 60-90 days.'
+    ];
+    var CONF_LEVELS = ['high', 'high', 'medium', 'medium', 'low'];
+    var PRIORITY_LEVELS = ['high', 'high', 'medium', 'medium', 'low'];
+
+    function generateAnalysisData(name, company) {
+        var email = name.split(' ')[0].toLowerCase() + '@' + company.toLowerCase().replace(/[^a-z]/g, '') + '.example.com';
+        var score = 60 + Math.floor(Math.random() * 35);
+        var interests = [];
+        var shuffled = INTEREST_TOPICS.slice().sort(function () { return Math.random() - 0.5; });
+        for (var i = 0; i < 3; i++) {
+            interests.push({
+                topic: shuffled[i].topic,
+                confidence: CONF_LEVELS[i],
+                detail: shuffled[i].detail
+            });
+        }
+        var actions = [];
+        var shuffledActions = ACTIONS.slice().sort(function () { return Math.random() - 0.5; });
+        for (var i = 0; i < 3; i++) {
+            actions.push({ action: shuffledActions[i], priority: PRIORITY_LEVELS[i] });
+        }
+        return {
+            visitor: {
+                name: name,
+                title: pick(TITLES),
+                company: company,
+                email: email,
+                industry: pick(INDUSTRIES),
+                company_size: pick(SIZES),
+                visit_duration: (15 + Math.floor(Math.random() * 30)) + ' minutes'
+            },
+            summary: pick(SUMMARIES),
+            interests: interests,
+            actions: actions,
+            score: score,
+            report_id: 'RPT-2026-' + String(Math.floor(Math.random() * 9999)).padStart(4, '0'),
+            generated_at: new Date().toLocaleString()
+        };
+    }
+
+    function showAnalysis(name, company) {
+        var data = generateAnalysisData(name, company);
+        document.getElementById('analysisVisitorName').textContent = data.visitor.name;
+        document.getElementById('analysisDate').textContent = data.generated_at;
+        document.getElementById('analysisReportId').textContent = data.report_id;
+
+        var infoHtml =
+            '<div class="kv-label">Name</div><div class="kv-value">' + data.visitor.name + '</div>' +
+            '<div class="kv-label">Title</div><div class="kv-value">' + data.visitor.title + '</div>' +
+            '<div class="kv-label">Company</div><div class="kv-value">' + data.visitor.company + '</div>' +
+            '<div class="kv-label">Email</div><div class="kv-value">' + data.visitor.email + '</div>' +
+            '<div class="kv-label">Industry</div><div class="kv-value">' + data.visitor.industry + '</div>' +
+            '<div class="kv-label">Company Size</div><div class="kv-value">' + data.visitor.company_size + '</div>' +
+            '<div class="kv-label">Duration</div><div class="kv-value">' + data.visitor.visit_duration + '</div>';
+        document.getElementById('analysisVisitorInfo').innerHTML = infoHtml;
+
+        document.getElementById('analysisSummary').textContent = data.summary;
+
+        var interestsHtml = '';
+        data.interests.forEach(function (item) {
+            interestsHtml +=
+                '<div class="analysis-interest">' +
+                    '<span class="analysis-interest-name">' + item.topic + '</span>' +
+                    '<span class="analysis-interest-badge analysis-interest-badge--' + item.confidence + '">' + item.confidence + '</span>' +
+                    '<span class="analysis-interest-detail">' + item.detail + '</span>' +
+                '</div>';
+        });
+        document.getElementById('analysisInterests').innerHTML = interestsHtml;
+
+        var actionsHtml = '';
+        data.actions.forEach(function (item, i) {
+            var badgeClass = item.priority === 'high' ? 'analysis-interest-badge--high' :
+                             item.priority === 'medium' ? 'analysis-interest-badge--medium' : 'analysis-interest-badge--low';
+            actionsHtml +=
+                '<div class="analysis-action">' +
+                    '<div class="analysis-action-num">' + (i + 1) + '</div>' +
+                    '<div class="analysis-action-text">' + item.action + '</div>' +
+                    '<div class="analysis-action-priority"><span class="analysis-interest-badge ' + badgeClass + '">' + item.priority + '</span></div>' +
+                '</div>';
+        });
+        document.getElementById('analysisActions').innerHTML = actionsHtml;
+
+        // Score ring
+        var scoreCirc = 2 * Math.PI * 36;
+        var scoreDash = (data.score / 100) * scoreCirc;
+        var scoreColor = data.score >= 80 ? '#2D936C' : data.score >= 60 ? '#E9C46A' : '#E63946';
+        document.getElementById('analysisScore').innerHTML =
+            '<div class="analysis-score-ring">' +
+                '<svg viewBox="0 0 90 90">' +
+                    '<circle cx="45" cy="45" r="36" fill="none" stroke="' + (document.body.classList.contains('print') ? '#DFE6E9' : 'var(--surface)') + '" stroke-width="8"/>' +
+                    '<circle cx="45" cy="45" r="36" fill="none" stroke="' + scoreColor + '" stroke-width="8" ' +
+                        'stroke-dasharray="' + scoreDash + ' ' + (scoreCirc - scoreDash) + '" stroke-linecap="round" transform="rotate(-90 45 45)"/>' +
+                '</svg>' +
+                '<div class="analysis-score-value" style="color:' + scoreColor + '">' + data.score + '</div>' +
+            '</div>' +
+            '<div>' +
+                '<div class="analysis-score-label">Session Score</div>' +
+                '<div class="analysis-score-breakdown">' +
+                    '<span>Engagement:</span> ' + (data.score >= 70 ? 'High' : 'Medium') + '<br>' +
+                    '<span>Interest Level:</span> ' + (data.score >= 75 ? 'Strong' : 'Moderate') + '<br>' +
+                    '<span>Follow-up Priority:</span> ' + (data.score >= 80 ? 'Immediate' : data.score >= 60 ? 'This Week' : 'Low') +
+                '</div>' +
+            '</div>';
+
+        document.getElementById('analysisOverlay').classList.add('active');
+    }
+
+    window.closeAnalysis = function () {
+        document.getElementById('analysisOverlay').classList.remove('active');
+    };
+
+    window.exportPDF = function () {
+        window.print();
+    };
+
+    // Close overlay on background click
+    document.getElementById('analysisOverlay').addEventListener('click', function (e) {
+        if (e.target === this) closeAnalysis();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAnalysis();
+    });
+
+    // Attach click handler to feed items -- extract name/company from event text
+    window.showSessionAnalysis = function (eventObj) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = eventObj.text;
+        var strong = tmp.querySelector('strong');
+        var name = strong ? strong.textContent : pick(NAMES);
+        // Try to extract company from text
+        var textContent = tmp.textContent;
+        var fromMatch = textContent.match(/from\s+(.+?)$/);
+        var company = fromMatch ? fromMatch[1] : pick(COMPANIES);
+        showAnalysis(name, company);
+    };
 
 })();
 </script>
