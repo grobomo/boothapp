@@ -1,3 +1,6 @@
 node_modules/
 sessions/
 .env
+*.log
+.DS_Store
+continuous-claude.log
