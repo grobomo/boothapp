@@ -142,7 +142,7 @@ function buildSegments(allEvents, durationSeconds) {
  * Output:
  * {
  *   session_id, generated_at, started_at, duration_seconds,
- *   event_count, click_count, speech_count, topics,
+ *   event_count, click_count, speech_count, skipped_clicks, skipped_speech, topics,
  *   segments: [{ segment_index, start_seconds, end_seconds,
  *     click_count, speech_count, engagement_score, topics[], screenshot_refs[] }],
  *   timeline: [
@@ -173,8 +173,19 @@ function correlate(metadata, clicks, transcript, screenshots) {
     throw new Error('metadata.started_at is not a valid date: ' + startedAt);
   }
 
-  const hasClicks = clicks && Array.isArray(clicks.events) && clicks.events.length > 0;
-  const hasTranscript = transcript && Array.isArray(transcript.entries) && transcript.entries.length > 0;
+  // Safely coerce events/entries to arrays (handles non-array truthy values like strings/objects)
+  const rawClickEvents = (clicks && Array.isArray(clicks.events)) ? clicks.events : [];
+  const rawTranscriptEntries = (transcript && Array.isArray(transcript.entries)) ? transcript.entries : [];
+
+  if (clicks && clicks.events && !Array.isArray(clicks.events)) {
+    console.error('[correlate] clicks.events is not an array (got ' + typeof clicks.events + '), treating as empty');
+  }
+  if (transcript && transcript.entries && !Array.isArray(transcript.entries)) {
+    console.error('[correlate] transcript.entries is not an array (got ' + typeof transcript.entries + '), treating as empty');
+  }
+
+  const hasClicks = rawClickEvents.length > 0;
+  const hasTranscript = rawTranscriptEntries.length > 0;
 
   if (!hasClicks && !hasTranscript) {
     const now = new Date().toISOString();
@@ -187,6 +198,8 @@ function correlate(metadata, clicks, transcript, screenshots) {
       event_count: 0,
       click_count: 0,
       speech_count: 0,
+      skipped_clicks: 0,
+      skipped_speech: 0,
       topics: [],
       segments: [],
       timeline: [],
@@ -194,9 +207,11 @@ function correlate(metadata, clicks, transcript, screenshots) {
   }
 
   // --- Build click event objects (skip entries with missing/invalid timestamps) ---
-  const clickEvents = ((clicks && clicks.events) || []).reduce((acc, ev) => {
+  var skippedClicks = 0;
+  const clickEvents = rawClickEvents.reduce((acc, ev) => {
     const tsMs = ev.timestamp ? new Date(ev.timestamp).getTime() : NaN;
     if (isNaN(tsMs)) {
+      skippedClicks++;
       console.error('[correlate] skipping click event with missing/invalid timestamp at index ' + ev.index);
       return acc;
     }
@@ -220,10 +235,16 @@ function correlate(metadata, clicks, transcript, screenshots) {
   // Sort clicks by time (defensive — clicks.json should already be ordered)
   clickEvents.sort((a, b) => a._tsMs - b._tsMs);
 
+  if (skippedClicks > 0 && clickEvents.length === 0 && rawClickEvents.length > 0) {
+    console.error('[correlate] WARNING: all ' + rawClickEvents.length + ' click events had invalid timestamps — 0 clicks in output');
+  }
+
   // --- Build speech event objects (skip entries with missing/invalid timestamps) ---
-  const speechEvents = ((transcript && transcript.entries) || []).reduce((acc, entry) => {
+  var skippedSpeech = 0;
+  const speechEvents = rawTranscriptEntries.reduce((acc, entry) => {
     const offsetSeconds = parseOffset(entry.timestamp);
     if (isNaN(offsetSeconds)) {
+      skippedSpeech++;
       console.error('[correlate] skipping transcript entry with missing/invalid timestamp: ' + JSON.stringify(entry.text || '').slice(0, 80));
       return acc;
     }
@@ -242,6 +263,10 @@ function correlate(metadata, clicks, transcript, screenshots) {
     });
     return acc;
   }, []);
+
+  if (skippedSpeech > 0 && speechEvents.length === 0 && rawTranscriptEntries.length > 0) {
+    console.error('[correlate] WARNING: all ' + rawTranscriptEntries.length + ' transcript entries had invalid timestamps — 0 speech in output');
+  }
 
   // Sort speech by time (defensive)
   speechEvents.sort((a, b) => a._tsMs - b._tsMs);
@@ -333,6 +358,8 @@ function correlate(metadata, clicks, transcript, screenshots) {
     event_count: timeline.length,
     click_count: clickEvents.length,
     speech_count: speechEvents.length,
+    skipped_clicks: skippedClicks,
+    skipped_speech: skippedSpeech,
     topics,
     segments,
     timeline,
@@ -350,6 +377,8 @@ function correlate(metadata, clicks, transcript, screenshots) {
       event_count: 0,
       click_count: 0,
       speech_count: 0,
+      skipped_clicks: 0,
+      skipped_speech: 0,
       topics: [],
       segments: [],
       timeline: [],
@@ -557,6 +586,44 @@ if (require.main === module) {
   var r15 = correlate({ session_id: 'bad-date', started_at: 'not-a-date' }, clicks, transcript);
   assert(r15.error, 'has error field');
   assert(r15.session_id === 'bad-date', 'session_id preserved');
+
+  // Test 16: clicks.events is a non-array truthy value (string)
+  console.log('Test 16: clicks.events is a string (non-array truthy)');
+  var r16 = correlate(metadata, { events: 'not-an-array' }, transcript);
+  assert(!r16.error, 'no error field');
+  assert(r16.click_count === 0, '0 clicks from string events');
+  assert(r16.speech_count === 3, 'speech still processed');
+
+  // Test 17: transcript.entries is a non-array truthy value (object)
+  console.log('Test 17: transcript.entries is an object (non-array truthy)');
+  var r17 = correlate(metadata, clicks, { entries: { bad: true }, duration_seconds: 10 });
+  assert(!r17.error, 'no error field');
+  assert(r17.click_count === 2, 'clicks still processed');
+  assert(r17.speech_count === 0, '0 speech from object entries');
+
+  // Test 18: skipped_clicks and skipped_speech counters
+  console.log('Test 18: skipped_clicks and skipped_speech counters');
+  var r18 = correlate(metadata, badClicks, badTranscript);
+  assert(r18.skipped_clicks === 2, 'skipped_clicks = 2 (indices 2 and 3)');
+  assert(r18.skipped_speech === 2, 'skipped_speech = 2 (missing + empty timestamp)');
+
+  // Test 19: skipped counters are 0 when all data is valid
+  console.log('Test 19: skipped counters are 0 for valid data');
+  var r19 = correlate(metadata, clicks, transcript);
+  assert(r19.skipped_clicks === 0, 'skipped_clicks = 0');
+  assert(r19.skipped_speech === 0, 'skipped_speech = 0');
+
+  // Test 20: empty result includes skipped counters
+  console.log('Test 20: empty result includes skipped counters');
+  var r20 = correlate(metadata, null, null);
+  assert(r20.skipped_clicks === 0, 'skipped_clicks = 0 on empty');
+  assert(r20.skipped_speech === 0, 'skipped_speech = 0 on empty');
+
+  // Test 21: clicks.events is a number (non-array truthy)
+  console.log('Test 21: clicks.events is a number');
+  var r21 = correlate(metadata, { events: 42 }, transcript);
+  assert(!r21.error, 'no error field');
+  assert(r21.click_count === 0, '0 clicks from numeric events');
 
   console.log('');
   if (failures === 0) {

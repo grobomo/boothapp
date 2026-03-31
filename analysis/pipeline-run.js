@@ -150,12 +150,16 @@ async function run() {
     checkTimeout('correlate');
     log('Correlating timestamps...');
     timeline = correlate(metadata, clicks, transcript, screenshots);
-    log(`Timeline built: ${timeline.event_count} events (${timeline.click_count} clicks, ${timeline.speech_count} speech), ${timeline.topics.length} topics, ${timeline.segments.length} segments`);
+    var skippedNote = '';
+    if (timeline.skipped_clicks > 0 || timeline.skipped_speech > 0) {
+      skippedNote = `, skipped ${timeline.skipped_clicks} clicks + ${timeline.skipped_speech} speech`;
+    }
+    log(`Timeline built: ${timeline.event_count} events (${timeline.click_count} clicks, ${timeline.speech_count} speech), ${timeline.topics.length} topics, ${timeline.segments.length} segments${skippedNote}`);
   } catch (err) {
     errors.push({ step: 'correlate', error: err.message, timestamp: new Date().toISOString() });
     log(`ERROR: Correlation failed — ${err.message}`);
     // Continue with empty timeline so downstream steps can still produce a fallback
-    timeline = { event_count: 0, click_count: 0, speech_count: 0, timeline: [], duration_seconds: 0 };
+    timeline = { event_count: 0, click_count: 0, speech_count: 0, skipped_clicks: 0, skipped_speech: 0, timeline: [], duration_seconds: 0 };
   }
 
   // --- Step 3: Write timeline.json to S3 ---
