@@ -4,7 +4,7 @@
   "title": "Upload audio + transcript to S3 session folder",
   "description": "After recording stops and transcription completes, upload recording.wav to sessions/<id>/audio/ and transcript.json to sessions/<id>/transcript/. Must use hackathon AWS profile. Handle upload failures with retry (3 attempts). Mark session audio as 'uploaded' in metadata. Large file upload should use multipart for WAV files over 100MB.",
   "priority": 3,
-  "status": "in_progress",
+  "status": "completed",
   "assigned_worker": "ccc-worker-local",
   "substeps": [
     {
@@ -13,6 +13,13 @@
       "status": "completed",
       "pr": null,
       "notes": "audio/lib/s3-upload.js + audio/upload.js CLI + audio/test-upload.js (7/7 tests pass)"
+    },
+    {
+      "id": "recorder-integration",
+      "title": "Integrate s3-upload into recorder.js stop/shutdown handlers",
+      "status": "completed",
+      "pr": null,
+      "notes": "recorder.js auto-uploads after session stop and on SIGINT/SIGTERM (best-effort, non-fatal on failure)"
     }
   ],
   "depends_on": ["aud-02-transcriber"],

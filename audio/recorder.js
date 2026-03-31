@@ -26,6 +26,7 @@ const path = require('path');
 const { detectMic } = require('./lib/device-detect');
 const { SessionPoller } = require('./lib/session-poller');
 const { FfmpegRecorder } = require('./lib/ffmpeg-recorder');
+const { uploadSessionAudio } = require('./lib/s3-upload');
 
 const SESSION_ID = process.env.SESSION_ID;
 const S3_BUCKET = process.env.S3_BUCKET;
@@ -96,6 +97,23 @@ async function main() {
       await recorder.stop();
     }
     poller.stop();
+
+    // Upload recording + transcript to S3
+    log('Uploading session audio to S3...');
+    try {
+      const result = await uploadSessionAudio({
+        sessionId: SESSION_ID,
+        outputDir,
+        bucket: S3_BUCKET,
+      });
+      log(`Uploaded audio -> s3://${S3_BUCKET}/${result.audioKey}`);
+      if (result.transcriptKey) {
+        log(`Uploaded transcript -> s3://${S3_BUCKET}/${result.transcriptKey}`);
+      }
+    } catch (err) {
+      log(`Upload failed (non-fatal): ${err.message}`);
+    }
+
     log('Done.');
     process.exit(0);
   });
@@ -111,6 +129,19 @@ async function main() {
     if (recorder.isRecording) {
       await recorder.stop();
       log(`Recording saved to ${outputPath}`);
+
+      // Best-effort upload before exit
+      log('Uploading session audio to S3...');
+      try {
+        await uploadSessionAudio({
+          sessionId: SESSION_ID,
+          outputDir,
+          bucket: S3_BUCKET,
+        });
+        log('Upload complete.');
+      } catch (err) {
+        log(`Upload failed (non-fatal): ${err.message}`);
+      }
     }
     process.exit(0);
   }
