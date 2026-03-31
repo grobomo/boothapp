@@ -1,0 +1,22 @@
+[
+  {
+    "start": 800,
+    "end": 3500,
+    "text": "Let me show you our XDR platform and how it consolidates alerts."
+  },
+  {
+    "start": 4500,
+    "end": 7000,
+    "text": "Here you can see the unified incident view across all sensors."
+  },
+  {
+    "start": 11000,
+    "end": 14000,
+    "text": "This incident was automatically correlated from three different sources."
+  },
+  {
+    "start": 17000,
+    "end": 20000,
+    "text": "Now switching to email security -- notice the BEC detection engine."
+  }
+]
