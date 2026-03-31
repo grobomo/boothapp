@@ -612,6 +612,9 @@
         </div>
     </div>
 
+    <!-- ============ SESSION TIMELINE ============ -->
+    <div id="timeline-mount"></div>
+
     <!-- ============ FOOTER ============ -->
     <div class="footer">
         <span>Powered by Trend Micro Vision One</span>
@@ -944,6 +947,11 @@
     setInterval(tickCountdown, 1000);
 
 })();
+</script>
+
+<script src="components/timeline.js"></script>
+<script>
+    new BoothTimeline({ container: '#timeline-mount' });
 </script>
 
 </body>
