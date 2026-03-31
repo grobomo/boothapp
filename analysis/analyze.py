@@ -10,6 +10,7 @@ from engines.email_template import render_follow_up_email
 from engines.product_detector import detect_products
 
 
+
 def _make_s3_client():
     """Create a boto3 S3 client with credential fallback.
 
