@@ -111,6 +111,8 @@ topic detection, and personalized follow-up emails. All automated. All in real t
 - **Demo-day preflight** -- 9-point automated system check before showtime
 - **Structured error handling** -- transient vs. permanent failure classification
   with exponential backoff retry
+- **SE voice notes** -- Ctrl+Shift+N hotkey to add timestamped text annotations
+  during a session, included in the analysis report as SE Annotations
 
 ---
 
@@ -122,9 +124,9 @@ Each session is stored under a unique session ID:
 s3://boothapp-sessions-<account>/sessions/<session-id>/
   |
   |-- audio.webm              # WebM audio recording (MediaRecorder API)
-  |-- clicks.json             # Array of click events:
-  |                           #   [{ timestamp: <ms>, url: <string>,
-  |                           #      element: <string>, x: <n>, y: <n> }]
+  |-- clicks.json             # Array of session events:
+  |                           #   Click: { timestamp, url, element, x, y }
+  |                           #   Note:  { type: "note", timestamp, text, url }
   |-- screenshots/
   |   |-- click-001.jpg       # Frame captures matched to click events
   |   |-- click-002.jpg       #   (filename = click-<NNN>.jpg)

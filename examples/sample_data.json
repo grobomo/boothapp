@@ -59,6 +59,20 @@
             "detail": "Mentioned briefly, has internal SOC team"
         }
     ],
+    "se_notes": [
+        {
+            "timestamp": "14:05",
+            "text": "Visitor very engaged on XDR topic -- asked detailed questions about SIEM integration"
+        },
+        {
+            "timestamp": "14:15",
+            "text": "Running EKS in production, 200+ pods -- strong container security need"
+        },
+        {
+            "timestamp": "14:22",
+            "text": "Budget approved for Q2, decision timeline is 6 weeks"
+        }
+    ],
     "recommendations": [
         {
             "action": "Schedule technical deep-dive on Vision One XDR with SOC team",
