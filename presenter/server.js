@@ -1,11 +1,14 @@
 const express = require('express');
 const path = require('path');
-const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const http = require('http');
+const { S3Client, ListObjectsV2Command, GetObjectCommand, DeleteObjectsCommand, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const BUCKET = process.env.S3_BUCKET || 'boothapp-sessions';
 const REGION = process.env.AWS_REGION || 'us-east-1';
+const WATCHER_HEALTH = process.env.WATCHER_HEALTH || 'http://localhost:8080';
 
 const s3 = new S3Client({ region: REGION });
 
@@ -99,6 +102,149 @@ app.get('/api/sessions/:id/summary', async (req, res) => {
         } else {
             res.status(500).json({ error: 'Failed to fetch summary', detail: err.message });
         }
+    }
+});
+
+// DELETE /api/sessions/:id - delete all objects for a session
+app.delete('/api/sessions/:id', async (req, res) => {
+    try {
+        const prefix = `${req.params.id}/`;
+        const listCmd = new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix });
+        const listResult = await s3.send(listCmd);
+        const objects = (listResult.Contents || []).map(o => ({ Key: o.Key }));
+
+        if (objects.length === 0) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        await s3.send(new DeleteObjectsCommand({
+            Bucket: BUCKET,
+            Delete: { Objects: objects },
+        }));
+
+        res.json({ deleted: true, objectsRemoved: objects.length });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete session', detail: err.message });
+    }
+});
+
+// POST /api/sessions/:id/retry - remove output/ so watcher re-processes
+app.post('/api/sessions/:id/retry', async (req, res) => {
+    try {
+        const prefix = `${req.params.id}/output/`;
+        const listCmd = new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix });
+        const listResult = await s3.send(listCmd);
+        const objects = (listResult.Contents || []).map(o => ({ Key: o.Key }));
+
+        if (objects.length > 0) {
+            await s3.send(new DeleteObjectsCommand({
+                Bucket: BUCKET,
+                Delete: { Objects: objects },
+            }));
+        }
+
+        res.json({ retried: true, outputFilesRemoved: objects.length });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to retry session', detail: err.message });
+    }
+});
+
+// GET /api/watcher/status - proxy to watcher health endpoint
+app.get('/api/watcher/status', async (req, res) => {
+    try {
+        const data = await new Promise((resolve, reject) => {
+            http.get(`${WATCHER_HEALTH}/health`, (resp) => {
+                let body = '';
+                resp.on('data', (chunk) => { body += chunk; });
+                resp.on('end', () => {
+                    try { resolve(JSON.parse(body)); }
+                    catch { reject(new Error('Invalid JSON from watcher')); }
+                });
+            }).on('error', reject);
+        });
+        res.json(data);
+    } catch (err) {
+        res.json({ status: 'unreachable', error: err.message });
+    }
+});
+
+// GET /api/storage/stats - S3 bucket usage
+app.get('/api/storage/stats', async (req, res) => {
+    try {
+        let totalSize = 0;
+        let totalObjects = 0;
+        let continuationToken;
+
+        do {
+            const params = { Bucket: BUCKET };
+            if (continuationToken) params.ContinuationToken = continuationToken;
+            const result = await s3.send(new ListObjectsV2Command(params));
+            for (const obj of (result.Contents || [])) {
+                totalSize += obj.Size;
+                totalObjects++;
+            }
+            continuationToken = result.IsTruncated ? result.NextContinuationToken : null;
+        } while (continuationToken);
+
+        res.json({
+            bucket: BUCKET,
+            totalObjects,
+            totalSizeBytes: totalSize,
+            totalSizeMB: Math.round(totalSize / 1024 / 1024 * 100) / 100,
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to get storage stats', detail: err.message });
+    }
+});
+
+// POST /api/sessions - create a test session
+app.post('/api/sessions', async (req, res) => {
+    try {
+        const sessionId = req.body.sessionId || `test-${Date.now()}`;
+        const prefix = `${sessionId}/`;
+
+        const badge = {
+            name: req.body.visitorName || 'Test Visitor',
+            company: req.body.visitorCompany || 'Test Corp',
+            title: req.body.visitorTitle || 'Engineer',
+            email: req.body.visitorEmail || 'test@example.com',
+        };
+
+        const metadata = {
+            visitor_name: badge.name,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+        };
+
+        const clicks = [
+            { timestamp: Date.now(), url: 'https://demo.example.com', element: 'button.cta', x: 400, y: 300 },
+            { timestamp: Date.now() + 5000, url: 'https://demo.example.com/features', element: 'a.nav', x: 200, y: 50 },
+        ];
+
+        await s3.send(new PutObjectCommand({
+            Bucket: BUCKET, Key: `${prefix}metadata.json`,
+            Body: JSON.stringify(metadata, null, 2), ContentType: 'application/json',
+        }));
+
+        await s3.send(new PutObjectCommand({
+            Bucket: BUCKET, Key: `${prefix}badge.json`,
+            Body: JSON.stringify(badge, null, 2), ContentType: 'application/json',
+        }));
+
+        await s3.send(new PutObjectCommand({
+            Bucket: BUCKET, Key: `${prefix}clicks.json`,
+            Body: JSON.stringify(clicks, null, 2), ContentType: 'application/json',
+        }));
+
+        // ready trigger last (per S3 data contract)
+        await s3.send(new PutObjectCommand({
+            Bucket: BUCKET, Key: `${prefix}ready`,
+            Body: '', ContentType: 'text/plain',
+        }));
+
+        res.status(201).json({ sessionId, status: 'created' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create session', detail: err.message });
     }
 });
 
