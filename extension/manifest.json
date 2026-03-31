@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "CaseyApp Demo Capture",
+  "version": "2.0.0",
+  "description": "CaseyApp: AI-powered demo capture for trade show booths. Pairs with phone app via QR code, captures screenshots and clicks during live demos.",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://caseyapp.trendcyberrange.com/*",
+    "http://localhost:4000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "CaseyApp"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
