@@ -706,6 +706,50 @@
     .event-feed { width: 100vw; }
     body.feed-open .layout { margin-right: 0; }
     body.feed-open .topbar { margin-right: 0; }
+
+  /* ── Demo Mode ─────────────────────────────────────── */
+  .demo-badge {
+    position: fixed;
+    top: 60px;
+    right: 16px;
+    z-index: 9999;
+    background: linear-gradient(135deg, #f85149, #d29922);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(248,81,73,0.4);
+    pointer-events: none;
+    animation: demo-pulse 2s ease-in-out infinite;
+  }
+  @keyframes demo-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .demo-progress {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    z-index: 9999;
+    transition: width 0.3s linear;
+  }
+  .demo-counter {
+    position: fixed;
+    bottom: 12px;
+    right: 16px;
+    z-index: 9999;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: monospace;
+  }
+  #app.demo-transition {
+    transition: opacity 0.6s ease;
+  }
 </style>
 </head>
 <body>
@@ -840,6 +884,11 @@ if (!BoothAuth.requireAwsCreds()) {
   // ── URL Params ──────────────────────────────────────────────────
   var params = new URLSearchParams(window.location.search);
   var sessionId = params.get("session") || "";
+  var isDemoMode = params.get("demo") === "true";
+
+  if (isDemoMode) {
+    sessionId = sessionId || "DEMO-001";
+  }
 
   if (!sessionId) {
     showError("No session ID provided. Add ?session=<id> to the URL.");
@@ -956,38 +1005,270 @@ if (!BoothAuth.requireAwsCreds()) {
   }
   window.openLightbox = openLightbox;
 
+  // ── Demo Mode: Sample Sessions ─────────────────────────────────
+  var DEMO_SESSIONS = [
+    {
+      metadata: {
+        session_id: "DEMO-001", visitor_name: "Priya Sharma",
+        started_at: "2026-08-06T10:15:00Z", ended_at: "2026-08-06T10:32:00Z",
+        demo_pc: "booth-pc-1", se_name: "Casey Mondoux", status: "completed"
+      },
+      clicks: { session_id: "DEMO-001", events: [
+        { index: 1, timestamp: "2026-08-06T10:15:18Z", type: "click", element: { text: "Endpoint Security" }, page_title: "Vision One - Dashboard" },
+        { index: 2, timestamp: "2026-08-06T10:16:05Z", type: "click", element: { text: "BYOD Policy" }, page_title: "Vision One - Endpoint Security" },
+        { index: 3, timestamp: "2026-08-06T10:17:44Z", type: "click", element: { text: "Device Enrollment Settings" }, page_title: "Vision One - BYOD Policy" },
+        { index: 4, timestamp: "2026-08-06T10:19:30Z", type: "click", element: { text: "XDR" }, page_title: "Vision One - BYOD Policy" },
+        { index: 5, timestamp: "2026-08-06T10:20:12Z", type: "click", element: { text: "Workbench" }, page_title: "Vision One - XDR Overview" },
+        { index: 6, timestamp: "2026-08-06T10:21:55Z", type: "click", element: { text: "Suspicious PowerShell Execution" }, page_title: "Vision One - Workbench" },
+        { index: 7, timestamp: "2026-08-06T10:23:40Z", type: "click", element: { text: "Risk Insights" }, page_title: "Vision One - Alert Detail" },
+        { index: 8, timestamp: "2026-08-06T10:26:05Z", type: "click", element: { text: "Start Remediation Workflow" }, page_title: "Vision One - Risk Insights" }
+      ]},
+      transcript: { session_id: "DEMO-001", entries: [
+        { timestamp: "00:00:05", speaker: "SE", text: "Hi Priya, welcome to the Trend Micro booth. Let me show you Vision One." },
+        { timestamp: "00:00:14", speaker: "Visitor", text: "We're a mid-size financial firm with 3,500 endpoints. BYOD is our biggest headache." },
+        { timestamp: "00:01:02", speaker: "SE", text: "This BYOD Policy panel lets you define enrollment without full MDM. The employee enrolls and we apply a containerized workspace." },
+        { timestamp: "00:01:20", speaker: "Visitor", text: "Does this require a full MDM agent? Our employees pushed back hard on MobileIron." },
+        { timestamp: "00:04:35", speaker: "Visitor", text: "How long to correlate that? Our current SIEM takes 20 minutes." },
+        { timestamp: "00:04:45", speaker: "SE", text: "Under two minutes end-to-end. The correlation engine runs in real time." },
+        { timestamp: "00:09:05", speaker: "Visitor", text: "That automated response is exactly what we need. We're doing this manually and it takes hours." },
+        { timestamp: "00:13:00", speaker: "Visitor", text: "Overall this is impressive. The BYOD container approach and automated risk response are what I want to explore further." }
+      ]},
+      summary: {
+        session_id: "DEMO-001", visitor_name: "Priya Sharma", se_name: "Casey Mondoux",
+        session_score: 8,
+        executive_summary: "Priya showed strong interest in BYOD containerization and automated risk response for her 3,500-endpoint financial firm. Schedule a POC scoping call within the week to capitalize on competitive evaluation against CrowdStrike.",
+        products_demonstrated: ["Endpoint Security", "XDR", "Risk Insights"],
+        key_interests: [
+          { topic: "BYOD Container Policy", confidence: "high", evidence: "Asked 3 detailed questions about MDM-free enrollment and platform-specific policies" },
+          { topic: "Automated Risk Remediation", confidence: "high", evidence: "Said 'That automated response is what we need' after seeing workflow demo" },
+          { topic: "XDR Correlation Speed", confidence: "medium", evidence: "Compared 20-min SIEM correlation to V1's sub-2-minute detection" },
+          { topic: "Splunk Integration", confidence: "medium", evidence: "Asked specifically about native Splunk app and API push" }
+        ],
+        follow_up_actions: [
+          "Send BYOD container deployment guide with iOS/Android comparison matrix",
+          "Schedule POC scoping call for 3,500-endpoint environment within 5 business days",
+          "Provide competitive comparison: V1 BYOD vs CrowdStrike Falcon Go mobile coverage",
+          "Share EU data residency documentation and DPA template"
+        ],
+        key_moments: [
+          { timestamp: "01:20", description: "Visitor asked if BYOD requires full MDM", impact: "Previous MobileIron pushback makes lightweight container a strong selling point" },
+          { timestamp: "04:35", description: "Compared V1 correlation speed to 20-minute SIEM", impact: "Direct pain point -- current tooling too slow" },
+          { timestamp: "09:05", description: "Called automated remediation 'what we need'", impact: "Strong buying signal -- manual process taking hours today" }
+        ]
+      },
+      followUp: { priority: "high", tags: ["BYOD", "financial", "POC", "CrowdStrike competitive"] }
+    },
+    {
+      metadata: {
+        session_id: "DEMO-002", visitor_name: "Marcus Chen",
+        started_at: "2026-08-06T11:05:00Z", ended_at: "2026-08-06T11:28:00Z",
+        demo_pc: "booth-pc-2", se_name: "Casey Mondoux", status: "completed"
+      },
+      clicks: { session_id: "DEMO-002", events: [
+        { index: 1, timestamp: "2026-08-06T11:05:30Z", type: "click", element: { text: "Cloud Security" }, page_title: "Vision One - Dashboard" },
+        { index: 2, timestamp: "2026-08-06T11:07:12Z", type: "click", element: { text: "Container Security" }, page_title: "Vision One - Cloud Security" },
+        { index: 3, timestamp: "2026-08-06T11:09:45Z", type: "click", element: { text: "Runtime Protection" }, page_title: "Vision One - Container Security" },
+        { index: 4, timestamp: "2026-08-06T11:12:00Z", type: "click", element: { text: "Image Scanning" }, page_title: "Vision One - Container Security" },
+        { index: 5, timestamp: "2026-08-06T11:15:20Z", type: "click", element: { text: "Cloud Posture" }, page_title: "Vision One - Container Security" },
+        { index: 6, timestamp: "2026-08-06T11:18:40Z", type: "click", element: { text: "Compliance Dashboard" }, page_title: "Vision One - Cloud Posture" },
+        { index: 7, timestamp: "2026-08-06T11:22:10Z", type: "click", element: { text: "Attack Surface" }, page_title: "Vision One - Compliance" }
+      ]},
+      transcript: { session_id: "DEMO-002", entries: [
+        { timestamp: "00:00:08", speaker: "SE", text: "Hi Marcus, welcome. What's your biggest security challenge right now?" },
+        { timestamp: "00:00:18", speaker: "Visitor", text: "We're migrating 200 microservices to Kubernetes. Our current tools can't see inside containers." },
+        { timestamp: "00:02:12", speaker: "SE", text: "Vision One's Container Security gives you runtime protection, image scanning, and admission control -- all from one console." },
+        { timestamp: "00:04:45", speaker: "Visitor", text: "Can it scan images in our private ECR registry before deployment?" },
+        { timestamp: "00:05:00", speaker: "SE", text: "Yes, it integrates with ECR, ACR, and GCR. It blocks vulnerable images from deploying via admission controllers." },
+        { timestamp: "00:10:20", speaker: "Visitor", text: "The compliance dashboard is exactly what our auditors have been asking for." },
+        { timestamp: "00:18:00", speaker: "Visitor", text: "We need to see this in our AWS environment. Can we get a trial?" }
+      ]},
+      summary: {
+        session_id: "DEMO-002", visitor_name: "Marcus Chen", se_name: "Casey Mondoux",
+        session_score: 9,
+        executive_summary: "Marcus is migrating 200 microservices to K8s and needs container-native security. Current tools have zero container visibility. High urgency -- migration timeline is Q4. Request a trial deployment in their AWS environment.",
+        products_demonstrated: ["Cloud Security", "Container Security", "Cloud Posture"],
+        key_interests: [
+          { topic: "Container Runtime Protection", confidence: "high", evidence: "Migrating 200 microservices, current tools have no container visibility" },
+          { topic: "Image Scanning (ECR)", confidence: "high", evidence: "Asked specifically about private ECR registry scanning and admission control" },
+          { topic: "Compliance Reporting", confidence: "high", evidence: "Called compliance dashboard 'exactly what our auditors asked for'" },
+          { topic: "Attack Surface Management", confidence: "medium", evidence: "Explored attack surface section, asked about multi-cloud support" }
+        ],
+        follow_up_actions: [
+          "Provision trial environment with container security module enabled",
+          "Send K8s integration guide (EKS + admission controller setup)",
+          "Schedule technical deep-dive with cloud security SE team",
+          "Share compliance report templates (SOC2, PCI-DSS)"
+        ],
+        key_moments: [
+          { timestamp: "00:18", description: "Current tools can't see inside containers", impact: "Critical gap -- 200 microservices moving to K8s with zero visibility" },
+          { timestamp: "04:45", description: "Asked about private ECR scanning", impact: "Specific requirement shows advanced evaluation stage" },
+          { timestamp: "10:20", description: "Called compliance dashboard 'exactly what auditors asked for'", impact: "Compliance is a buying driver, not just nice-to-have" }
+        ]
+      },
+      followUp: { priority: "high", tags: ["K8s", "containers", "AWS", "compliance", "trial"] }
+    },
+    {
+      metadata: {
+        session_id: "DEMO-003", visitor_name: "Sarah Okonkwo",
+        started_at: "2026-08-06T14:20:00Z", ended_at: "2026-08-06T14:41:00Z",
+        demo_pc: "booth-pc-3", se_name: "Casey Mondoux", status: "completed"
+      },
+      clicks: { session_id: "DEMO-003", events: [
+        { index: 1, timestamp: "2026-08-06T14:20:45Z", type: "click", element: { text: "Email Security" }, page_title: "Vision One - Dashboard" },
+        { index: 2, timestamp: "2026-08-06T14:22:30Z", type: "click", element: { text: "Threat Intelligence" }, page_title: "Vision One - Email Security" },
+        { index: 3, timestamp: "2026-08-06T14:25:10Z", type: "click", element: { text: "Sandbox Analysis" }, page_title: "Vision One - Email Security" },
+        { index: 4, timestamp: "2026-08-06T14:27:55Z", type: "click", element: { text: "XDR" }, page_title: "Vision One - Sandbox" },
+        { index: 5, timestamp: "2026-08-06T14:29:40Z", type: "click", element: { text: "Workbench" }, page_title: "Vision One - XDR Overview" },
+        { index: 6, timestamp: "2026-08-06T14:33:00Z", type: "click", element: { text: "Zero Trust" }, page_title: "Vision One - Workbench" },
+        { index: 7, timestamp: "2026-08-06T14:36:20Z", type: "click", element: { text: "Network Security" }, page_title: "Vision One - Zero Trust" }
+      ]},
+      transcript: { session_id: "DEMO-003", entries: [
+        { timestamp: "00:00:10", speaker: "SE", text: "Hi Sarah, great to meet you. What brings you to the booth today?" },
+        { timestamp: "00:00:22", speaker: "Visitor", text: "We're a healthcare network -- 12 hospitals. Phishing is our #1 threat. We had two BEC incidents last quarter that cost us $340K." },
+        { timestamp: "00:02:30", speaker: "SE", text: "Let me show you our Email Security module. It uses AI-powered content inspection and sender reputation analysis." },
+        { timestamp: "00:05:10", speaker: "Visitor", text: "Can the sandbox catch zero-day payloads in attachments? We get a lot of weaponized PDFs and Excel files." },
+        { timestamp: "00:05:25", speaker: "SE", text: "Yes -- Deep Discovery Analyzer detonates files in a virtual environment. It catches evasive malware that static scanning misses." },
+        { timestamp: "00:09:40", speaker: "Visitor", text: "The XDR correlation between email and endpoint events is huge for us. Right now those are siloed in separate tools." },
+        { timestamp: "00:15:00", speaker: "Visitor", text: "HIPAA compliance is non-negotiable. Do you have healthcare-specific compliance templates?" },
+        { timestamp: "00:18:00", speaker: "Visitor", text: "This could replace three of our current tools. I want to bring our CISO back for a deeper look." }
+      ]},
+      summary: {
+        session_id: "DEMO-003", visitor_name: "Sarah Okonkwo", se_name: "Casey Mondoux",
+        session_score: 9,
+        executive_summary: "Sarah manages security for a 12-hospital healthcare network that lost $340K to BEC attacks last quarter. Strong interest in email security with AI analysis, XDR cross-correlation, and HIPAA compliance. Wants to bring CISO back -- schedule follow-up booth visit.",
+        products_demonstrated: ["Email Security", "XDR", "Zero Trust", "Network Security"],
+        key_interests: [
+          { topic: "Email Threat Protection", confidence: "high", evidence: "Two BEC incidents last quarter costing $340K -- phishing is their #1 threat" },
+          { topic: "Sandbox Analysis (Zero-Day)", confidence: "high", evidence: "Asked specifically about weaponized PDFs and Excel zero-day detection" },
+          { topic: "XDR Cross-Correlation", confidence: "high", evidence: "Called email+endpoint correlation 'huge' -- currently siloed in separate tools" },
+          { topic: "HIPAA Compliance", confidence: "high", evidence: "Called HIPAA compliance 'non-negotiable', asked about healthcare templates" },
+          { topic: "Tool Consolidation", confidence: "medium", evidence: "Said Vision One 'could replace three current tools'" }
+        ],
+        follow_up_actions: [
+          "Schedule CISO booth revisit for deeper technical dive",
+          "Send healthcare-specific deployment guide with HIPAA compliance templates",
+          "Provide BEC protection ROI calculator based on their $340K incident cost",
+          "Prepare tool consolidation proposal (replacing 3 existing tools)",
+          "Connect with healthcare vertical SE for follow-up call"
+        ],
+        key_moments: [
+          { timestamp: "00:22", description: "Two BEC incidents cost $340K last quarter", impact: "Quantified pain point -- clear budget justification for purchase" },
+          { timestamp: "09:40", description: "Called XDR email+endpoint correlation 'huge'", impact: "Current tool silos are a frustration -- consolidation is a buying driver" },
+          { timestamp: "18:00", description: "Wants to bring CISO back for deeper look", impact: "Champion identified -- multiplier opportunity at decision-maker level" }
+        ]
+      },
+      followUp: { priority: "high", tags: ["healthcare", "BEC", "email security", "HIPAA", "CISO revisit", "tool consolidation"] }
+    }
+  ];
+
   // ── Load All Data ───────────────────────────────────────────────
-  var prefix = "sessions/" + sessionId + "/";
+  if (isDemoMode) {
+    // Inject demo badge and progress bar
+    var badge = document.createElement("div");
+    badge.className = "demo-badge";
+    badge.textContent = "Demo Mode";
+    document.body.appendChild(badge);
 
-  var metadataP   = fetchS3Json(prefix + "metadata.json").catch(function () { return null; });
-  var clicksP     = fetchS3Json(prefix + "clicks/clicks.json").catch(function () { return null; });
-  var transcriptP = fetchS3Json(prefix + "transcript/transcript.json").catch(function () { return null; });
-  var summaryP    = fetchS3Json(prefix + "output/summary.json").catch(function () { return null; });
-  var followUpP   = fetchS3Json(prefix + "output/follow-up.json").catch(function () { return null; });
+    var progressBar = document.createElement("div");
+    progressBar.className = "demo-progress";
+    progressBar.style.width = "0%";
+    document.body.appendChild(progressBar);
 
-  Promise.all([metadataP, clicksP, transcriptP, summaryP, followUpP])
-    .then(function (results) {
-      var metadata   = results[0];
-      var clicks     = results[1];
-      var transcript = results[2];
-      var summary    = results[3];
-      var followUp   = results[4];
+    var counter = document.createElement("div");
+    counter.className = "demo-counter";
+    document.body.appendChild(counter);
 
-      if (!metadata) {
-        showError("Session not found: " + sessionId);
-        return;
-      }
+    var demoIndex = 0;
+    var DEMO_INTERVAL = 10000; // 10 seconds
+    var FADE_DURATION = 600;   // matches CSS transition
+
+    function renderDemoSession(idx) {
+      var sess = DEMO_SESSIONS[idx];
+      sessionId = sess.metadata.session_id;
+      document.getElementById("topbar-sid").textContent = sess.metadata.session_id;
+      counter.textContent = (idx + 1) + " / " + DEMO_SESSIONS.length;
 
       show("app");
-      renderVisitorCard(metadata, summary);
-      renderTimeline(clicks, metadata);
-      renderTranscript(transcript);
-      renderAnalysis(summary, followUp);
-      renderEventFeed(clicks, transcript, metadata, summary);
-    })
-    .catch(function (err) {
-      showError("Error loading session data: " + (err.message || err));
-    });
+      renderVisitorCard(sess.metadata, sess.summary);
+      renderTimeline(sess.clicks, sess.metadata);
+      renderTranscript(sess.transcript);
+      renderAnalysis(sess.summary, sess.followUp);
+      renderEventFeed(sess.clicks, sess.transcript, sess.metadata, sess.summary);
+    }
+
+    function cycleDemoSession() {
+      // Fade out
+      appEl.style.opacity = "0";
+      appEl.classList.add("demo-transition");
+
+      setTimeout(function () {
+        demoIndex = (demoIndex + 1) % DEMO_SESSIONS.length;
+        renderDemoSession(demoIndex);
+        // Scroll to top for each new session
+        window.scrollTo({ top: 0, behavior: "instant" });
+        // Fade in
+        appEl.style.opacity = "1";
+      }, FADE_DURATION);
+    }
+
+    // Progress bar animation
+    var progressStart = Date.now();
+    function updateProgress() {
+      var elapsed = Date.now() - progressStart;
+      var pct = Math.min((elapsed / DEMO_INTERVAL) * 100, 100);
+      progressBar.style.width = pct + "%";
+      if (pct < 100) {
+        requestAnimationFrame(updateProgress);
+      }
+    }
+
+    // Render first session immediately
+    renderDemoSession(0);
+
+    // Start cycling
+    progressStart = Date.now();
+    requestAnimationFrame(updateProgress);
+
+    setInterval(function () {
+      cycleDemoSession();
+      progressStart = Date.now();
+      requestAnimationFrame(updateProgress);
+    }, DEMO_INTERVAL);
+
+  } else {
+    // ── Normal Mode: Load from S3 ─────────────────────────────────
+    var prefix = "sessions/" + sessionId + "/";
+
+    var metadataP   = fetchS3Json(prefix + "metadata.json").catch(function () { return null; });
+    var clicksP     = fetchS3Json(prefix + "clicks/clicks.json").catch(function () { return null; });
+    var transcriptP = fetchS3Json(prefix + "transcript/transcript.json").catch(function () { return null; });
+    var summaryP    = fetchS3Json(prefix + "output/summary.json").catch(function () { return null; });
+    var followUpP   = fetchS3Json(prefix + "output/follow-up.json").catch(function () { return null; });
+
+    Promise.all([metadataP, clicksP, transcriptP, summaryP, followUpP])
+      .then(function (results) {
+        var metadata   = results[0];
+        var clicks     = results[1];
+        var transcript = results[2];
+        var summary    = results[3];
+        var followUp   = results[4];
+
+        if (!metadata) {
+          showError("Session not found: " + sessionId);
+          return;
+        }
+
+        show("app");
+        renderVisitorCard(metadata, summary);
+        renderTimeline(clicks, metadata);
+        renderTranscript(transcript);
+        renderAnalysis(summary, followUp);
+        renderEventFeed(clicks, transcript, metadata, summary);
+      })
+      .catch(function (err) {
+        showError("Error loading session data: " + (err.message || err));
+      });
+  }
 
   // ── Render: Visitor Card ────────────────────────────────────────
   function renderVisitorCard(meta, summary) {

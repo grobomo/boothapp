@@ -1,13 +1,12 @@
-# Demo Mode - Self-Running Presentation
+# Demo Mode for Session Viewer
 
 ## Goal
-Create a self-running demo at `presenter/demo-mode.html` that simulates the full BoothApp workflow for projector presentations. Dark theme, full-screen, auto-advancing.
+Add a demo mode to session-viewer.html that auto-cycles through 3 sample sessions with fade transitions when `?demo=true` is in the URL, plus a "Demo Mode" badge.
 
 ## Success Criteria
-- [ ] 6-step auto-advancing sequence: badge scan -> visitor info -> click tracking -> audio waveform -> analyzing -> report card
-- [ ] Each step auto-advances after ~5s (badge scan 3s)
-- [ ] Full-screen mode for projector display
-- [ ] Dark theme matching existing presenter/demo styles (#0d1117 palette)
-- [ ] Animations: scanning pulse, dot tracking, audio waveform, spinner
-- [ ] Final report card with scores and follow-up actions
-- [ ] Self-contained single HTML file, no external dependencies beyond fonts
+1. `?demo=true` URL parameter activates demo mode
+2. 3 distinct sample sessions cycle every 10 seconds
+3. Smooth fade transitions between sessions
+4. "Demo Mode" badge visible in corner when active
+5. Full analysis results rendered for each sample session
+6. Normal mode unaffected when `?demo=true` is absent
