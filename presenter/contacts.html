@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/error-boundary.js"></script>
+<script src="components/nav.js"></script>
+<title>BoothApp — Contact Import & AI Matching</title>
+<link rel="stylesheet" href="styles/mobile.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 1.5rem 2rem;
+  }
+
+  header {
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  h1 { font-size: 1.8rem; font-weight: 600; color: #58a6ff; letter-spacing: 0.02em; }
+  h2 { font-size: 1.3rem; font-weight: 600; color: #c9d1d9; margin-bottom: 0.8rem; }
+
+  .header-right {
+    display: flex; align-items: center; gap: 1rem; font-size: 0.85rem;
+  }
+  .header-right a { color: #8b949e; text-decoration: none; }
+  .header-right a:hover { color: #e6edf3; }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* Cards */
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    background: #21262d;
+    color: #c9d1d9;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover { background: #30363d; border-color: #484f58; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+
+  .btn-danger { background: #da3633; border-color: #f85149; color: #fff; }
+  .btn-danger:hover { background: #f85149; }
+
+  .btn-blue { background: #1f6feb; border-color: #388bfd; color: #fff; }
+  .btn-blue:hover { background: #388bfd; }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed #30363d;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: #58a6ff;
+    background: rgba(88, 166, 255, 0.05);
+  }
+  .upload-zone input[type="file"] { display: none; }
+  .upload-zone p { color: #8b949e; margin-top: 0.5rem; font-size: 0.9rem; }
+
+  /* Event selector */
+  .event-bar {
+    display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .event-bar label { color: #8b949e; font-size: 0.85rem; }
+  .event-bar input {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+    color: #e6edf3; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    width: 200px;
+  }
+
+  /* Status message */
+  .status {
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    display: none;
+  }
+  .status.success { display: block; background: rgba(35, 134, 54, 0.15); border: 1px solid #238636; color: #3fb950; }
+  .status.error { display: block; background: rgba(218, 54, 51, 0.15); border: 1px solid #da3633; color: #f85149; }
+  .status.info { display: block; background: rgba(31, 111, 235, 0.15); border: 1px solid #1f6feb; color: #58a6ff; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid #21262d;
+  }
+  th { color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:hover td { background: rgba(88, 166, 255, 0.03); }
+
+  /* Confidence bar */
+  .confidence-bar {
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .confidence-track {
+    width: 100px; height: 8px;
+    background: #21262d;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .confidence-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .confidence-label { font-size: 0.8rem; font-weight: 600; min-width: 35px; }
+
+  /* Mapping preview */
+  .mapping-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  .mapping-item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: #0d1117;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+  .mapping-arrow { color: #3fb950; }
+  .mapping-csv { color: #f0883e; font-family: monospace; }
+  .mapping-field { color: #58a6ff; }
+
+  /* Match reasoning */
+  .reasoning {
+    font-size: 0.8rem;
+    color: #8b949e;
+    font-style: italic;
+    max-width: 300px;
+  }
+
+  /* Match badge */
+  .match-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .match-badge.ai { background: rgba(31, 111, 235, 0.2); color: #58a6ff; }
+  .match-badge.manual { background: rgba(163, 113, 247, 0.2); color: #d2a8ff; }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 0; margin-bottom: 1.5rem;
+    border-bottom: 1px solid #30363d;
+  }
+  .tab {
+    padding: 0.6rem 1.2rem;
+    color: #8b949e;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-size: 0.9rem;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: #e6edf3; }
+  .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Override select */
+  select {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 4px;
+    color: #e6edf3; padding: 0.3rem 0.5rem; font-size: 0.8rem;
+  }
+
+  .count-badge {
+    background: #30363d;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 0.3rem;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Contact Import & AI Matching</h1>
+  <div class="header-right">
+    <a href="sessions.html">Sessions</a>
+    <a href="admin.html">Admin</a>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Event selector -->
+  <div class="event-bar">
+    <label>Event ID:</label>
+    <input type="text" id="eventId" value="default" placeholder="e.g. blackhat-2026">
+    <button class="btn" onclick="loadAll()">Load</button>
+    <span id="contactCount" class="count-badge" style="display:none"></span>
+  </div>
+
+  <!-- Status -->
+  <div id="status" class="status"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="upload">Upload CSV</div>
+    <div class="tab" data-tab="contacts">Contacts <span id="contactsTabCount" class="count-badge"></span></div>
+    <div class="tab" data-tab="matching">AI Matching <span id="matchesTabCount" class="count-badge"></span></div>
+  </div>
+
+  <!-- Upload Tab -->
+  <div id="tab-upload" class="tab-content active">
+    <div class="card">
+      <h2>Import Contacts from CSV</h2>
+      <p style="color:#8b949e; margin-bottom:1rem; font-size:0.9rem;">
+        Upload an attendee list CSV. Columns are auto-detected by header names (name, email, company, title, phone, etc.).
+      </p>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="csvFile" accept=".csv,.txt">
+        <p><strong style="color:#58a6ff">Click or drag a CSV file here</strong></p>
+        <p>Supports: name, email, company, title, phone, address, lead_score, notes</p>
+      </div>
+
+      <!-- Preview area -->
+      <div id="previewArea" style="display:none; margin-top:1.5rem;">
+        <h2>Column Mapping Preview</h2>
+        <div id="mappingDisplay"></div>
+        <div id="previewTable" style="margin-top:1rem;"></div>
+        <div style="margin-top:1rem; display:flex; gap:0.8rem;">
+          <button class="btn btn-primary" onclick="confirmImport()">Confirm Import</button>
+          <button class="btn" onclick="cancelPreview()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contacts Tab -->
+  <div id="tab-contacts" class="tab-content">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h2 style="margin-bottom:0;">Imported Contacts</h2>
+        <button class="btn btn-danger" onclick="clearContacts()">Clear All</button>
+      </div>
+      <div id="contactsTable"></div>
+    </div>
+  </div>
+
+  <!-- Matching Tab -->
+  <div id="tab-matching" class="tab-content">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <h2 style="margin-bottom:0;">AI Contact Matching</h2>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-blue" id="runMatchBtn" onclick="runMatching(false)">Run AI Matching</button>
+          <button class="btn" onclick="runMatching(true)">Force Rematch All</button>
+        </div>
+      </div>
+      <p style="color:#8b949e; margin-bottom:1rem; font-size:0.85rem;">
+        Matches session visitors (from badge OCR) to imported contacts using Claude AI. Processes contacts in batches of 50.
+      </p>
+      <div id="matchProgress" style="display:none; margin-bottom:1rem;">
+        <span class="spinner"></span> <span id="matchProgressText">Running AI matching...</span>
+      </div>
+      <div id="matchesTable"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Drag and drop
+  var zone = document.getElementById('uploadZone');
+  var fileInput = document.getElementById('csvFile');
+
+  zone.addEventListener('click', function() { fileInput.click(); });
+  zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      previewCSV(e.dataTransfer.files[0]);
+    }
+  });
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length) previewCSV(fileInput.files[0]);
+  });
+
+  // Initial load
+  loadAll();
+})();
+
+var _pendingFile = null;
+
+function getEventId() {
+  return document.getElementById('eventId').value.trim() || 'default';
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+  if (type === 'success') setTimeout(function() { el.className = 'status'; }, 5000);
+}
+
+function loadAll() {
+  loadContacts();
+  loadMatches();
+}
+
+// --- CSV Preview ---
+function previewCSV(file) {
+  _pendingFile = file;
+  var form = new FormData();
+  form.append('csv', file);
+
+  fetch('/api/contacts/preview', { method: 'POST', body: form })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { showStatus(data.error, 'error'); return; }
+      renderPreview(data);
+      document.getElementById('previewArea').style.display = 'block';
+    })
+    .catch(function(e) { showStatus('Preview failed: ' + e.message, 'error'); });
+}
+
+function renderPreview(data) {
+  // Mapping display
+  var html = '<div class="mapping-grid">';
+  for (var field in data.column_mapping) {
+    html += '<div class="mapping-item">'
+      + '<span class="mapping-csv">' + esc(data.column_mapping[field]) + '</span>'
+      + ' <span class="mapping-arrow">&rarr;</span> '
+      + '<span class="mapping-field">' + esc(field) + '</span>'
+      + '</div>';
+  }
+  if (data.unmapped_columns.length) {
+    for (var i = 0; i < data.unmapped_columns.length; i++) {
+      html += '<div class="mapping-item" style="opacity:0.5">'
+        + '<span class="mapping-csv">' + esc(data.unmapped_columns[i]) + '</span>'
+        + ' <span style="color:#8b949e">&rarr; (unmapped)</span>'
+        + '</div>';
+    }
+  }
+  html += '</div>';
+  html += '<p style="color:#8b949e; font-size:0.85rem;">' + data.total_rows + ' rows detected</p>';
+  document.getElementById('mappingDisplay').innerHTML = html;
+
+  // Preview table
+  if (data.preview && data.preview.length) {
+    var cols = ['name', 'email', 'company', 'title', 'phone'];
+    var tbl = '<table><thead><tr>';
+    for (var c = 0; c < cols.length; c++) tbl += '<th>' + cols[c] + '</th>';
+    tbl += '</tr></thead><tbody>';
+    for (var r = 0; r < data.preview.length; r++) {
+      tbl += '<tr>';
+      for (var c2 = 0; c2 < cols.length; c2++) tbl += '<td>' + esc(data.preview[r][cols[c2]] || '') + '</td>';
+      tbl += '</tr>';
+    }
+    tbl += '</tbody></table>';
+    tbl += '<p style="color:#8b949e; font-size:0.8rem; margin-top:0.5rem;">Showing first ' + data.preview.length + ' of ' + data.total_rows + ' rows</p>';
+    document.getElementById('previewTable').innerHTML = tbl;
+  }
+}
+
+function confirmImport() {
+  if (!_pendingFile) return;
+  var form = new FormData();
+  form.append('csv', _pendingFile);
+  form.append('event_id', getEventId());
+
+  fetch('/api/contacts/upload', { method: 'POST', body: form })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { showStatus(data.error, 'error'); return; }
+      showStatus('Imported ' + data.inserted + ' contacts (' + data.duplicates_skipped + ' duplicates skipped)', 'success');
+      cancelPreview();
+      loadContacts();
+    })
+    .catch(function(e) { showStatus('Import failed: ' + e.message, 'error'); });
+}
+
+function cancelPreview() {
+  _pendingFile = null;
+  document.getElementById('previewArea').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+}
+
+// --- Contacts List ---
+function loadContacts() {
+  var eventId = getEventId();
+  fetch('/api/contacts?event_id=' + encodeURIComponent(eventId))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('contactsTabCount').textContent = data.count;
+      var el = document.getElementById('contactCount');
+      el.textContent = data.count + ' contacts';
+      el.style.display = data.count ? 'inline' : 'none';
+
+      if (!data.contacts.length) {
+        document.getElementById('contactsTable').innerHTML = '<p style="color:#8b949e">No contacts imported yet.</p>';
+        return;
+      }
+
+      var html = '<table><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Title</th><th>Phone</th></tr></thead><tbody>';
+      for (var i = 0; i < data.contacts.length; i++) {
+        var c = data.contacts[i];
+        html += '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email) + '</td><td>' + esc(c.company) + '</td><td>' + esc(c.title) + '</td><td>' + esc(c.phone) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById('contactsTable').innerHTML = html;
+    });
+}
+
+function clearContacts() {
+  if (!confirm('Delete all contacts for event "' + getEventId() + '"?')) return;
+  fetch('/api/contacts?event_id=' + encodeURIComponent(getEventId()), { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      showStatus('Deleted ' + data.deleted + ' contacts', 'success');
+      loadContacts();
+      loadMatches();
+    });
+}
+
+// --- AI Matching ---
+function runMatching(force) {
+  var btn = document.getElementById('runMatchBtn');
+  btn.disabled = true;
+  document.getElementById('matchProgress').style.display = 'block';
+  document.getElementById('matchProgressText').textContent = 'Running AI matching... this may take a minute.';
+
+  fetch('/api/contacts/match', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event_id: getEventId(), force: force })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      document.getElementById('matchProgress').style.display = 'none';
+      if (data.error) { showStatus(data.error, 'error'); return; }
+      showStatus('Matched ' + data.matched + ' of ' + data.total + ' sessions', 'success');
+      loadMatches();
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      document.getElementById('matchProgress').style.display = 'none';
+      showStatus('Matching failed: ' + e.message, 'error');
+    });
+}
+
+function loadMatches() {
+  var eventId = getEventId();
+  fetch('/api/contacts/matches?event_id=' + encodeURIComponent(eventId))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('matchesTabCount').textContent = data.count;
+
+      if (!data.matches.length) {
+        document.getElementById('matchesTable').innerHTML = '<p style="color:#8b949e">No matches yet. Import contacts and run AI matching.</p>';
+        return;
+      }
+
+      var html = '<table><thead><tr><th>Session</th><th>Visitor</th><th>Matched Contact</th><th>Confidence</th><th>Reasoning</th><th>Type</th><th>Override</th></tr></thead><tbody>';
+      for (var i = 0; i < data.matches.length; i++) {
+        var m = data.matches[i];
+        var confColor = m.confidence >= 80 ? '#3fb950' : m.confidence >= 50 ? '#d29922' : '#f85149';
+        html += '<tr>'
+          + '<td style="font-family:monospace; font-size:0.8rem;">' + esc(m.session_id).slice(0, 16) + '</td>'
+          + '<td>' + esc(m.session_id) + '</td>'
+          + '<td>' + (m.contact_name ? esc(m.contact_name) + '<br><span style="color:#8b949e; font-size:0.8rem;">' + esc(m.contact_email || '') + '</span>' : '<span style="color:#f85149">No match</span>') + '</td>'
+          + '<td><div class="confidence-bar">'
+          + '<div class="confidence-track"><div class="confidence-fill" style="width:' + m.confidence + '%; background:' + confColor + '"></div></div>'
+          + '<span class="confidence-label" style="color:' + confColor + '">' + m.confidence + '%</span>'
+          + '</div></td>'
+          + '<td><div class="reasoning">' + esc(m.reasoning || '') + '</div></td>'
+          + '<td><span class="match-badge ' + (m.matched_by || 'ai') + '">' + (m.matched_by || 'ai') + '</span></td>'
+          + '<td><button class="btn" style="font-size:0.75rem; padding:0.2rem 0.5rem;" onclick="overrideMatch(\'' + esc(m.session_id) + '\')">Override</button></td>'
+          + '</tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById('matchesTable').innerHTML = html;
+    });
+}
+
+function overrideMatch(sessionId) {
+  var eventId = getEventId();
+  // Load contacts for selection
+  fetch('/api/contacts?event_id=' + encodeURIComponent(eventId))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.contacts.length) { showStatus('No contacts to select from', 'error'); return; }
+
+      var options = data.contacts.map(function(c) {
+        return c.id + ': ' + (c.name || 'N/A') + ' (' + (c.company || 'N/A') + ')';
+      });
+
+      var choice = prompt('Select contact ID:\n\n' + options.join('\n'));
+      if (!choice) return;
+      var contactId = parseInt(choice, 10);
+      if (isNaN(contactId)) { showStatus('Invalid contact ID', 'error'); return; }
+
+      fetch('/api/contacts/matches/' + encodeURIComponent(sessionId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId, event_id: eventId })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+          if (result.error) { showStatus(result.error, 'error'); return; }
+          showStatus('Manually matched to ' + result.contact_name, 'success');
+          loadMatches();
+        });
+    });
+}
+
+function esc(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(s)));
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

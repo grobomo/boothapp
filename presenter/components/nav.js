@@ -6,6 +6,7 @@
     { label: 'Chat', href: '/chat.html' },
     { label: 'Analytics', href: '/analytics.html' },
     { label: 'Architecture', href: '/architecture.html' },
+    { label: 'Contacts', href: '/contacts.html' },
     { label: 'Demo Script', href: '/demo-script.html' },
     { label: 'Slides', href: '/slides.html' }
   ];

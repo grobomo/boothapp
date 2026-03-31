@@ -29,3 +29,6 @@ packager/sessions/
 
 # Generated reports
 presenter/batch-report.html
+
+# Contact DB and uploads (runtime data)
+presenter/data/

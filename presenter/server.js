@@ -162,6 +162,10 @@ app.use(screenshotsRouter({ bucket: S3_BUCKET }));
 const { createRouter: chatRouter } = require('./lib/chat');
 app.use(chatRouter({ bucket: S3_BUCKET }));
 
+// --- Contacts API (CSV import & AI matching) ---
+const { createRouter: contactsRouter } = require('./lib/contacts');
+app.use(contactsRouter({ bucket: S3_BUCKET }));
+
 // --- Static files ---
 app.use('/analysis', express.static(path.join(__dirname, '..', 'analysis')));
 app.use(express.static(path.join(__dirname)));
