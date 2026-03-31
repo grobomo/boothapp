@@ -162,11 +162,12 @@
                 <th>Status</th>
                 <th>Created</th>
                 <th>Analysis</th>
+                <th>Transcript</th>
                 <th>Summary</th>
             </tr>
         </thead>
         <tbody id="sessions-body">
-            <tr><td colspan="6" class="loading">Loading sessions...</td></tr>
+            <tr><td colspan="7" class="loading">Loading sessions...</td></tr>
         </tbody>
     </table>
 
@@ -204,7 +205,7 @@
                 var tbody = document.getElementById('sessions-body');
 
                 if (sessions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty">No sessions found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty">No sessions found</td></tr>';
                     return;
                 }
 
@@ -215,12 +216,16 @@
                     var summaryCell = s.summary_link
                         ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
                         : '--';
+                    var transcriptCell = s.has_analysis
+                        ? '<a class="summary-link" href="/session.html?id=' + encodeURIComponent(s.session_id) + '">View</a>'
+                        : '--';
                     return '<tr>' +
-                        '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
+                        '<td class="session-id"><a class="summary-link" href="/session.html?id=' + encodeURIComponent(s.session_id) + '">' + escHtml(s.session_id) + '</a></td>' +
                         '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
                         '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
                         '<td>' + formatDate(s.created_at) + '</td>' +
                         '<td>' + analysisCell + '</td>' +
+                        '<td>' + transcriptCell + '</td>' +
                         '<td>' + summaryCell + '</td>' +
                         '</tr>';
                 }).join('');
@@ -229,7 +234,7 @@
                 errEl.style.display = 'block';
                 errEl.textContent = 'Failed to load sessions: ' + err.message;
                 document.getElementById('sessions-body').innerHTML =
-                    '<tr><td colspan="6" class="empty">Could not load sessions</td></tr>';
+                    '<tr><td colspan="7" class="empty">Could not load sessions</td></tr>';
             }
         }
 
