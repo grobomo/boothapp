@@ -786,6 +786,7 @@ if (!BoothAuth.requireAwsCreds()) {
       <a href="replay.html" id="link-replay">Replay</a>
       <a href="session.html" id="link-live">Live View</a>
       <a href="email-generator.html" id="link-email">Email</a>
+      <a href="#" id="link-compare">Compare</a>
       <a href="#" id="link-prep">Meeting Prep</a>
       <a href="#" id="link-print" style="cursor:pointer">Print Report</a>
       <button class="event-feed-toggle" id="feed-toggle">[&gt;] Feed <span class="feed-count" id="feed-count">0</span></button>
@@ -906,6 +907,7 @@ if (!BoothAuth.requireAwsCreds()) {
   document.getElementById("link-live").href = "session.html?session=" + encodeURIComponent(sessionId);
   document.getElementById("link-email").href = "email-generator.html?session=" + encodeURIComponent(sessionId);
   document.getElementById("link-prep").href = "meeting-prep.html?session=" + encodeURIComponent(sessionId);
+  document.getElementById("link-compare").href = "compare.html?a=" + encodeURIComponent(sessionId);
   document.getElementById("link-print").addEventListener("click", function (e) {
     e.preventDefault();
     openPrintReport();

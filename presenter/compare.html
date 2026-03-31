@@ -424,6 +424,106 @@
   .wordcloud-box.side-b .word.s4,
   .wordcloud-box.side-b .word.s5 { color: var(--accent-purple); }
 
+  /* -- Interests grid -- */
+  .interests-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .interest-col h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .interest-col.side-a h3 { color: var(--accent-blue); border-color: var(--accent-blue); }
+  .interest-col.shared h3 { color: var(--accent-green); border-color: var(--accent-green); }
+  .interest-col.side-b h3 { color: var(--accent-purple); border-color: var(--accent-purple); }
+
+  .interest-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .interest-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
+  }
+  .interest-card .topic {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+  }
+  .interest-card .confidence {
+    display: inline-block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    margin-left: 0.4rem;
+    font-weight: 600;
+  }
+  .confidence-high { background: #3fb95033; color: var(--accent-green); }
+  .confidence-medium { background: #d2992233; color: var(--accent-yellow); }
+  .confidence-low { background: #f8514933; color: var(--accent-red); }
+  .interest-card .evidence {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+    line-height: 1.4;
+  }
+
+  .interest-col.side-a .interest-card { border-left: 3px solid var(--accent-blue); }
+  .interest-col.shared .interest-card { border-left: 3px solid var(--accent-green); }
+  .interest-col.side-b .interest-card { border-left: 3px solid var(--accent-purple); }
+
+  .empty-hint { color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
+
+  /* -- Insights panel -- */
+  .insights-panel {
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .insight-row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+
+  .insight-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: 0.1rem;
+  }
+  .insight-icon.positive { background: #3fb95033; color: var(--accent-green); }
+  .insight-icon.neutral  { background: #58a6ff33; color: var(--accent-blue); }
+  .insight-icon.warning  { background: #d2992233; color: var(--accent-yellow); }
+  .insight-icon.negative { background: #f8514933; color: var(--accent-red); }
+
+  .insight-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+  .insight-text .highlight-a { color: var(--accent-blue); font-weight: 600; }
+  .insight-text .highlight-b { color: var(--accent-purple); font-weight: 600; }
+  .insight-text .highlight-val { color: var(--accent-green); font-weight: 600; }
+
   /* -- Footer -- */
   .site-footer {
     text-align: center;
@@ -439,6 +539,7 @@
     .side-by-side,
     .wordcloud-grid { grid-template-columns: 1fr; }
     .products-grid { grid-template-columns: 1fr; }
+    .interests-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -582,7 +683,26 @@
       </div>
     </div>
 
-    <!-- 5. Word clouds -->
+    <!-- 5. Interests comparison -->
+    <div class="compare-section">
+      <div class="section-title">Interests Identified</div>
+      <div class="interests-grid">
+        <div class="interest-col side-a">
+          <h3>Only in A</h3>
+          <div id="interests-only-a" class="interest-list"><div class="empty-hint">None</div></div>
+        </div>
+        <div class="interest-col shared">
+          <h3>Shared</h3>
+          <div id="interests-shared" class="interest-list"><div class="empty-hint">None</div></div>
+        </div>
+        <div class="interest-col side-b">
+          <h3>Only in B</h3>
+          <div id="interests-only-b" class="interest-list"><div class="empty-hint">None</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Word clouds -->
     <div class="compare-section">
       <div class="section-title">Transcript Word Clouds</div>
       <div class="wordcloud-grid">
@@ -594,6 +714,14 @@
           <h3>Session B</h3>
           <div class="wordcloud" id="wordcloud-b"><span class="word s2">No transcript</span></div>
         </div>
+      </div>
+    </div>
+
+    <!-- 7. Aggregate insights -->
+    <div class="compare-section">
+      <div class="section-title">Insights</div>
+      <div class="insights-panel" id="insights-panel">
+        <div class="empty-hint">Analyzing sessions...</div>
       </div>
     </div>
 
@@ -651,12 +779,18 @@
   if (idA && idB) {
     activate(idA, idB);
   } else {
+    // Pre-fill inputs from URL params (e.g. navigating from session-viewer with ?a=X)
+    if (idA) inputA.value = idA;
+    if (idB) inputB.value = idB;
     goBtn.addEventListener("click", function () {
       activate(inputA.value.trim(), inputB.value.trim());
     });
     inputB.addEventListener("keydown", function (e) {
       if (e.key === "Enter") activate(inputA.value.trim(), inputB.value.trim());
     });
+    // Auto-focus the empty input
+    if (idA && !idB) inputB.focus();
+    else if (!idA) inputA.focus();
   }
 
   function activate(a, b) {
@@ -722,7 +856,9 @@
     renderBars();
     renderProducts();
     renderScores();
+    renderInterests();
     renderWordClouds();
+    renderInsights();
   }
 
   // ── 1. Visitor cards ────────────────────────────────────────────────────────
@@ -961,6 +1097,174 @@
     var wordsB = buildWordFreqs(dataB.transcript);
     renderWordCloud("wordcloud-a", wordsA);
     renderWordCloud("wordcloud-b", wordsB);
+  }
+
+  // ── 6. Interests comparison ─────────────────────────────────────────────────
+  function getInterests(summary) {
+    if (!summary || !summary.key_interests) return [];
+    return summary.key_interests;
+  }
+
+  function renderInterestCard(interest) {
+    var confClass = "confidence-" + (interest.confidence || "low");
+    return '<div class="interest-card">' +
+      '<div class="topic">' + esc(interest.topic || "Unknown") +
+        '<span class="confidence ' + confClass + '">' + esc(interest.confidence || "?") + '</span>' +
+      '</div>' +
+      (interest.evidence ? '<div class="evidence">' + esc(interest.evidence) + '</div>' : '') +
+      '</div>';
+  }
+
+  function renderInterests() {
+    var intsA = getInterests(dataA.summary);
+    var intsB = getInterests(dataB.summary);
+
+    // Build topic maps (case-insensitive)
+    var mapA = {};
+    var mapB = {};
+    intsA.forEach(function (i) { mapA[i.topic.toLowerCase()] = i; });
+    intsB.forEach(function (i) { mapB[i.topic.toLowerCase()] = i; });
+
+    var onlyA = [];
+    var shared = [];
+    var onlyB = [];
+
+    Object.keys(mapA).forEach(function (k) {
+      if (mapB[k]) {
+        shared.push({ a: mapA[k], b: mapB[k] });
+      } else {
+        onlyA.push(mapA[k]);
+      }
+    });
+    Object.keys(mapB).forEach(function (k) {
+      if (!mapA[k]) onlyB.push(mapB[k]);
+    });
+
+    var elOnlyA = document.getElementById("interests-only-a");
+    var elShared = document.getElementById("interests-shared");
+    var elOnlyB = document.getElementById("interests-only-b");
+
+    elOnlyA.innerHTML = onlyA.length ? onlyA.map(renderInterestCard).join("") : '<div class="empty-hint">None</div>';
+    elOnlyB.innerHTML = onlyB.length ? onlyB.map(renderInterestCard).join("") : '<div class="empty-hint">None</div>';
+
+    if (shared.length) {
+      elShared.innerHTML = shared.map(function (pair) {
+        var confA = pair.a.confidence || "?";
+        var confB = pair.b.confidence || "?";
+        var confDiff = (confA !== confB)
+          ? ' <span style="font-size:0.7rem;color:var(--text-muted)">(A: ' + esc(confA) + ' / B: ' + esc(confB) + ')</span>'
+          : '';
+        return '<div class="interest-card">' +
+          '<div class="topic">' + esc(pair.a.topic) + confDiff + '</div>' +
+          (pair.a.evidence ? '<div class="evidence" style="color:var(--accent-blue)">A: ' + esc(pair.a.evidence) + '</div>' : '') +
+          (pair.b.evidence ? '<div class="evidence" style="color:var(--accent-purple)">B: ' + esc(pair.b.evidence) + '</div>' : '') +
+          '</div>';
+      }).join("");
+    } else {
+      elShared.innerHTML = '<div class="empty-hint">None</div>';
+    }
+  }
+
+  // ── 7. Aggregate insights ───────────────────────────────────────────────────
+  function renderInsights() {
+    var insights = [];
+    var sa = dataA.summary || {};
+    var sb = dataB.summary || {};
+    var ma = dataA.meta || {};
+    var mb = dataB.meta || {};
+
+    // Score comparison
+    if (sa.session_score != null && sb.session_score != null) {
+      var diff = sa.session_score - sb.session_score;
+      if (diff > 0) {
+        insights.push({ type: "positive", text: 'Session <span class="highlight-a">A</span> scored higher (' + sa.session_score + ' vs ' + sb.session_score + '), indicating stronger visitor engagement.' });
+      } else if (diff < 0) {
+        insights.push({ type: "positive", text: 'Session <span class="highlight-b">B</span> scored higher (' + sb.session_score + ' vs ' + sa.session_score + '), indicating stronger visitor engagement.' });
+      } else {
+        insights.push({ type: "neutral", text: 'Both sessions scored equally (' + sa.session_score + '), suggesting similar engagement levels.' });
+      }
+    }
+
+    // Duration insight
+    var durA = getDurationSec(ma);
+    var durB = getDurationSec(mb);
+    if (durA > 0 && durB > 0) {
+      var longer = durA > durB ? "A" : "B";
+      var ratio = Math.max(durA, durB) / Math.min(durA, durB);
+      if (ratio > 1.5) {
+        insights.push({ type: "neutral", text: 'Session <span class="highlight-' + longer.toLowerCase() + '">' + longer + '</span> ran <span class="highlight-val">' + ratio.toFixed(1) + 'x</span> longer (' + fmtDuration(Math.max(durA, durB)) + ' vs ' + fmtDuration(Math.min(durA, durB)) + ').' });
+      }
+    }
+
+    // Product coverage
+    var prodsA = getProducts(sa);
+    var prodsB = getProducts(sb);
+    var allProds = {};
+    prodsA.forEach(function (p) { allProds[p.toLowerCase()] = true; });
+    prodsB.forEach(function (p) { allProds[p.toLowerCase()] = true; });
+    var totalUnique = Object.keys(allProds).length;
+    var sharedProds = prodsA.filter(function (p) {
+      return prodsB.some(function (q) { return q.toLowerCase() === p.toLowerCase(); });
+    });
+
+    if (totalUnique > 0) {
+      var overlapPct = Math.round((sharedProds.length / totalUnique) * 100);
+      if (overlapPct === 100 && totalUnique > 0) {
+        insights.push({ type: "neutral", text: 'Both sessions demonstrated the same <span class="highlight-val">' + totalUnique + '</span> products -- identical demo coverage.' });
+      } else if (overlapPct > 50) {
+        insights.push({ type: "neutral", text: '<span class="highlight-val">' + overlapPct + '%</span> product overlap (' + sharedProds.length + '/' + totalUnique + ' unique products shared). Demo paths were similar.' });
+      } else {
+        insights.push({ type: "warning", text: 'Low product overlap (<span class="highlight-val">' + overlapPct + '%</span>). Sessions focused on different capabilities (' + prodsA.length + ' vs ' + prodsB.length + ' products).' });
+      }
+    }
+
+    // Interests overlap
+    var intsA = getInterests(sa);
+    var intsB = getInterests(sb);
+    var intTopicsA = {};
+    var intTopicsB = {};
+    intsA.forEach(function (i) { intTopicsA[i.topic.toLowerCase()] = i; });
+    intsB.forEach(function (i) { intTopicsB[i.topic.toLowerCase()] = i; });
+    var sharedInterests = Object.keys(intTopicsA).filter(function (k) { return intTopicsB[k]; });
+    var uniqueA = Object.keys(intTopicsA).filter(function (k) { return !intTopicsB[k]; });
+    var uniqueB = Object.keys(intTopicsB).filter(function (k) { return !intTopicsA[k]; });
+
+    if (sharedInterests.length > 0) {
+      var topShared = sharedInterests.slice(0, 3).map(function (k) { return intTopicsA[k].topic; });
+      insights.push({ type: "positive", text: '<span class="highlight-val">' + sharedInterests.length + '</span> shared interest(s): ' + topShared.join(", ") + '. These topics resonate across visitors.' });
+    }
+    if (uniqueA.length > 0 && uniqueB.length > 0) {
+      insights.push({ type: "neutral", text: 'Session <span class="highlight-a">A</span> surfaced ' + uniqueA.length + ' unique interest(s), session <span class="highlight-b">B</span> surfaced ' + uniqueB.length + '. Different visitor pain points.' });
+    }
+
+    // High-confidence interests
+    var highConfA = intsA.filter(function (i) { return i.confidence === "high"; });
+    var highConfB = intsB.filter(function (i) { return i.confidence === "high"; });
+    if (highConfA.length + highConfB.length > 0) {
+      var total = highConfA.length + highConfB.length;
+      insights.push({ type: "positive", text: '<span class="highlight-val">' + total + '</span> high-confidence interest(s) detected across both sessions -- strong buying signals.' });
+    }
+
+    // Follow-up actions
+    var fuA = (sa.follow_up_actions || []).length;
+    var fuB = (sb.follow_up_actions || []).length;
+    if (fuA + fuB > 0) {
+      insights.push({ type: "neutral", text: 'Combined <span class="highlight-val">' + (fuA + fuB) + '</span> follow-up actions generated (A: ' + fuA + ', B: ' + fuB + ').' });
+    }
+
+    // No data fallback
+    if (insights.length === 0) {
+      insights.push({ type: "neutral", text: "Not enough analysis data to generate insights. Ensure both sessions have completed analysis." });
+    }
+
+    var panel = document.getElementById("insights-panel");
+    var icons = { positive: "+", neutral: "~", warning: "!", negative: "x" };
+    panel.innerHTML = insights.map(function (ins) {
+      return '<div class="insight-row">' +
+        '<div class="insight-icon ' + ins.type + '">' + icons[ins.type] + '</div>' +
+        '<div class="insight-text">' + ins.text + '</div>' +
+        '</div>';
+    }).join("");
   }
 
 })();
