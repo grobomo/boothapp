@@ -1,15 +1,15 @@
 // ─── State ───────────────────────────────────────────────────────────────────
 
-let currentSessionActive = false;
-let sessionStartIso = null;
-let durationTimer = null;
+var currentSessionActive = false;
+var sessionStartIso = null;
+var durationTimer = null;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatTime(isoString) {
   if (!isoString) return '--';
   try {
-    const d = new Date(isoString);
+    var d = new Date(isoString);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   } catch (_) {
     return isoString;
@@ -18,11 +18,15 @@ function formatTime(isoString) {
 
 function formatDuration(startIso) {
   if (!startIso) return '--:--';
-  const ms = Date.now() - new Date(startIso).getTime();
+  var ms = Date.now() - new Date(startIso).getTime();
   if (ms < 0) return '--:--';
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
+  var totalSec = Math.floor(ms / 1000);
+  var h = Math.floor(totalSec / 3600);
+  var min = Math.floor((totalSec % 3600) / 60);
+  var sec = totalSec % 60;
+  if (h > 0) {
+    return h + ':' + (min < 10 ? '0' : '') + min + ':' + (sec < 10 ? '0' : '') + sec;
+  }
   return (min < 10 ? '0' : '') + min + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
@@ -37,15 +41,41 @@ function updateDuration() {
   document.getElementById('circleTimer').textContent = formatDuration(sessionStartIso);
 }
 
+// ─── UI State Machine ────────────────────────────────────────────────────────
+
+function setCircleState(state) {
+  var circle = document.getElementById('statusCircle');
+  var timerEl = document.getElementById('circleTimer');
+  var labelEl = document.getElementById('circleLabel');
+
+  circle.classList.remove('recording', 'uploading', 'error');
+
+  if (state === 'recording') {
+    circle.classList.add('recording');
+    labelEl.textContent = 'REC';
+  } else if (state === 'uploading') {
+    circle.classList.add('uploading');
+    timerEl.textContent = '...';
+    labelEl.textContent = 'UPLOADING';
+  } else if (state === 'error') {
+    circle.classList.add('error');
+    timerEl.textContent = '!!';
+    labelEl.textContent = 'ERROR';
+  } else {
+    timerEl.textContent = '--:--';
+    labelEl.textContent = 'IDLE';
+  }
+}
+
 // ─── Status Polling ──────────────────────────────────────────────────────────
 
 function refreshStatus() {
-  chrome.runtime.sendMessage({ type: 'get_popup_status' }, (response) => {
+  chrome.runtime.sendMessage({ type: 'get_popup_status' }, function(response) {
     if (chrome.runtime.lastError || !response || response.status !== 'ok') return;
 
     // S3 polling indicator (header)
-    const s3Dot = document.getElementById('s3PollDot');
-    const s3Text = document.getElementById('s3PollText');
+    var s3Dot = document.getElementById('s3PollDot');
+    var s3Text = document.getElementById('s3PollText');
     if (response.s3_polling) {
       s3Dot.classList.add('active');
       s3Text.textContent = 'S3: Connected';
@@ -56,31 +86,24 @@ function refreshStatus() {
       s3Text.classList.remove('active');
     }
 
-    // Status circle
-    const circle = document.getElementById('statusCircle');
-    const timerEl = document.getElementById('circleTimer');
-    const labelEl = document.getElementById('circleLabel');
-    const heroVisitor = document.getElementById('heroVisitor');
-    const heroError = document.getElementById('heroError');
+    var heroVisitor = document.getElementById('heroVisitor');
+    var heroError = document.getElementById('heroError');
 
     currentSessionActive = response.session_active;
 
-    // Reset circle state
-    circle.classList.remove('recording', 'error');
+    // Reset transient UI
     heroError.classList.remove('visible');
 
     if (response.error_message) {
-      // Error state -- solid red
-      circle.classList.add('error');
-      timerEl.textContent = '!!';
-      labelEl.textContent = 'ERROR';
+      setCircleState('error');
       heroError.textContent = response.error_message;
       heroError.classList.add('visible');
       heroVisitor.classList.remove('visible');
+    } else if (response.uploading) {
+      setCircleState('uploading');
+      heroVisitor.classList.remove('visible');
     } else if (response.session_active) {
-      // Recording -- green pulse
-      circle.classList.add('recording');
-      labelEl.textContent = 'REC';
+      setCircleState('recording');
 
       sessionStartIso = response.start_time || null;
       if (!durationTimer && sessionStartIso) {
@@ -95,9 +118,7 @@ function refreshStatus() {
         heroVisitor.classList.remove('visible');
       }
     } else {
-      // Idle -- gray
-      timerEl.textContent = '--:--';
-      labelEl.textContent = 'IDLE';
+      setCircleState('idle');
       heroVisitor.classList.remove('visible');
 
       if (durationTimer) {
@@ -115,15 +136,15 @@ function refreshStatus() {
     document.getElementById('statScreenshots').textContent = response.screenshot_count || '0';
 
     // Session info rows
-    const sidEl = document.getElementById('infoSessionId');
+    var sidEl = document.getElementById('infoSessionId');
     sidEl.textContent = truncateId(response.session_id);
     sidEl.classList.toggle('muted', !response.session_id);
 
-    const visEl = document.getElementById('infoVisitor');
+    var visEl = document.getElementById('infoVisitor');
     visEl.textContent = response.visitor_name || '--';
     visEl.classList.toggle('muted', !response.visitor_name);
 
-    const startEl = document.getElementById('infoStartTime');
+    var startEl = document.getElementById('infoStartTime');
     startEl.textContent = formatTime(response.start_time);
     startEl.classList.toggle('muted', !response.start_time);
   });
@@ -136,7 +157,7 @@ setInterval(refreshStatus, 1000);
 // ─── Session Start/Stop Button ───────────────────────────────────────────────
 
 function updateSessionButton(isActive) {
-  const btn = document.getElementById('sessionBtn');
+  var btn = document.getElementById('sessionBtn');
   if (isActive) {
     btn.textContent = 'Stop Session';
     btn.classList.remove('start');
@@ -148,14 +169,14 @@ function updateSessionButton(isActive) {
   }
 }
 
-document.getElementById('sessionBtn').addEventListener('click', () => {
+document.getElementById('sessionBtn').addEventListener('click', function() {
   if (currentSessionActive) {
-    chrome.runtime.sendMessage({ type: 'session_end' }, () => {
+    chrome.runtime.sendMessage({ type: 'session_end' }, function() {
       refreshStatus();
     });
   } else {
-    const sessionId = 'manual-' + Date.now().toString(36);
-    chrome.runtime.sendMessage({ type: 'session_start', session_id: sessionId }, () => {
+    var sessionId = 'manual-' + Date.now().toString(36);
+    chrome.runtime.sendMessage({ type: 'session_start', session_id: sessionId }, function() {
       refreshStatus();
     });
   }
@@ -163,7 +184,7 @@ document.getElementById('sessionBtn').addEventListener('click', () => {
 
 // ─── S3 Config ────────────────────────────────────────────────────────────────
 
-const S3_KEYS = ['s3Bucket', 's3Region', 'presignEndpoint', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
+var S3_KEYS = ['s3Bucket', 's3Region', 'presignEndpoint', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
 
 function isConfigured(config) {
   return !!(config.s3Bucket && config.s3Region && config.presignEndpoint && config.awsAccessKeyId && config.awsSecretAccessKey);
@@ -174,7 +195,7 @@ function updateConfiguredBadge(config) {
 }
 
 // Load saved values
-chrome.storage.local.get(S3_KEYS, (config) => {
+chrome.storage.local.get(S3_KEYS, function(config) {
   if (config.s3Bucket)            document.getElementById('s3Bucket').value = config.s3Bucket;
   if (config.s3Region)            document.getElementById('s3Region').value = config.s3Region;
   if (config.presignEndpoint)     document.getElementById('presignEndpoint').value = config.presignEndpoint;
@@ -185,8 +206,8 @@ chrome.storage.local.get(S3_KEYS, (config) => {
 });
 
 // Save
-document.getElementById('s3SaveBtn').addEventListener('click', () => {
-  const config = {
+document.getElementById('s3SaveBtn').addEventListener('click', function() {
+  var config = {
     s3Bucket:           document.getElementById('s3Bucket').value.trim(),
     s3Region:           document.getElementById('s3Region').value.trim(),
     presignEndpoint:    document.getElementById('presignEndpoint').value.trim(),
@@ -194,13 +215,13 @@ document.getElementById('s3SaveBtn').addEventListener('click', () => {
     awsSecretAccessKey: document.getElementById('awsSecretAccessKey').value.trim(),
     awsSessionToken:    document.getElementById('awsSessionToken').value.trim(),
   };
-  chrome.storage.local.set(config, () => {
+  chrome.storage.local.set(config, function() {
     updateConfiguredBadge(config);
-    const btn = document.getElementById('s3SaveBtn');
-    const orig = btn.textContent;
+    var btn = document.getElementById('s3SaveBtn');
+    var orig = btn.textContent;
     btn.textContent = 'Saved!';
     btn.classList.add('saved');
-    setTimeout(() => {
+    setTimeout(function() {
       btn.textContent = orig;
       btn.classList.remove('saved');
     }, 1500);
@@ -208,16 +229,18 @@ document.getElementById('s3SaveBtn').addEventListener('click', () => {
 });
 
 // Pre-fill Demo
-document.getElementById('s3DemoBtn').addEventListener('click', () => {
+document.getElementById('s3DemoBtn').addEventListener('click', function() {
   document.getElementById('s3Bucket').value = 'boothapp-sessions-752266476357';
   document.getElementById('s3Region').value = 'us-east-1';
+  document.getElementById('presignEndpoint').focus();
+  document.getElementById('presignEndpoint').setAttribute('placeholder', 'Paste Lambda Function URL here');
 });
 
 // Collapsible toggle
-document.getElementById('s3ConfigToggle').addEventListener('click', () => {
-  const body = document.getElementById('s3ConfigBody');
-  const arrow = document.getElementById('s3Arrow');
-  const collapsed = body.classList.toggle('collapsed');
+document.getElementById('s3ConfigToggle').addEventListener('click', function() {
+  var body = document.getElementById('s3ConfigBody');
+  var arrow = document.getElementById('s3Arrow');
+  var collapsed = body.classList.toggle('collapsed');
   if (collapsed) {
     arrow.classList.remove('open');
     arrow.textContent = '\u25B6';

@@ -288,6 +288,7 @@ async function s3GetJson(bucket, key, region, credentials) {
 let pollingSessionId = null;
 let lastError = '';       // Surfaced to popup as error_message
 let lastErrorTime = 0;    // Auto-clear after 30s
+let isUploading = false;  // Surfaced to popup as uploading indicator
 
 async function pollActiveSession() {
   const config = await chrome.storage.local.get([
@@ -480,13 +481,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'upload_session') {
     const { session_id, click_buffer } = message;
+    isUploading = true;
     uploadSessionData(session_id, click_buffer).then(() => {
       lastError = '';
+      isUploading = false;
       sendResponse({ status: 'ok' });
     }).catch((err) => {
       console.error('V1-Helper upload failed:', err);
       lastError = 'Upload Failed';
       lastErrorTime = Date.now();
+      isUploading = false;
       // Still clear local data even on error
       clearAllScreenshots().catch(() => {});
       chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});
@@ -533,6 +537,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           s3_polling: s3Configured,
           polling_session_id: pollingSessionId || '',
           error_message: errorMessage,
+          uploading: isUploading,
         });
       } catch (err) {
         sendResponse({ status: 'error', error: err.message });
