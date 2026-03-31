@@ -14,25 +14,25 @@ const TOPIC_CONTENT = {
     cta: 'Book a live XDR demo',
     resource: 'https://www.trendmicro.com/en_us/business/products/detection-response.html',
   },
-  'Endpoint Security': {
+  'Endpoint': {
     subject: 'Next-gen endpoint protection tailored to your environment',
     blurb: 'From workload protection to EDR, our endpoint platform stops threats before they execute -- with minimal performance impact on your servers and desktops.',
     cta: 'Start a free endpoint trial',
     resource: 'https://www.trendmicro.com/en_us/business/products/endpoint-security.html',
   },
-  'ZTSA': {
+  'Zero Trust': {
     subject: 'Zero Trust access without the complexity',
     blurb: 'Trend Micro Zero Trust Secure Access continuously verifies user identity and device posture before granting access to private apps -- no VPN required.',
-    cta: 'See ZTSA in action',
+    cta: 'See Zero Trust in action',
     resource: 'https://www.trendmicro.com/en_us/business/products/zero-trust.html',
   },
-  'Cloud Security': {
+  'Cloud': {
     subject: 'Secure your cloud from build to runtime',
     blurb: 'Whether you run containers, serverless, or VMs, Cloud Security provides unified visibility and automated protection across AWS, Azure, and GCP.',
     cta: 'Explore cloud security',
     resource: 'https://www.trendmicro.com/en_us/business/products/cloud-security.html',
   },
-  'Email Security': {
+  'Email': {
     subject: 'Stop phishing and BEC before they reach the inbox',
     blurb: 'Our email security uses AI-powered analysis to catch phishing, business email compromise, and zero-day attachments -- protecting Microsoft 365 and Google Workspace.',
     cta: 'Try email protection free',

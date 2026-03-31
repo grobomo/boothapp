@@ -9,10 +9,15 @@ const SCREENSHOT_MATCH_WINDOW_MS = 2000;
 
 const PRODUCT_TOPICS = {
   'XDR':              [/\bxdr\b/i, /\bagentic.siem\b/i, /\bdetection.and.response\b/i],
-  'Endpoint Security':[/\bendpoint/i, /\bepp\b/i, /\bedr\b/i, /\bworkload.protection\b/i],
-  'ZTSA':             [/\bztsa\b/i, /\bzero.trust\b/i, /\bsecure.access\b/i],
-  'Cloud Security':   [/\bcloud.security\b/i, /\bcloud.one\b/i, /\bcontainer.security\b/i],
-  'Email Security':   [/\bemail.security\b/i, /\bemail.protection\b/i, /\bcecp\b/i],
+  'Endpoint':         [/\bendpoint/i, /\bepp\b/i, /\bedr\b/i, /\bworkload.protection\b/i],
+  'Email':            [/\bemail.security\b/i, /\bemail.protection\b/i, /\bcecp\b/i],
+  'Network':          [/\bnetwork.security\b/i, /\btippingpoint\b/i, /\bnetwork.defense\b/i, /\bids\b/i, /\bips\b/i],
+  'Cloud':            [/\bcloud.security\b/i, /\bcloud.one\b/i, /\bcontainer.security\b/i, /\bcloud.posture\b/i],
+  'Risk Insights':    [/\brisk.insight/i, /\brisk.index\b/i, /\bcyber.risk\b/i, /\brisk.score\b/i],
+  'Workbench':        [/\bworkbench\b/i, /\binvestigation\b/i, /\bincident.response\b/i],
+  'Threat Intel':     [/\bthreat.intel/i, /\bthreat.encyclop/i, /\bioc\b/i, /\bsweeping\b/i],
+  'ASRM':             [/\basrm\b/i, /\battack.surface/i, /\bexposure.management\b/i, /\basset.discovery\b/i],
+  'Zero Trust':       [/\bztsa\b/i, /\bzero.trust\b/i, /\bsecure.access\b/i],
 };
 
 /**
@@ -167,8 +172,64 @@ function correlate(data, opts) {
   };
 }
 
+/**
+ * Build a product coverage matrix from correlator output.
+ *
+ * For each product in PRODUCT_TOPICS, determines:
+ * - mentioned: was it found in any transcript text?
+ * - clicked: was it found in any click URL?
+ * - interestLevel: 'high' | 'medium' | 'low' | 'none'
+ * - followUpRelevance: 'high' | 'medium' | 'low'
+ *
+ * @param {Object} correlatorOutput - return value of correlate()
+ * @returns {Object[]} array of { product, mentioned, clicked, interestLevel, followUpRelevance }
+ */
+function buildCoverageMatrix(correlatorOutput) {
+  const { segments = [] } = correlatorOutput || {};
+  const products = Object.keys(PRODUCT_TOPICS);
+
+  return products.map((product) => {
+    const patterns = PRODUCT_TOPICS[product];
+    let mentioned = false;
+    let clicked = false;
+    let mentionSegments = 0;
+    let clickSegments = 0;
+    let highEngagementHits = 0;
+
+    for (const seg of segments) {
+      const text = seg.transcript_text || '';
+      const segMentioned = patterns.some((re) => re.test(text));
+      const segClicked = (seg.clicks || []).some((c) =>
+        patterns.some((re) => re.test(c.url || '')),
+      );
+
+      if (segMentioned) { mentioned = true; mentionSegments++; }
+      if (segClicked) { clicked = true; clickSegments++; }
+      if ((segMentioned || segClicked) && seg.engagement_score === 'high') {
+        highEngagementHits++;
+      }
+    }
+
+    // Interest level based on signal strength
+    let interestLevel = 'none';
+    if (mentioned && clicked) {
+      interestLevel = highEngagementHits > 0 ? 'high' : 'medium';
+    } else if (mentioned || clicked) {
+      interestLevel = mentionSegments + clickSegments > 1 ? 'medium' : 'low';
+    }
+
+    // Follow-up relevance: high if actively discussed + clicked, low if absent
+    let followUpRelevance = 'low';
+    if (interestLevel === 'high') followUpRelevance = 'high';
+    else if (interestLevel === 'medium') followUpRelevance = 'medium';
+
+    return { product, mentioned, clicked, interestLevel, followUpRelevance };
+  });
+}
+
 module.exports = {
   correlate,
+  buildCoverageMatrix,
   matchScreenshots,
   detectTopics,
   engagementScore,
