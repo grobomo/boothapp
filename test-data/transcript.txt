@@ -1,0 +1,13 @@
+00:00 [Rep] Welcome to the booth! What brings you to the show today?
+00:05 [Visitor] We're looking at consolidating our security stack. We have too many point products.
+00:12 [Rep] That's a common challenge. Let me show you Vision One XDR -- it brings everything into one platform.
+00:20 [Visitor] How does it handle correlation across endpoints and email?
+00:25 [Rep] Great question. Vision One ingests telemetry from all sensors and uses AI to correlate events automatically.
+00:35 [Visitor] What about our cloud workloads? We're running Kubernetes on AWS.
+00:40 [Rep] Perfect -- let me pull up Cloud Security. We protect containers at runtime and scan images in your CI pipeline.
+00:50 [Visitor] That's interesting. We had an incident last month with a compromised container image.
+00:58 [Rep] Our container security would have caught that at build time. Let me also show you Zero Trust Secure Access.
+01:05 [Visitor] We're evaluating ZTNA for our remote workforce. About 60% of our team is hybrid.
+01:12 [Rep] ZTSA gives you per-app access policies without a traditional VPN. Works great for hybrid setups.
+01:20 [Visitor] Can we get a proof of concept set up?
+01:23 [Rep] Absolutely. I'll have our SE reach out this week to schedule a POC.
