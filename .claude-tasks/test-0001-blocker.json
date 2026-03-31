@@ -1,0 +1,23 @@
+{
+  "id": "test-0001-blocker",
+  "workstream": "infra",
+  "title": "[test-manager] Blocker: task-0001",
+  "description": "Test blocker issue created to validate the blocker reporting pipeline. No code changes required.",
+  "priority": 99,
+  "status": "completed",
+  "assigned_worker": null,
+  "substeps": [
+    {
+      "id": "validate-pipeline",
+      "title": "Validate blocker reporting pipeline works end-to-end",
+      "status": "completed",
+      "pr": null,
+      "notes": "Issue #310 created by test-manager, dispatched to CCC worker, resolved as test validation. Pipeline confirmed working."
+    }
+  ],
+  "depends_on": [],
+  "created_at": "2026-03-31T18:49:00Z",
+  "completed_at": "2026-03-31T18:50:09Z",
+  "github_issue": 310,
+  "notes": "This was a pipeline validation test, not a real blocker. The test-manager (tier t1) created this issue to verify that blockers are correctly reported, dispatched, and resolved."
+}
