@@ -1,0 +1,9 @@
+{
+  "mode": "yolo",
+  "depth": "quick",
+  "auto_initialized": true,
+  "workflow": {
+    "verifier": true
+  },
+  "spec_dir": ".specs/in-altarrboothapp-git-clone"
+}

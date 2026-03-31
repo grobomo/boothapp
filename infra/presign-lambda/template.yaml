@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: BoothApp pre-signed URL generator for S3 session uploads
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs20.x
+
+Resources:
+  PresignFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: .
+      MemorySize: 128
+      Environment:
+        Variables:
+          BUCKET_NAME: boothapp-sessions-752266476357
+      Policies:
+        - S3WritePolicy:
+            BucketName: boothapp-sessions-752266476357
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /presign
+            Method: post
+        Cors:
+          Type: Api
+          Properties:
+            Path: /presign
+            Method: options
+
+Outputs:
+  PresignApi:
+    Description: API Gateway endpoint for pre-signed URL generation
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/presign"
+  PresignFunction:
+    Description: Lambda function ARN
+    Value: !GetAtt PresignFunction.Arn
