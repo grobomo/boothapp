@@ -1,0 +1,7 @@
+{
+  "audio_recording": true,
+  "badge_ocr": true,
+  "competitive_analysis": true,
+  "email_drafts": true,
+  "cost_estimation": false
+}

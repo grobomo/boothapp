@@ -325,6 +325,8 @@
         .feed-dot--analysis { background: var(--blue); box-shadow: 0 0 10px rgba(68,138,255,.4); }
         .feed-dot--report   { background: var(--success); box-shadow: 0 0 10px rgba(0,230,118,.4); }
         .feed-dot--email    { background: var(--amber); box-shadow: 0 0 10px rgba(255,171,0,.4); }
+        .feed-dot--badge    { background: #AB47BC; box-shadow: 0 0 10px rgba(171,71,188,.4); }
+        .feed-dot--audio    { background: #26C6DA; box-shadow: 0 0 10px rgba(38,198,218,.4); }
 
         .feed-content { flex: 1; min-width: 0; }
         .feed-text {
@@ -515,6 +517,7 @@
             <span class="live-dot"></span>
             Live Dashboard
         </div>
+        <a href="admin.html" style="color:var(--text-dim);font-size:.8rem;text-decoration:none;margin-left:auto">Admin</a>
     </header>
 
     <!-- ============ STATUS CARDS ============ -->
@@ -621,6 +624,7 @@
 
 </div>
 
+<script src="../infra/feature-flags.js"></script>
 <script>
 (function () {
     'use strict';
@@ -721,16 +725,30 @@
         { name: 'Zero Trust',     color: '#FF7043' }
     ];
 
-    var EVENT_TEMPLATES = [
+    var ALL_EVENT_TEMPLATES = [
         { type: 'session',  tpl: 'Session started for <strong>{name}</strong> from {company}' },
         { type: 'session',  tpl: '<strong>{name}</strong> began a {product} demo' },
+        { type: 'badge',    tpl: 'Badge scanned for <strong>{name}</strong> from {company}', flag: 'badge_ocr' },
+        { type: 'badge',    tpl: 'OCR captured contact info for <strong>{name}</strong>', flag: 'badge_ocr' },
         { type: 'analysis', tpl: 'AI analysis complete for <strong>{name}</strong> -- report ready' },
         { type: 'analysis', tpl: 'Threat landscape assessment generated for <strong>{company}</strong>' },
+        { type: 'analysis', tpl: 'Competitive analysis: {product} vs alternatives for <strong>{company}</strong>', flag: 'competitive_analysis' },
         { type: 'report',   tpl: 'Executive report delivered to <strong>{name}</strong>' },
         { type: 'report',   tpl: 'ROI analysis report generated for <strong>{company}</strong>' },
-        { type: 'email',    tpl: 'Follow-up email generated for <strong>{name}</strong>' },
-        { type: 'email',    tpl: 'Personalized demo summary sent to <strong>{name}</strong> at {company}' }
+        { type: 'report',   tpl: 'Cost estimate generated for <strong>{company}</strong> -- {product}', flag: 'cost_estimation' },
+        { type: 'audio',    tpl: 'Audio recording transcribed for <strong>{name}</strong> session', flag: 'audio_recording' },
+        { type: 'audio',    tpl: 'Key topics extracted from <strong>{name}</strong> conversation', flag: 'audio_recording' },
+        { type: 'email',    tpl: 'Follow-up email generated for <strong>{name}</strong>', flag: 'email_drafts' },
+        { type: 'email',    tpl: 'Personalized demo summary sent to <strong>{name}</strong> at {company}', flag: 'email_drafts' }
     ];
+
+    // Filter templates by active feature flags
+    function getActiveTemplates() {
+        return ALL_EVENT_TEMPLATES.filter(function (t) {
+            if (!t.flag) return true;  // no flag = always active
+            return FeatureFlags.getFlag(t.flag);
+        });
+    }
 
     // ------------------------------------------------------------------
     // STATE
@@ -761,7 +779,9 @@
     }
 
     function generateMockEvent() {
-        var t = pick(EVENT_TEMPLATES);
+        var templates = getActiveTemplates();
+        if (templates.length === 0) templates = ALL_EVENT_TEMPLATES.slice(0, 2); // fallback to sessions
+        var t = pick(templates);
         var prod = pick(PRODUCTS);
         var text = t.tpl
             .replace('{name}', pick(NAMES))
