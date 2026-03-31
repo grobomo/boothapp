@@ -500,6 +500,7 @@ if (!BoothAuth.requireAwsCreds()) {
       <a href="timeline.html" id="link-timeline">Timeline</a>
       <a href="replay.html" id="link-replay">Replay</a>
       <a href="session.html" id="link-live">Live View</a>
+      <a href="email-generator.html" id="link-email">Email</a>
       <span id="auth-user" style="font-family:monospace"></span>
       <a href="#" id="logout-link">logout</a>
     </div>
@@ -576,6 +577,7 @@ if (!BoothAuth.requireAwsCreds()) {
   document.getElementById("link-timeline").href = "timeline.html?session=" + encodeURIComponent(sessionId);
   document.getElementById("link-replay").href = "replay.html?session=" + encodeURIComponent(sessionId);
   document.getElementById("link-live").href = "session.html?session=" + encodeURIComponent(sessionId);
+  document.getElementById("link-email").href = "email-generator.html?session=" + encodeURIComponent(sessionId);
   document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
   document.getElementById("logout-link").addEventListener("click", function (e) {
     e.preventDefault();

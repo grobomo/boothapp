@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/error-boundary.js"></script>
+<script src="components/nav.js"></script>
+<title>BoothApp — Email Generator</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<script src="auth.js"></script>
+<link rel="stylesheet" href="styles/mobile.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding-top: 56px;
+  }
+
+  /* -- Loading / Error -- */
+  #loading, #error {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 80vh; gap: 16px; padding: 24px;
+  }
+  #loading .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #error { color: var(--red); }
+  #error .msg { max-width: 500px; text-align: center; color: var(--text2); }
+  .hidden { display: none !important; }
+
+  /* -- Layout -- */
+  .page-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+  }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; }
+  .page-header .subtitle { color: var(--text2); font-size: 0.9rem; margin-top: 4px; }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 56px - 80px);
+  }
+
+  /* -- Sidebar controls -- */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(100vh - 56px - 80px);
+  }
+
+  .sidebar h2 {
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text2); margin-bottom: 12px;
+  }
+
+  .field-group { margin-bottom: 20px; }
+  .field-group label {
+    display: block; font-size: 0.8rem; font-weight: 600;
+    color: var(--text2); margin-bottom: 6px; text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .field-group input, .field-group textarea, .field-group select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; color: var(--text);
+    font-family: inherit; font-size: 0.9rem;
+  }
+  .field-group input:focus, .field-group textarea:focus, .field-group select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .field-group textarea { resize: vertical; min-height: 80px; }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; font-size: 0.85rem; color: var(--text2);
+  }
+  .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 6px; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); transition: all 0.15s;
+    text-decoration: none;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary {
+    background: var(--accent-dim); border-color: var(--accent-dim); color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-green { background: #238636; border-color: #238636; color: #fff; }
+  .btn-green:hover { background: #2ea043; border-color: #2ea043; }
+
+  .copy-feedback {
+    font-size: 0.8rem; color: var(--green); margin-left: 8px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .copy-feedback.show { opacity: 1; }
+
+  .divider {
+    border: none; border-top: 1px solid var(--border); margin: 20px 0;
+  }
+
+  /* -- Email preview pane -- */
+  .preview-pane {
+    padding: 32px;
+    overflow-y: auto;
+    max-height: calc(100vh - 56px - 80px);
+    display: flex;
+    justify-content: center;
+  }
+
+  .email-frame {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    max-width: 640px;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* -- Email template (light theme, inline-style-ready) -- */
+  .email-body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #24292f;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+
+  .email-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 32px 40px 28px;
+    color: #ffffff;
+  }
+  .email-header .brand {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; opacity: 0.85; margin-bottom: 16px;
+  }
+  .email-header h1 {
+    font-size: 1.4rem; font-weight: 700; margin: 0; line-height: 1.3;
+  }
+  .email-header .date {
+    font-size: 0.85rem; opacity: 0.8; margin-top: 6px;
+  }
+
+  .email-content { padding: 32px 40px; }
+
+  .email-greeting {
+    font-size: 1.05rem; margin-bottom: 16px; color: #24292f;
+  }
+
+  .email-intro {
+    color: #57606a; margin-bottom: 24px;
+  }
+
+  .email-section { margin-bottom: 28px; }
+  .email-section-title {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #5a67d8; margin-bottom: 12px;
+    padding-bottom: 8px; border-bottom: 2px solid #eef0ff;
+  }
+
+  .product-pills {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .product-pill {
+    background: #eef0ff; color: #5a67d8; padding: 6px 14px;
+    border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+  }
+
+  .interest-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .interest-item:last-child { border-bottom: none; }
+  .interest-topic {
+    font-weight: 600; color: #24292f; margin-bottom: 2px;
+  }
+  .interest-evidence {
+    font-size: 0.85rem; color: #57606a; font-style: italic;
+  }
+  .interest-confidence {
+    display: inline-block; font-size: 0.7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 2px 8px; border-radius: 10px; margin-left: 8px;
+  }
+  .confidence-high { background: #dafbe1; color: #1a7f37; }
+  .confidence-medium { background: #fff8c5; color: #9a6700; }
+  .confidence-low { background: #f0f0f0; color: #57606a; }
+
+  .steps-list {
+    list-style: none; padding: 0; margin: 0;
+  }
+  .steps-list li {
+    padding: 8px 0 8px 24px; position: relative; color: #24292f;
+  }
+  .steps-list li::before {
+    content: ""; position: absolute; left: 0; top: 16px;
+    width: 8px; height: 8px; background: #5a67d8;
+    border-radius: 50%;
+  }
+
+  .cta-section {
+    text-align: center; padding: 24px 0;
+  }
+  .cta-btn {
+    display: inline-block; background: #5a67d8; color: #ffffff !important;
+    padding: 12px 32px; border-radius: 6px; font-weight: 600;
+    font-size: 0.95rem; text-decoration: none;
+  }
+  .cta-sub {
+    font-size: 0.8rem; color: #8b949e; margin-top: 8px;
+  }
+
+  .tenant-box {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 16px 20px; margin-bottom: 24px;
+  }
+  .tenant-box .tenant-label {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    color: #15803d; margin-bottom: 6px;
+  }
+  .tenant-box a {
+    color: #5a67d8; font-weight: 500; word-break: break-all;
+  }
+
+  .email-footer {
+    background: #f6f8fa; padding: 24px 40px;
+    border-top: 1px solid #e1e4e8;
+    font-size: 0.8rem; color: #8b949e; text-align: center;
+  }
+  .email-footer .team-name { font-weight: 600; color: #57606a; }
+
+  /* -- Responsive -- */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .sidebar {
+      max-height: none; border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .preview-pane { max-height: none; }
+    .email-header, .email-content, .email-footer { padding-left: 24px; padding-right: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="color: var(--text2); font-size: 0.9rem;">Loading session data...</div>
+</div>
+
+<!-- Error -->
+<div id="error" class="hidden">
+  <div style="font-size: 2rem;">!</div>
+  <div style="font-size: 1.1rem; font-weight: 600;">Failed to load session</div>
+  <div class="msg" id="error-msg">Session not found or missing analysis data.</div>
+  <a href="sessions.html" class="btn" style="margin-top: 12px;">Back to Sessions</a>
+</div>
+
+<!-- Main content -->
+<div id="content" class="hidden">
+  <div class="page-header">
+    <h1>Follow-Up Email Generator</h1>
+    <div class="subtitle">Session <span id="header-session-id" style="font-family: monospace; color: var(--accent);"></span></div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Sidebar: editable fields -->
+    <div class="sidebar">
+      <h2>Sender Info</h2>
+      <div class="field-group">
+        <label>Your Name</label>
+        <input type="text" id="sender-name" placeholder="Sales Engineer name">
+      </div>
+      <div class="field-group">
+        <label>Your Title</label>
+        <input type="text" id="sender-title" value="Solutions Engineer" placeholder="Your title">
+      </div>
+      <div class="field-group">
+        <label>Your Email</label>
+        <input type="email" id="sender-email" placeholder="you@trendmicro.com">
+      </div>
+
+      <hr class="divider">
+
+      <h2>Email Options</h2>
+      <div class="field-group">
+        <label>Subject Line</label>
+        <input type="text" id="email-subject">
+      </div>
+      <div class="field-group">
+        <label>Custom Intro (optional)</label>
+        <textarea id="custom-intro" placeholder="Override the auto-generated intro paragraph..."></textarea>
+      </div>
+      <div class="field-group">
+        <label>Calendar Link</label>
+        <select id="calendar-type">
+          <option value="google">Google Calendar</option>
+          <option value="outlook">Outlook Web</option>
+          <option value="mailto">Email Request</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Follow-Up Duration (min)</label>
+        <input type="number" id="meeting-duration" value="30" min="15" max="120" step="15">
+      </div>
+
+      <hr class="divider">
+
+      <h2>Include Sections</h2>
+      <div class="checkbox-row">
+        <input type="checkbox" id="inc-products" checked> Products Demonstrated
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="inc-interests" checked> Key Interests
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="inc-steps" checked> Next Steps
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="inc-tenant" checked> V1 Tenant Link
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="inc-calendar" checked> Calendar CTA
+      </div>
+
+      <hr class="divider">
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="regeneratePreview()">Refresh Preview</button>
+        <button class="btn btn-green" onclick="copyEmailHTML()">Copy HTML</button>
+        <span class="copy-feedback" id="copy-feedback">Copied!</span>
+      </div>
+      <div class="btn-row" style="margin-top: 8px;">
+        <button class="btn" onclick="copyPlainText()">Copy Plain Text</button>
+        <button class="btn" onclick="openInMailto()">Open in Mail Client</button>
+      </div>
+    </div>
+
+    <!-- Email preview -->
+    <div class="preview-pane">
+      <div class="email-frame">
+        <div class="email-body" id="email-preview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  if (!BoothAuth.requireLogin()) return;
+
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get("session");
+  if (!sessionId) {
+    showError("No session ID provided. Use ?session=SESSION_ID");
+    return;
+  }
+
+  document.getElementById("header-session-id").textContent = sessionId;
+
+  var s3 = null;
+  function getS3() {
+    if (s3) return s3;
+    var ak = localStorage.getItem("boothapp_aws_ak");
+    var sk = localStorage.getItem("boothapp_aws_sk");
+    if (!ak || !sk) return null;
+    AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
+    s3 = new AWS.S3({ params: { Bucket: BUCKET } });
+    return s3;
+  }
+
+  function fetchJson(key) {
+    return new Promise(function (resolve, reject) {
+      var client = getS3();
+      if (!client) { reject(new Error("No AWS credentials")); return; }
+      client.getObject({ Key: key }, function (err, data) {
+        if (err) { reject(err); return; }
+        try { resolve(JSON.parse(data.Body.toString())); }
+        catch (e) { reject(e); }
+      });
+    });
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
+  }
+
+  function formatDate(isoStr) {
+    if (!isoStr) return "";
+    var d = new Date(isoStr);
+    return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  }
+
+  // -- State --
+  var summaryData = null;
+  var metaData = null;
+  var followUpData = null;
+
+  // Load all session JSON files
+  var prefix = "sessions/" + sessionId + "/";
+  Promise.all([
+    fetchJson(prefix + "output/summary.json"),
+    fetchJson(prefix + "metadata.json").catch(function () { return {}; }),
+    fetchJson(prefix + "output/follow-up.json").catch(function () { return {}; })
+  ]).then(function (results) {
+    summaryData = results[0];
+    metaData = results[1];
+    followUpData = results[2];
+    initFields();
+    regeneratePreview();
+    showContent();
+  }).catch(function (err) {
+    showError("Could not load session data: " + (err.message || err));
+  });
+
+  function showContent() {
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+  }
+
+  function showError(msg) {
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("error").classList.remove("hidden");
+    if (msg) document.getElementById("error-msg").textContent = msg;
+  }
+
+  function initFields() {
+    var name = summaryData.visitor_name || "Visitor";
+    var seName = metaData.se_name || summaryData.se_name || "";
+    document.getElementById("sender-name").value = seName;
+    document.getElementById("email-subject").value =
+      "Your Vision One Demo Summary" + (name !== "Visitor" ? " - " + name : "");
+  }
+
+  // -- Calendar link builders --
+  function buildCalendarLink() {
+    var type = document.getElementById("calendar-type").value;
+    var duration = parseInt(document.getElementById("meeting-duration").value, 10) || 30;
+    var visitorName = summaryData.visitor_name || "Visitor";
+    var senderName = document.getElementById("sender-name").value || "Solutions Engineer";
+    var title = "Vision One Follow-Up: " + visitorName;
+    var details = "Follow-up discussion on the Vision One demo session.\n\nTopics:\n";
+    var interests = summaryData.key_interests || [];
+    interests.forEach(function (ki) { details += "- " + ki.topic + "\n"; });
+
+    // Dates: suggest next Tuesday at 2pm
+    var now = new Date();
+    var daysUntilTue = (9 - now.getDay()) % 7 || 7;
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilTue, 14, 0, 0);
+    var end = new Date(start.getTime() + duration * 60000);
+
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    function toGCal(d) {
+      return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+        "T" + pad(d.getHours()) + pad(d.getMinutes()) + "00";
+    }
+    function toISO(d) {
+      return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    }
+
+    if (type === "google") {
+      return "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+        "&text=" + encodeURIComponent(title) +
+        "&dates=" + toGCal(start) + "/" + toGCal(end) +
+        "&details=" + encodeURIComponent(details);
+    } else if (type === "outlook") {
+      return "https://outlook.office.com/calendar/0/deeplink/compose?subject=" +
+        encodeURIComponent(title) +
+        "&startdt=" + start.toISOString() +
+        "&enddt=" + end.toISOString() +
+        "&body=" + encodeURIComponent(details);
+    } else {
+      var senderEmail = document.getElementById("sender-email").value || "";
+      return "mailto:" + senderEmail +
+        "?subject=" + encodeURIComponent("Schedule Follow-Up: " + title) +
+        "&body=" + encodeURIComponent(
+          "Hi " + senderName.split(" ")[0] + ",\n\n" +
+          "I'd like to schedule a " + duration + "-minute follow-up to discuss our Vision One demo.\n\n" +
+          "Topics I'd like to cover:\n" +
+          interests.map(function (ki) { return "- " + ki.topic; }).join("\n") +
+          "\n\nPlease let me know your availability.\n\nBest regards,\n" +
+          (summaryData.visitor_name || "")
+        );
+    }
+  }
+
+  // -- Generate email HTML --
+  window.regeneratePreview = function () {
+    var s = summaryData;
+    var name = s.visitor_name || "Visitor";
+    var firstName = name.split(" ")[0];
+    var senderName = document.getElementById("sender-name").value || "Your Solutions Engineer";
+    var senderTitle = document.getElementById("sender-title").value || "";
+    var subject = document.getElementById("email-subject").value || "Your Vision One Demo Summary";
+    var customIntro = document.getElementById("custom-intro").value;
+    var incProducts = document.getElementById("inc-products").checked;
+    var incInterests = document.getElementById("inc-interests").checked;
+    var incSteps = document.getElementById("inc-steps").checked;
+    var incTenant = document.getElementById("inc-tenant").checked;
+    var incCalendar = document.getElementById("inc-calendar").checked;
+
+    var html = "";
+
+    // Header
+    html += '<div class="email-header">';
+    html += '<div class="brand">Trend Micro Vision One</div>';
+    html += '<h1>' + esc(subject) + '</h1>';
+    var dateStr = formatDate(s.generated_at || metaData.ended_at);
+    if (dateStr) html += '<div class="date">Demo session on ' + esc(dateStr) + '</div>';
+    html += '</div>';
+
+    // Content
+    html += '<div class="email-content">';
+
+    // Greeting
+    html += '<div class="email-greeting">Hi ' + esc(firstName) + ',</div>';
+
+    // Intro
+    var intro = customIntro || (
+      "Thank you for visiting the Trend Micro booth and taking the time to explore Vision One with us. " +
+      "As promised, here\u2019s a personalized summary of your demo session and recommended next steps."
+    );
+    html += '<div class="email-intro">' + esc(intro) + '</div>';
+
+    // Products
+    if (incProducts && s.products_demonstrated && s.products_demonstrated.length > 0) {
+      html += '<div class="email-section">';
+      html += '<div class="email-section-title">What We Covered</div>';
+      html += '<div class="product-pills">';
+      s.products_demonstrated.forEach(function (p) {
+        html += '<span class="product-pill">' + esc(p) + '</span>';
+      });
+      html += '</div></div>';
+    }
+
+    // Key interests
+    if (incInterests && s.key_interests && s.key_interests.length > 0) {
+      html += '<div class="email-section">';
+      html += '<div class="email-section-title">Your Key Interests</div>';
+      s.key_interests.forEach(function (ki) {
+        html += '<div class="interest-item">';
+        html += '<div class="interest-topic">' + esc(ki.topic);
+        if (ki.confidence) {
+          html += ' <span class="interest-confidence confidence-' + esc(ki.confidence) + '">' +
+            esc(ki.confidence) + '</span>';
+        }
+        html += '</div>';
+        if (ki.evidence) {
+          html += '<div class="interest-evidence">' + esc(ki.evidence) + '</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Next steps
+    if (incSteps && s.follow_up_actions && s.follow_up_actions.length > 0) {
+      html += '<div class="email-section">';
+      html += '<div class="email-section-title">Recommended Next Steps</div>';
+      html += '<ul class="steps-list">';
+      s.follow_up_actions.forEach(function (action) {
+        html += '<li>' + esc(action) + '</li>';
+      });
+      html += '</ul></div>';
+    }
+
+    // Tenant link
+    if (incTenant && s.v1_tenant_link) {
+      html += '<div class="tenant-box">';
+      html += '<div class="tenant-label">Your Vision One Demo Environment</div>';
+      html += '<div>Explore Vision One at your own pace. Your environment is available for 30 days:</div>';
+      html += '<div style="margin-top:8px;"><a href="' + esc(s.v1_tenant_link) + '">' +
+        esc(s.v1_tenant_link) + '</a></div>';
+      html += '</div>';
+    }
+
+    // Calendar CTA
+    if (incCalendar) {
+      var calLink = buildCalendarLink();
+      html += '<div class="cta-section">';
+      html += '<a class="cta-btn" href="' + esc(calLink) + '">Schedule a Follow-Up</a>';
+      html += '<div class="cta-sub">30-minute deep dive on the topics that matter to you</div>';
+      html += '</div>';
+    }
+
+    html += '</div>'; // end email-content
+
+    // Footer
+    html += '<div class="email-footer">';
+    html += '<div class="team-name">' + esc(senderName) + '</div>';
+    if (senderTitle) html += '<div>' + esc(senderTitle) + '</div>';
+    html += '<div style="margin-top:8px;">Trend Micro | Vision One Platform</div>';
+    html += '</div>';
+
+    document.getElementById("email-preview").innerHTML = html;
+  };
+
+  // -- Copy email HTML to clipboard --
+  window.copyEmailHTML = function () {
+    var emailEl = document.getElementById("email-preview");
+    // Build a standalone HTML email with inline styles
+    var fullHTML = buildStandaloneEmail(emailEl.innerHTML);
+    navigator.clipboard.writeText(fullHTML).then(function () {
+      flashFeedback("copy-feedback", "Copied!");
+    });
+  };
+
+  function buildStandaloneEmail(bodyHTML) {
+    return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+      '<title>' + esc(document.getElementById("email-subject").value) + '</title>\n' +
+      '</head>\n<body style="margin:0;padding:0;background:#f6f8fa;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Helvetica,Arial,sans-serif;">\n' +
+      '<div style="max-width:640px;margin:0 auto;background:#ffffff;">\n' +
+      bodyHTML + '\n</div>\n</body>\n</html>';
+  }
+
+  // -- Copy plain text version --
+  window.copyPlainText = function () {
+    var s = summaryData;
+    var name = s.visitor_name || "Visitor";
+    var firstName = name.split(" ")[0];
+    var senderName = document.getElementById("sender-name").value || "Your Solutions Engineer";
+    var senderTitle = document.getElementById("sender-title").value || "";
+    var customIntro = document.getElementById("custom-intro").value;
+
+    var text = "Hi " + firstName + ",\n\n";
+    text += (customIntro || "Thank you for visiting the Trend Micro booth and taking the time to explore Vision One with us. As promised, here's a personalized summary of your demo session and recommended next steps.") + "\n\n";
+
+    if (document.getElementById("inc-products").checked && s.products_demonstrated && s.products_demonstrated.length) {
+      text += "WHAT WE COVERED\n";
+      s.products_demonstrated.forEach(function (p) { text += "  - " + p + "\n"; });
+      text += "\n";
+    }
+
+    if (document.getElementById("inc-interests").checked && s.key_interests && s.key_interests.length) {
+      text += "YOUR KEY INTERESTS\n";
+      s.key_interests.forEach(function (ki) {
+        text += "  - " + ki.topic;
+        if (ki.evidence) text += " (" + ki.evidence + ")";
+        text += "\n";
+      });
+      text += "\n";
+    }
+
+    if (document.getElementById("inc-steps").checked && s.follow_up_actions && s.follow_up_actions.length) {
+      text += "RECOMMENDED NEXT STEPS\n";
+      s.follow_up_actions.forEach(function (a) { text += "  - " + a + "\n"; });
+      text += "\n";
+    }
+
+    if (document.getElementById("inc-tenant").checked && s.v1_tenant_link) {
+      text += "YOUR VISION ONE DEMO ENVIRONMENT\n";
+      text += "Explore at your own pace (available 30 days): " + s.v1_tenant_link + "\n\n";
+    }
+
+    if (document.getElementById("inc-calendar").checked) {
+      text += "Schedule a follow-up: " + buildCalendarLink() + "\n\n";
+    }
+
+    text += "---\n" + senderName;
+    if (senderTitle) text += "\n" + senderTitle;
+    text += "\nTrend Micro | Vision One Platform\n";
+
+    navigator.clipboard.writeText(text).then(function () {
+      flashFeedback("copy-feedback", "Copied plain text!");
+    });
+  };
+
+  // -- Open in mail client --
+  window.openInMailto = function () {
+    var s = summaryData;
+    var visitorEmail = (followUpData && followUpData.visitor_email) || "";
+    var subject = document.getElementById("email-subject").value;
+    // Build a simple plain text body for mailto
+    var firstName = (s.visitor_name || "Visitor").split(" ")[0];
+    var body = "Hi " + firstName + ",\n\n";
+    body += "Thank you for visiting our booth. Here's your demo summary:\n\n";
+    if (s.products_demonstrated && s.products_demonstrated.length) {
+      body += "Products covered: " + s.products_demonstrated.join(", ") + "\n\n";
+    }
+    if (s.follow_up_actions && s.follow_up_actions.length) {
+      body += "Next steps:\n";
+      s.follow_up_actions.forEach(function (a) { body += "- " + a + "\n"; });
+      body += "\n";
+    }
+    if (s.v1_tenant_link) {
+      body += "Your demo environment: " + s.v1_tenant_link + "\n\n";
+    }
+    body += "Best regards,\n" + (document.getElementById("sender-name").value || "Your SE");
+
+    window.location.href = "mailto:" + encodeURIComponent(visitorEmail) +
+      "?subject=" + encodeURIComponent(subject) +
+      "&body=" + encodeURIComponent(body);
+  };
+
+  function flashFeedback(id, msg) {
+    var el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(function () { el.classList.remove("show"); }, 2000);
+  }
+
+  // Live preview updates on input changes
+  var inputs = document.querySelectorAll(".sidebar input, .sidebar textarea, .sidebar select");
+  for (var i = 0; i < inputs.length; i++) {
+    inputs[i].addEventListener("input", function () {
+      clearTimeout(window._previewTimer);
+      window._previewTimer = setTimeout(regeneratePreview, 300);
+    });
+    inputs[i].addEventListener("change", function () {
+      regeneratePreview();
+    });
+  }
+})();
+</script>
+</body>
+</html>
