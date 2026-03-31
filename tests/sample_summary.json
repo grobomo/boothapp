@@ -1,0 +1,14 @@
+{
+  "visitor_name": "Sarah Chen",
+  "company": "Acme Corp",
+  "demos": [
+    "Vision One XDR platform -- correlated threat detection across endpoints, email, and network",
+    "Cloud Security posture management for AWS and Azure workloads",
+    "Zero Trust Secure Access for hybrid workforce connectivity"
+  ],
+  "takeaways": [
+    "Unified visibility across your multi-cloud environment reduces mean time to detect by 60%",
+    "Automated response playbooks can contain lateral movement within seconds",
+    "Zero Trust architecture eliminates implicit trust for remote and on-prem users alike"
+  ]
+}

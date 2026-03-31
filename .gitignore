@@ -7,3 +7,5 @@ __pycache__/
 .DS_Store
 continuous-claude.log
 examples/sample_report.html
+output/
+.planning/
