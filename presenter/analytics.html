@@ -247,6 +247,47 @@
     text-align: center;
   }
 
+  /* -- Export bar -- */
+  .export-bar {
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .export-bar h2 {
+    font-size: 0.85rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+  .export-btn {
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    color: #58a6ff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .export-btn:hover { border-color: #58a6ff; background: #58a6ff11; }
+  .export-btn:active { background: #58a6ff22; }
+  .export-count {
+    font-size: 0.8rem;
+    color: #484f58;
+    font-family: monospace;
+    margin-left: auto;
+  }
+
   @media (max-width: 768px) {
     body { padding: 1rem; }
     .charts-grid { grid-template-columns: 1fr; }
@@ -312,6 +353,14 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
       <div class="label">Unique Companies</div>
       <div class="value" id="kpi-companies">--</div>
     </div>
+  </div>
+
+  <!-- Export to CRM -->
+  <div class="export-bar">
+    <h2>Export to CRM</h2>
+    <button class="export-btn" id="export-csv">Download CSV</button>
+    <button class="export-btn" id="export-salesforce">Salesforce Import</button>
+    <span class="export-count" id="export-count"></span>
   </div>
 
   <!-- Charts row 1: sessions by day + peak hours -->
@@ -498,6 +547,7 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
   function renderDashboard() {
     var sessions = filterSessions(activeRange);
     renderKPIs(sessions);
+    updateExportCount(sessions);
     renderSessionsByDay(sessions);
     renderPeakHours(sessions);
     renderProducts(sessions);
@@ -811,6 +861,134 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
       }
     };
   }
+
+  // ── CRM Export ─────────────────────────────────────────────────────────────
+
+  function csvEscape(val) {
+    var str = String(val == null ? "" : val);
+    if (str.indexOf(",") !== -1 || str.indexOf('"') !== -1 || str.indexOf("\n") !== -1) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function getFollowUpPriority(score) {
+    if (score == null) return "";
+    if (score >= 8) return "High";
+    if (score >= 5) return "Medium";
+    return "Low";
+  }
+
+  function buildExportRows(sessions) {
+    return sessions.map(function (s) {
+      var meta = s.metadata || {};
+      var sum = s.summary || {};
+      var interests = (sum.key_interests || []).map(function (ki) {
+        return typeof ki === "string" ? ki : (ki.topic || "");
+      }).filter(Boolean).join("; ");
+      var actions = (sum.follow_up_actions || []).join("; ");
+      var products = (sum.products_demonstrated || []).join("; ");
+      var sessionDate = meta.started_at || meta.created_at || "";
+      if (sessionDate) {
+        var d = new Date(sessionDate);
+        if (!isNaN(d.getTime())) {
+          sessionDate = d.getFullYear() + "-" +
+            String(d.getMonth() + 1).padStart(2, "0") + "-" +
+            String(d.getDate()).padStart(2, "0");
+        }
+      }
+      return {
+        visitor_name: sum.visitor_name || meta.visitor_name || "",
+        company: meta.visitor_company || sum.visitor_company || "",
+        title: meta.visitor_title || sum.visitor_title || "",
+        session_date: sessionDate,
+        products_demonstrated: products,
+        key_interests: interests,
+        recommended_actions: actions,
+        session_score: sum.session_score != null ? sum.session_score : "",
+        follow_up_priority: getFollowUpPriority(sum.session_score)
+      };
+    });
+  }
+
+  function generateCSV(sessions) {
+    var rows = buildExportRows(sessions);
+    var headers = ["visitor_name", "company", "title", "session_date",
+      "products_demonstrated", "key_interests", "recommended_actions",
+      "session_score", "follow_up_priority"];
+    var lines = [headers.join(",")];
+    rows.forEach(function (r) {
+      lines.push(headers.map(function (h) { return csvEscape(r[h]); }).join(","));
+    });
+    return lines.join("\r\n");
+  }
+
+  function generateSalesforceCSV(sessions) {
+    var rows = buildExportRows(sessions);
+    var sfHeaders = ["Last Name", "First Name", "Company", "Title",
+      "Lead Source", "Rating", "Description",
+      "Products_Demonstrated__c", "Session_Score__c",
+      "Key_Interests__c", "Recommended_Actions__c", "Session_Date__c"];
+    var lines = [sfHeaders.join(",")];
+    rows.forEach(function (r) {
+      var nameParts = (r.visitor_name || "").trim().split(/\s+/);
+      var firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : "";
+      var lastName = nameParts.length > 0 ? nameParts[nameParts.length - 1] : "Unknown";
+      var rating = r.follow_up_priority === "High" ? "Hot" :
+                   r.follow_up_priority === "Medium" ? "Warm" : "Cold";
+      var desc = r.key_interests ? "Interests: " + r.key_interests : "";
+      if (r.recommended_actions) {
+        desc += (desc ? " | " : "") + "Actions: " + r.recommended_actions;
+      }
+      lines.push([
+        csvEscape(lastName),
+        csvEscape(firstName),
+        csvEscape(r.company || "Unknown"),
+        csvEscape(r.title),
+        csvEscape("Trade Show Demo"),
+        csvEscape(rating),
+        csvEscape(desc),
+        csvEscape(r.products_demonstrated),
+        csvEscape(r.session_score),
+        csvEscape(r.key_interests),
+        csvEscape(r.recommended_actions),
+        csvEscape(r.session_date)
+      ].join(","));
+    });
+    return lines.join("\r\n");
+  }
+
+  function downloadFile(content, filename, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function updateExportCount(sessions) {
+    var el = document.getElementById("export-count");
+    var withAnalysis = sessions.filter(function (s) { return s.summary; }).length;
+    el.textContent = withAnalysis + " of " + sessions.length + " sessions have analysis data";
+  }
+
+  document.getElementById("export-csv").addEventListener("click", function () {
+    var sessions = filterSessions(activeRange);
+    var csv = generateCSV(sessions);
+    var ts = new Date().toISOString().slice(0, 10);
+    downloadFile(csv, "boothapp-crm-export-" + ts + ".csv", "text/csv;charset=utf-8;");
+  });
+
+  document.getElementById("export-salesforce").addEventListener("click", function () {
+    var sessions = filterSessions(activeRange);
+    var csv = generateSalesforceCSV(sessions);
+    var ts = new Date().toISOString().slice(0, 10);
+    downloadFile(csv, "boothapp-salesforce-import-" + ts + ".csv", "text/csv;charset=utf-8;");
+  });
 
   // ── Init ──────────────────────────────────────────────────────────────────
   loadAllSessions();
