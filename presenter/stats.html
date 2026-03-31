@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Demo Statistics</title>
+    <style>
+        /* ============================================================
+           RESET & BASE
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --red-light: #FF4D52;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+            --cyan:      #00BCD4;
+            --purple:    #7C4DFF;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============================================================
+           BACKGROUND (matches other presenter pages)
+           ============================================================ */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(rgba(215,25,32,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(215,25,32,.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+            animation: gridPulse 10s ease-in-out infinite;
+        }
+        @keyframes gridPulse {
+            0%, 100% { opacity: .3; }
+            50%      { opacity: .7; }
+        }
+
+        .bg-glow {
+            position: fixed; z-index: 0;
+            border-radius: 50%;
+            filter: blur(180px);
+            opacity: .12;
+            animation: drift 25s ease-in-out infinite;
+        }
+        .bg-glow--1 { top: -300px; left: -200px; width: 800px; height: 800px; background: var(--red); }
+        .bg-glow--2 { bottom: -300px; right: -200px; width: 700px; height: 700px; background: var(--red); animation-delay: -12s; }
+        .bg-glow--3 { top: 40%; left: 50%; width: 500px; height: 500px; background: var(--blue); opacity: .06; animation-delay: -6s; }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33%      { transform: translate(50px, 30px) scale(1.05); }
+            66%      { transform: translate(-30px, 50px) scale(.95); }
+        }
+
+        /* ============================================================
+           LAYOUT
+           ============================================================ */
+        .page {
+            position: relative;
+            z-index: 1;
+            padding: 32px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            width: 48px; height: 48px;
+            background: var(--red);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 20px; color: #FFF;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .header h1 span { color: var(--red); }
+
+        .header-right {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .refresh-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .refresh-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .3; }
+        }
+
+        /* ============================================================
+           STAT CARDS (top row)
+           ============================================================ */
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 48px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .stat-card .sub {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .stat-card:nth-child(1) .value { color: var(--red-light); }
+        .stat-card:nth-child(2) .value { color: var(--blue); }
+        .stat-card:nth-child(3) .value { color: var(--amber); }
+        .stat-card:nth-child(4) .value { color: var(--success); }
+
+        /* ============================================================
+           GRID LAYOUT (charts)
+           ============================================================ */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .chart-card h2 {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
+        /* ============================================================
+           BAR CHART (CSS-only)
+           ============================================================ */
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .bar-label {
+            width: 180px;
+            font-size: 15px;
+            font-weight: 500;
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 28px;
+            background: var(--surface2);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--red-dark), var(--red-light));
+            transition: width 0.8s ease;
+            min-width: 2px;
+        }
+
+        .bar-count {
+            width: 40px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dim);
+            flex-shrink: 0;
+        }
+
+        /* ============================================================
+           INTERESTS LIST
+           ============================================================ */
+        .interest-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .interest-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: var(--surface2);
+            border-radius: 8px;
+        }
+
+        .interest-rank {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--red);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .interest-name {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .interest-count {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dim);
+        }
+
+        .interest-bar {
+            width: 80px;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .interest-bar-fill {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        /* ============================================================
+           HEATMAP
+           ============================================================ */
+        .heatmap-container {
+            overflow-x: auto;
+        }
+
+        .heatmap {
+            display: grid;
+            grid-template-columns: 60px repeat(12, 1fr);
+            gap: 3px;
+            font-size: 12px;
+        }
+
+        .heatmap-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 4px 0;
+        }
+
+        .heatmap-day {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            padding-right: 8px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1.6;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: transparent;
+            transition: background 0.3s ease;
+            min-height: 36px;
+        }
+        .heatmap-cell:hover {
+            color: var(--text);
+            outline: 1px solid var(--text-dim);
+        }
+
+        .heatmap-cell[data-count="0"] { background: var(--surface2); }
+
+        /* ============================================================
+           ENGAGEMENT DISTRIBUTION
+           ============================================================ */
+        .engagement-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 6px;
+            height: 180px;
+            padding-top: 20px;
+        }
+
+        .eng-bar-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            max-width: 60px;
+        }
+
+        .eng-bar-container {
+            width: 100%;
+            height: 140px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .eng-bar {
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.8s ease;
+            min-height: 2px;
+        }
+
+        .eng-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        .eng-count {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-dim);
+        }
+
+        /* ============================================================
+           LOADING / ERROR
+           ============================================================ */
+        .status-msg {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 18px;
+            color: var(--text-dim);
+        }
+        .status-msg.error { color: var(--red-light); }
+
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--red);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============================================================
+           FULL-WIDTH CARDS
+           ============================================================ */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* ============================================================
+           CONFIG PANEL
+           ============================================================ */
+        .config-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .config-bar label {
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .config-bar input, .config-bar select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 6px 10px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .config-bar input:focus, .config-bar select:focus {
+            outline: none;
+            border-color: var(--red);
+        }
+
+        .config-bar .spacer { flex: 1; }
+
+        .btn-refresh {
+            background: var(--red);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-refresh:hover { background: var(--red-dark); }
+    </style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow--1"></div>
+<div class="bg-glow bg-glow--2"></div>
+<div class="bg-glow bg-glow--3"></div>
+
+<div class="page">
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">V1</div>
+            <div>
+                <h1>Booth <span>Statistics</span></h1>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="refresh-indicator">
+                <span class="refresh-dot"></span>
+                <span id="refresh-status">Auto-refresh every 30s</span>
+            </div>
+            <div id="last-update" style="margin-top:4px;font-size:12px;">--</div>
+        </div>
+    </div>
+
+    <!-- Config -->
+    <div class="config-bar">
+        <label>S3 Bucket</label>
+        <input type="text" id="cfg-bucket" placeholder="boothapp-sessions-ACCOUNT" style="width:320px;">
+        <label>Region</label>
+        <select id="cfg-region">
+            <option value="us-east-1">us-east-1</option>
+            <option value="us-east-2">us-east-2</option>
+            <option value="us-west-2">us-west-2</option>
+            <option value="eu-west-1">eu-west-1</option>
+            <option value="ap-southeast-1">ap-southeast-1</option>
+        </select>
+        <label>Profile</label>
+        <input type="text" id="cfg-profile" placeholder="hackathon" style="width:140px;">
+        <span class="spacer"></span>
+        <button class="btn-refresh" onclick="refreshNow()">Refresh Now</button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stat-row">
+        <div class="stat-card">
+            <div class="label">Total Sessions</div>
+            <div class="value" id="stat-sessions">--</div>
+            <div class="sub" id="stat-sessions-sub">&nbsp;</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Avg Duration</div>
+            <div class="value" id="stat-duration">--</div>
+            <div class="sub" id="stat-duration-sub">&nbsp;</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Avg Engagement</div>
+            <div class="value" id="stat-engagement">--</div>
+            <div class="sub" id="stat-engagement-sub">&nbsp;</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Products Shown</div>
+            <div class="value" id="stat-products">--</div>
+            <div class="sub" id="stat-products-sub">&nbsp;</div>
+        </div>
+    </div>
+
+    <!-- Charts grid -->
+    <div class="charts-grid">
+        <!-- Most Demonstrated Products -->
+        <div class="chart-card">
+            <h2>Most Demonstrated Products</h2>
+            <div id="chart-products" class="bar-chart">
+                <div class="status-msg"><div class="loading-spinner"></div>Loading...</div>
+            </div>
+        </div>
+
+        <!-- Top Visitor Interests -->
+        <div class="chart-card">
+            <h2>Top Visitor Interests</h2>
+            <div id="chart-interests" class="interest-list">
+                <div class="status-msg"><div class="loading-spinner"></div>Loading...</div>
+            </div>
+        </div>
+
+        <!-- Busiest Time Slots (Heatmap) -->
+        <div class="chart-card full-width">
+            <h2>Busiest Time Slots</h2>
+            <div id="chart-heatmap" class="heatmap-container">
+                <div class="status-msg"><div class="loading-spinner"></div>Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AWS SDK v3 (browser bundle) -->
+<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-s3@3.525.0/dist-es/bundle.min.js" onerror="loadFallback()"></script>
+
+<script>
+(function () {
+    'use strict';
+
+    // ================================================================
+    // CONFIG
+    // ================================================================
+    var REFRESH_INTERVAL = 30000; // 30 seconds
+    var refreshTimer = null;
+    var sessions = [];
+
+    // Try to load config from localStorage
+    var savedBucket = localStorage.getItem('boothapp_bucket') || '';
+    var savedRegion = localStorage.getItem('boothapp_region') || 'us-east-1';
+    document.getElementById('cfg-bucket').value = savedBucket;
+    document.getElementById('cfg-region').value = savedRegion;
+
+    // ================================================================
+    // S3 DATA FETCHER
+    // ================================================================
+
+    // Since the browser AWS SDK bundle may not load from CDN in all
+    // environments, we support two modes:
+    //   1. Direct S3 via AWS SDK (if credentials are available)
+    //   2. Local JSON file fallback for demo/offline use
+
+    async function fetchSessionsFromS3(bucket, region) {
+        // Use AWS SDK if available
+        if (typeof AWS !== 'undefined' && AWS.S3) {
+            var s3 = new AWS.S3({ region: region });
+            var list = await s3.listObjectsV2({
+                Bucket: bucket,
+                Prefix: 'sessions/',
+                Delimiter: '/'
+            }).promise();
+
+            var prefixes = (list.CommonPrefixes || []).map(function(p) {
+                return p.Prefix;
+            });
+
+            var results = [];
+            for (var i = 0; i < prefixes.length; i++) {
+                try {
+                    var obj = await s3.getObject({
+                        Bucket: bucket,
+                        Key: prefixes[i] + 'output/result.json'
+                    }).promise();
+                    var data = JSON.parse(obj.Body.toString());
+                    data._sessionPrefix = prefixes[i];
+                    results.push(data);
+                } catch (e) {
+                    // Session may not have output yet -- skip
+                }
+            }
+            return results;
+        }
+
+        // Fallback: use pre-signed URL endpoint or local data
+        throw new Error('AWS SDK not available -- use local data mode');
+    }
+
+    async function fetchSessionsLocal() {
+        // Try loading from a local sessions.json file (for demo mode)
+        try {
+            var resp = await fetch('stats-data.json');
+            if (resp.ok) {
+                return await resp.json();
+            }
+        } catch (e) { /* ignore */ }
+
+        // Generate sample data for demo
+        return generateSampleSessions();
+    }
+
+    // ================================================================
+    // SAMPLE DATA GENERATOR (for demo/offline mode)
+    // ================================================================
+    function generateSampleSessions() {
+        var products = [
+            'Vision One XDR',
+            'Cloud Security - Container Protection',
+            'Zero Trust Secure Access',
+            'Email Security',
+            'Endpoint Security',
+            'Network Security - TippingPoint',
+            'Managed Detection & Response',
+            'Attack Surface Management'
+        ];
+        var interests = [
+            'XDR / SOC Modernization',
+            'Cloud Workload Security',
+            'Zero Trust Network Access',
+            'Email Threat Protection',
+            'Managed Detection & Response',
+            'Compliance & Risk Management',
+            'Container Security',
+            'Attack Surface Discovery',
+            'Identity Security',
+            'Incident Response'
+        ];
+        var companies = [
+            'Acme Financial Corp', 'TechVault Inc', 'GlobalPharma Ltd',
+            'NexGen Manufacturing', 'CloudFirst Media', 'SecureBank AG',
+            'DataDriven Health', 'FutureRetail Co', 'GovSecure Agency',
+            'EduTech Foundation', 'CryptoSafe Labs', 'AeroDefense Corp'
+        ];
+        var titles = [
+            'CISO', 'VP of IT Security', 'Security Architect',
+            'IT Director', 'SOC Manager', 'Cloud Security Lead',
+            'CTO', 'Head of Infrastructure'
+        ];
+
+        var sessions = [];
+        var numSessions = 25 + Math.floor(Math.random() * 15);
+        var dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+        for (var i = 0; i < numSessions; i++) {
+            var day = Math.floor(i / 8);
+            if (day > 4) day = Math.floor(Math.random() * 5);
+            var hour = 9 + Math.floor(Math.random() * 8); // 9am - 4pm
+            var minute = Math.floor(Math.random() * 60);
+            var duration = 8 + Math.floor(Math.random() * 35); // 8-42 min
+
+            var numProducts = 1 + Math.floor(Math.random() * 4);
+            var sessionProducts = [];
+            var shuffled = products.slice().sort(function() { return Math.random() - 0.5; });
+            for (var p = 0; p < numProducts; p++) {
+                sessionProducts.push({
+                    name: shuffled[p],
+                    timestamp: String(hour).padStart(2, '0') + ':' + String(minute + p * 5).padStart(2, '0'),
+                    note: 'Demo discussion'
+                });
+            }
+
+            var numInterests = 1 + Math.floor(Math.random() * 5);
+            var sessionInterests = [];
+            var shuffledInt = interests.slice().sort(function() { return Math.random() - 0.5; });
+            var confidences = ['high', 'high', 'medium', 'medium', 'low'];
+            for (var j = 0; j < numInterests; j++) {
+                sessionInterests.push({
+                    topic: shuffledInt[j],
+                    confidence: confidences[j] || 'low',
+                    detail: 'Interest noted during demo'
+                });
+            }
+
+            sessions.push({
+                report_id: 'RPT-2026-0331-' + String(i).padStart(4, '0'),
+                generated_at: '2026-03-' + String(24 + day).padStart(2, '0') + ' ' +
+                    String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0'),
+                visitor: {
+                    name: 'Visitor ' + (i + 1),
+                    title: titles[Math.floor(Math.random() * titles.length)],
+                    company: companies[Math.floor(Math.random() * companies.length)],
+                    visit_duration: duration + ' minutes'
+                },
+                products_demonstrated: sessionProducts,
+                interests: sessionInterests,
+                _day: day,
+                _hour: hour
+            });
+        }
+
+        return sessions;
+    }
+
+    // ================================================================
+    // DATA AGGREGATION
+    // ================================================================
+    function aggregate(sessions) {
+        var stats = {
+            totalSessions: sessions.length,
+            avgDuration: 0,
+            avgEngagement: 0,
+            uniqueProducts: 0,
+            productCounts: {},
+            interestCounts: {},
+            // heatmap: rows = days (Mon-Fri), cols = hours (8am-7pm)
+            heatmap: [],
+            engagementDist: { '1-2': 0, '3-4': 0, '5-6': 0, '7-8': 0, '9-10': 0 }
+        };
+
+        // Init heatmap: 5 days x 12 hours (8am - 7pm)
+        for (var d = 0; d < 5; d++) {
+            stats.heatmap[d] = [];
+            for (var h = 0; h < 12; h++) {
+                stats.heatmap[d][h] = 0;
+            }
+        }
+
+        var totalDuration = 0;
+        var totalEngagement = 0;
+
+        for (var i = 0; i < sessions.length; i++) {
+            var s = sessions[i];
+
+            // Duration
+            var dur = parseDuration(s.visitor && s.visitor.visit_duration);
+            totalDuration += dur;
+
+            // Products
+            var prods = s.products_demonstrated || [];
+            for (var p = 0; p < prods.length; p++) {
+                var pname = prods[p].name || 'Unknown';
+                stats.productCounts[pname] = (stats.productCounts[pname] || 0) + 1;
+            }
+
+            // Interests
+            var ints = s.interests || [];
+            for (var j = 0; j < ints.length; j++) {
+                var iname = ints[j].topic || 'Unknown';
+                stats.interestCounts[iname] = (stats.interestCounts[iname] || 0) + 1;
+            }
+
+            // Engagement: score based on # products shown + # high-confidence interests
+            var engagement = prods.length * 1.5;
+            for (var k = 0; k < ints.length; k++) {
+                var conf = (ints[k].confidence || '').toLowerCase();
+                if (conf === 'high') engagement += 2;
+                else if (conf === 'medium') engagement += 1;
+                else engagement += 0.5;
+            }
+            engagement = Math.min(10, Math.round(engagement));
+            totalEngagement += engagement;
+
+            // Engagement distribution
+            if (engagement <= 2) stats.engagementDist['1-2']++;
+            else if (engagement <= 4) stats.engagementDist['3-4']++;
+            else if (engagement <= 6) stats.engagementDist['5-6']++;
+            else if (engagement <= 8) stats.engagementDist['7-8']++;
+            else stats.engagementDist['9-10']++;
+
+            // Heatmap
+            var ts = parseTimestamp(s.generated_at, s._day, s._hour);
+            if (ts) {
+                var dayIdx = ts.day; // 0=Mon .. 4=Fri
+                var hourIdx = ts.hour - 8; // 8am = index 0
+                if (dayIdx >= 0 && dayIdx < 5 && hourIdx >= 0 && hourIdx < 12) {
+                    stats.heatmap[dayIdx][hourIdx]++;
+                }
+            }
+        }
+
+        stats.avgDuration = sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0;
+        stats.avgEngagement = sessions.length > 0 ? (totalEngagement / sessions.length).toFixed(1) : '0';
+        stats.uniqueProducts = Object.keys(stats.productCounts).length;
+
+        return stats;
+    }
+
+    function parseDuration(str) {
+        if (!str) return 0;
+        var m = str.match(/(\d+)/);
+        return m ? parseInt(m[1], 10) : 0;
+    }
+
+    function parseTimestamp(generated_at, _day, _hour) {
+        // Use explicit day/hour if available (from sample data)
+        if (typeof _day === 'number' && typeof _hour === 'number') {
+            return { day: _day, hour: _hour };
+        }
+        // Parse from generated_at string like "2026-03-31 14:22"
+        if (!generated_at) return null;
+        try {
+            var dt = new Date(generated_at.replace(' ', 'T'));
+            if (isNaN(dt.getTime())) return null;
+            var dow = dt.getDay(); // 0=Sun
+            var dayIdx = dow === 0 ? 6 : dow - 1; // convert to 0=Mon
+            return { day: dayIdx, hour: dt.getHours() };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ================================================================
+    // RENDERING
+    // ================================================================
+    function renderStats(stats) {
+        // Top cards
+        document.getElementById('stat-sessions').textContent = stats.totalSessions;
+        document.getElementById('stat-sessions-sub').textContent = 'completed demos';
+
+        document.getElementById('stat-duration').textContent = stats.avgDuration + 'm';
+        document.getElementById('stat-duration-sub').textContent = 'per visitor';
+
+        document.getElementById('stat-engagement').textContent = stats.avgEngagement;
+        document.getElementById('stat-engagement-sub').textContent = 'out of 10';
+
+        document.getElementById('stat-products').textContent = stats.uniqueProducts;
+        document.getElementById('stat-products-sub').textContent = 'unique products';
+
+        renderProductChart(stats);
+        renderInterests(stats);
+        renderHeatmap(stats);
+    }
+
+    function renderProductChart(stats) {
+        var container = document.getElementById('chart-products');
+        var sorted = Object.entries(stats.productCounts)
+            .sort(function(a, b) { return b[1] - a[1]; })
+            .slice(0, 8);
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="status-msg">No product data yet</div>';
+            return;
+        }
+
+        var maxCount = sorted[0][1];
+        var html = '';
+        for (var i = 0; i < sorted.length; i++) {
+            var pct = maxCount > 0 ? (sorted[i][1] / maxCount * 100) : 0;
+            html += '<div class="bar-row">' +
+                '<span class="bar-label" title="' + esc(sorted[i][0]) + '">' + esc(sorted[i][0]) + '</span>' +
+                '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+                '<span class="bar-count">' + sorted[i][1] + '</span>' +
+                '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function renderInterests(stats) {
+        var container = document.getElementById('chart-interests');
+        var sorted = Object.entries(stats.interestCounts)
+            .sort(function(a, b) { return b[1] - a[1]; })
+            .slice(0, 10);
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="status-msg">No interest data yet</div>';
+            return;
+        }
+
+        var maxCount = sorted[0][1];
+        var html = '';
+        for (var i = 0; i < sorted.length; i++) {
+            var pct = maxCount > 0 ? (sorted[i][1] / maxCount * 100) : 0;
+            html += '<div class="interest-item">' +
+                '<span class="interest-rank">' + (i + 1) + '</span>' +
+                '<span class="interest-name">' + esc(sorted[i][0]) + '</span>' +
+                '<span class="interest-bar"><span class="interest-bar-fill" style="width:' + pct + '%"></span></span>' +
+                '<span class="interest-count">' + sorted[i][1] + '</span>' +
+                '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function renderHeatmap(stats) {
+        var container = document.getElementById('chart-heatmap');
+        var dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        var hourLabels = ['8a', '9a', '10a', '11a', '12p', '1p', '2p', '3p', '4p', '5p', '6p', '7p'];
+
+        // Find max for color scaling
+        var maxVal = 0;
+        for (var d = 0; d < 5; d++) {
+            for (var h = 0; h < 12; h++) {
+                if (stats.heatmap[d][h] > maxVal) maxVal = stats.heatmap[d][h];
+            }
+        }
+
+        var html = '<div class="heatmap">';
+
+        // Header row
+        html += '<div class="heatmap-header"></div>';
+        for (var i = 0; i < hourLabels.length; i++) {
+            html += '<div class="heatmap-header">' + hourLabels[i] + '</div>';
+        }
+
+        // Data rows
+        for (var d = 0; d < 5; d++) {
+            html += '<div class="heatmap-day">' + dayLabels[d] + '</div>';
+            for (var h = 0; h < 12; h++) {
+                var val = stats.heatmap[d][h];
+                var intensity = maxVal > 0 ? val / maxVal : 0;
+                var bg = heatmapColor(intensity);
+                html += '<div class="heatmap-cell" data-count="' + val + '" ' +
+                    'style="background:' + bg + '" ' +
+                    'title="' + dayLabels[d] + ' ' + hourLabels[h] + ': ' + val + ' sessions">' +
+                    val + '</div>';
+            }
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function heatmapColor(intensity) {
+        if (intensity === 0) return 'var(--surface2)';
+        // Gradient from dark red to bright red
+        var r = Math.round(30 + intensity * 185);  // 30 -> 215
+        var g = Math.round(15 - intensity * 10);    // 15 -> 5
+        var b = Math.round(20 - intensity * 10);    // 20 -> 10
+        var a = 0.3 + intensity * 0.7;              // 0.3 -> 1.0
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+
+    function esc(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ================================================================
+    // MAIN LOOP
+    // ================================================================
+    async function loadData() {
+        var bucket = document.getElementById('cfg-bucket').value.trim();
+        var region = document.getElementById('cfg-region').value;
+
+        // Save config
+        localStorage.setItem('boothapp_bucket', bucket);
+        localStorage.setItem('boothapp_region', region);
+
+        try {
+            if (bucket) {
+                sessions = await fetchSessionsFromS3(bucket, region);
+            } else {
+                sessions = await fetchSessionsLocal();
+            }
+
+            var stats = aggregate(sessions);
+            renderStats(stats);
+            document.getElementById('last-update').textContent =
+                'Updated ' + new Date().toLocaleTimeString();
+        } catch (e) {
+            console.warn('S3 fetch failed, using local data:', e.message);
+            try {
+                sessions = await fetchSessionsLocal();
+                var stats = aggregate(sessions);
+                renderStats(stats);
+                document.getElementById('last-update').textContent =
+                    'Updated ' + new Date().toLocaleTimeString() + ' (demo data)';
+            } catch (e2) {
+                console.error('All data sources failed:', e2);
+            }
+        }
+    }
+
+    function startAutoRefresh() {
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(loadData, REFRESH_INTERVAL);
+    }
+
+    window.refreshNow = function() {
+        loadData();
+    };
+
+    // Initial load
+    loadData();
+    startAutoRefresh();
+
+})();
+</script>
+
+</body>
+</html>
