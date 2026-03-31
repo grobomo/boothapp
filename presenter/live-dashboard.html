@@ -1,0 +1,841 @@
+<!-- BoothApp Live Dashboard - Hackathon 2026 -->
+<!-- Full-screen real-time session dashboard for 55" TV at booth -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Live Dashboard</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --card-bg: #111118;
+    --card-border: #1e1e2a;
+    --text: #f0f0f0;
+    --muted: #555;
+    --dim: #333;
+    --neon-green: #00ff88;
+    --neon-green-glow: rgba(0, 255, 136, 0.3);
+    --neon-cyan: #00e5ff;
+    --neon-cyan-glow: rgba(0, 229, 255, 0.25);
+    --neon-magenta: #ff00ff;
+    --neon-magenta-glow: rgba(255, 0, 255, 0.2);
+    --neon-amber: #ffb300;
+    --neon-amber-glow: rgba(255, 179, 0, 0.25);
+    --neon-red: #ff3355;
+    --neon-red-glow: rgba(255, 51, 85, 0.3);
+    --mono: "SF Mono", "Cascadia Code", "Consolas", "Courier New", monospace;
+  }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    padding: 1.5rem 2rem;
+    gap: 1.2rem;
+  }
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
+  .header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.5rem;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .logo-text {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .session-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .pulse-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .pulse-dot.active {
+    background: var(--neon-green);
+    box-shadow: 0 0 8px var(--neon-green-glow), 0 0 20px var(--neon-green-glow);
+    animation: pulse-green 1.2s ease-in-out infinite;
+  }
+
+  .pulse-dot.idle {
+    background: var(--dim);
+  }
+
+  .pulse-dot.waiting {
+    background: var(--neon-amber);
+    animation: pulse-amber 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--neon-green-glow), 0 0 20px var(--neon-green-glow); }
+    50% { opacity: 0.5; box-shadow: 0 0 4px var(--neon-green-glow); }
+  }
+
+  @keyframes pulse-amber {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .clock {
+    font-size: 2.8rem;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px var(--neon-cyan-glow);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .card-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  /* ── Click Counter ───────────────────────────────────────────────────── */
+  .clicks-card {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .click-value {
+    font-size: 6rem;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--neon-magenta);
+    text-shadow: 0 0 15px var(--neon-magenta-glow);
+    line-height: 1;
+    transition: transform 0.15s;
+  }
+
+  .click-value.bump {
+    transform: scale(1.08);
+  }
+
+  .click-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* ── Session Info ────────────────────────────────────────────────────── */
+  .session-info-card {
+    justify-content: center;
+  }
+
+  .visitor-name {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  .session-meta {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
+  .session-duration {
+    font-size: 1.6rem;
+    font-family: var(--mono);
+    color: var(--neon-green);
+    margin-top: 0.5rem;
+  }
+
+  /* ── Screenshots ─────────────────────────────────────────────────────── */
+  .screenshots-card {
+    grid-column: span 2;
+  }
+
+  .thumb-strip {
+    display: flex;
+    gap: 0.6rem;
+    flex: 1;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .thumb-strip img {
+    height: 100%;
+    max-height: 160px;
+    width: auto;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    object-fit: cover;
+    flex-shrink: 0;
+    transition: opacity 0.3s;
+  }
+
+  .thumb-strip .empty-thumb {
+    height: 100px;
+    width: 150px;
+    border-radius: 8px;
+    border: 1px dashed var(--dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  /* ── Transcript ──────────────────────────────────────────────────────── */
+  .transcript-card {
+    grid-column: span 2;
+  }
+
+  .transcript-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    overflow: hidden;
+  }
+
+  .transcript-line {
+    font-size: 1.05rem;
+    line-height: 1.4;
+    color: var(--text);
+    opacity: 0.6;
+  }
+
+  .transcript-line:last-child {
+    opacity: 1;
+    color: var(--neon-cyan);
+  }
+
+  .transcript-line .speaker {
+    font-weight: 700;
+    color: var(--neon-amber);
+    margin-right: 0.4rem;
+  }
+
+  .transcript-empty {
+    color: var(--dim);
+    font-style: italic;
+    font-size: 0.95rem;
+  }
+
+  /* ── Queue ───────────────────────────────────────────────────────────── */
+  .queue-card {
+    /* single column */
+  }
+
+  .queue-list {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    font-size: 0.95rem;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .queue-item:last-child { border-bottom: none; }
+
+  .queue-pos {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--dim);
+    width: 1.5rem;
+    text-align: center;
+  }
+
+  .queue-name {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .queue-empty {
+    color: var(--dim);
+    font-style: italic;
+    font-size: 0.9rem;
+    padding-top: 0.3rem;
+  }
+
+  /* ── Footer stats ────────────────────────────────────────────────────── */
+  .footer {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.5rem;
+  }
+
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--neon-cyan);
+    text-shadow: 0 0 8px var(--neon-cyan-glow);
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .footer-nav {
+    display: flex;
+    gap: 1.2rem;
+    font-size: 0.7rem;
+  }
+
+  .footer-nav a {
+    color: var(--dim);
+    text-decoration: none;
+  }
+
+  .footer-nav a:hover { color: var(--neon-cyan); }
+
+  /* ── Idle state ──────────────────────────────────────────────────────── */
+  .idle-overlay {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .idle-icon {
+    font-size: 3rem;
+    color: var(--dim);
+    font-family: var(--mono);
+  }
+
+  .idle-text {
+    font-size: 1.4rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .idle-sub {
+    font-size: 0.9rem;
+    color: var(--dim);
+  }
+
+  .hidden { display: none !important; }
+
+  /* ── Card glow when session active ───────────────────────────────────── */
+  .card.glow-green {
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.08);
+  }
+</style>
+</head>
+<body>
+<script src="auth.js"></script>
+<script>
+if (!BoothAuth.requireAwsCreds()) {
+  window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+} else if (!BoothAuth.requireLogin()) { /* redirects */ }
+</script>
+
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span class="logo-text">BoothApp</span>
+      <div class="session-indicator" id="session-indicator">
+        <span class="pulse-dot idle" id="status-dot"></span>
+        <span id="status-text">No Active Session</span>
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <!-- Row 2: active session content OR idle overlay -->
+  <div class="idle-overlay" id="idle-overlay">
+    <div class="idle-icon">[ . . . ]</div>
+    <div class="idle-text">Waiting for Session</div>
+    <div class="idle-sub">Polling S3 every 2 seconds</div>
+  </div>
+
+  <!-- Session Info -->
+  <div class="card session-info-card hidden" id="info-card">
+    <div class="card-label">Current Session</div>
+    <div class="visitor-name" id="visitor-name">--</div>
+    <div class="session-meta" id="session-meta"></div>
+    <div class="session-duration" id="session-duration">00:00</div>
+  </div>
+
+  <!-- Click Counter -->
+  <div class="card clicks-card hidden" id="clicks-card">
+    <div class="card-label">Clicks</div>
+    <div class="click-value" id="click-value">0</div>
+    <div class="click-sub" id="click-sub">interactions tracked</div>
+  </div>
+
+  <!-- Queue -->
+  <div class="card queue-card hidden" id="queue-card">
+    <div class="card-label">Queue</div>
+    <div class="queue-list" id="queue-list">
+      <div class="queue-empty">No visitors waiting</div>
+    </div>
+  </div>
+
+  <!-- Screenshots -->
+  <div class="card screenshots-card hidden" id="screenshots-card">
+    <div class="card-label">Recent Screenshots</div>
+    <div class="thumb-strip" id="thumb-strip">
+      <div class="empty-thumb">No screenshots yet</div>
+    </div>
+  </div>
+
+  <!-- Transcript -->
+  <div class="card transcript-card hidden" id="transcript-card">
+    <div class="card-label">Live Transcript</div>
+    <div class="transcript-lines" id="transcript-lines">
+      <div class="transcript-empty">Waiting for audio...</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="stat">
+      <span class="stat-value" id="completed-today">0</span>
+      <span class="stat-label">Sessions Today</span>
+    </div>
+    <div class="footer-nav">
+      <a href="sessions.html">Sessions</a>
+      <a href="live.html">Monitor</a>
+      <a href="admin.html">Admin</a>
+      <a href="booth-display.html">Booth Display</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Config ────────────────────────────────────────────────────────────────
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+  var PREFIX = "sessions/";
+  var POLL_MS = 2000;
+  var SCREENSHOT_POLL_MS = 4000;
+  var TRANSCRIPT_POLL_MS = 3000;
+
+  var LS_KEY_AK = "boothapp_aws_ak";
+  var LS_KEY_SK = "boothapp_aws_sk";
+
+  // ── S3 client ─────────────────────────────────────────────────────────────
+  var ak = localStorage.getItem(LS_KEY_AK);
+  var sk = localStorage.getItem(LS_KEY_SK);
+  AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
+  var s3 = new AWS.S3({ params: { Bucket: BUCKET } });
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  var clockEl = document.getElementById("clock");
+  var statusDot = document.getElementById("status-dot");
+  var statusText = document.getElementById("status-text");
+  var idleOverlay = document.getElementById("idle-overlay");
+  var infoCard = document.getElementById("info-card");
+  var clicksCard = document.getElementById("clicks-card");
+  var queueCard = document.getElementById("queue-card");
+  var screenshotsCard = document.getElementById("screenshots-card");
+  var transcriptCard = document.getElementById("transcript-card");
+  var visitorNameEl = document.getElementById("visitor-name");
+  var sessionMetaEl = document.getElementById("session-meta");
+  var durationEl = document.getElementById("session-duration");
+  var clickValueEl = document.getElementById("click-value");
+  var clickSubEl = document.getElementById("click-sub");
+  var thumbStrip = document.getElementById("thumb-strip");
+  var transcriptLines = document.getElementById("transcript-lines");
+  var queueList = document.getElementById("queue-list");
+  var completedTodayEl = document.getElementById("completed-today");
+
+  var activeCards = [infoCard, clicksCard, queueCard, screenshotsCard, transcriptCard];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  var currentSession = null;
+  var lastClickCount = -1;
+  var lastScreenshotKeys = [];
+  var lastTranscriptText = "";
+  var durationTimer = null;
+  var completedCount = 0;
+
+  // ── Clock ─────────────────────────────────────────────────────────────────
+  function updateClock() {
+    var now = new Date();
+    var h = now.getHours();
+    var m = now.getMinutes();
+    var s = now.getSeconds();
+    var ampm = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12 || 12;
+    clockEl.textContent =
+      h12 + ":" +
+      (m < 10 ? "0" : "") + m + ":" +
+      (s < 10 ? "0" : "") + s + " " + ampm;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── View toggling ─────────────────────────────────────────────────────────
+  function showIdle() {
+    idleOverlay.classList.remove("hidden");
+    for (var i = 0; i < activeCards.length; i++) {
+      activeCards[i].classList.add("hidden");
+    }
+    statusDot.className = "pulse-dot idle";
+    statusText.textContent = "No Active Session";
+  }
+
+  function showActive() {
+    idleOverlay.classList.add("hidden");
+    for (var i = 0; i < activeCards.length; i++) {
+      activeCards[i].classList.remove("hidden");
+      activeCards[i].classList.add("glow-green");
+    }
+    statusDot.className = "pulse-dot active";
+    statusText.textContent = "Session Active";
+  }
+
+  // ── Duration timer ────────────────────────────────────────────────────────
+  function updateDuration() {
+    if (!currentSession || !currentSession.started_at) {
+      durationEl.textContent = "--:--";
+      return;
+    }
+    var start = new Date(currentSession.started_at).getTime();
+    var end = currentSession.ended_at
+      ? new Date(currentSession.ended_at).getTime()
+      : Date.now();
+    var diff = Math.max(0, Math.floor((end - start) / 1000));
+    var h = Math.floor(diff / 3600);
+    var m = Math.floor((diff % 3600) / 60);
+    var sec = diff % 60;
+    if (h > 0) {
+      durationEl.textContent = h + ":" + (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
+    } else {
+      durationEl.textContent = (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
+    }
+  }
+
+  function startDurationTimer() {
+    if (durationTimer) clearInterval(durationTimer);
+    updateDuration();
+    durationTimer = setInterval(updateDuration, 1000);
+  }
+
+  function stopDurationTimer() {
+    if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+  }
+
+  // ── S3 helpers ────────────────────────────────────────────────────────────
+  function s3GetJson(key, cb) {
+    s3.getObject({ Key: key }, function (err, data) {
+      if (err) { cb(null); return; }
+      try { cb(JSON.parse(data.Body.toString())); }
+      catch (e) { cb(null); }
+    });
+  }
+
+  function s3ListKeys(prefix, cb) {
+    s3.listObjectsV2({ Prefix: prefix, MaxKeys: 100 }, function (err, data) {
+      if (err || !data.Contents) { cb([]); return; }
+      cb(data.Contents.map(function (o) { return o.Key; }));
+    });
+  }
+
+  function s3SignedUrl(key) {
+    return s3.getSignedUrl("getObject", { Key: key, Expires: 300 });
+  }
+
+  // ── Find sessions ─────────────────────────────────────────────────────────
+  function pollSessions() {
+    // List session folders
+    s3.listObjectsV2({ Prefix: PREFIX, Delimiter: "/" }, function (err, data) {
+      if (err || !data.CommonPrefixes) return;
+
+      var prefixes = data.CommonPrefixes.map(function (p) { return p.Prefix; });
+      var pending = prefixes.length;
+      var sessions = [];
+      var queue = [];
+      var todayCompleted = 0;
+
+      if (pending === 0) {
+        onSessionsLoaded(null, [], 0);
+        return;
+      }
+
+      var todayStr = new Date().toISOString().slice(0, 10);
+
+      prefixes.forEach(function (pfx) {
+        s3GetJson(pfx + "metadata.json", function (meta) {
+          if (meta) {
+            sessions.push(meta);
+            meta._prefix = pfx;
+
+            var st = (meta.status || "").toLowerCase();
+            // Count completed today
+            if ((st === "completed" || st === "ended") && meta.ended_at) {
+              if (meta.ended_at.slice(0, 10) === todayStr) {
+                todayCompleted++;
+              }
+            }
+            // Queue = waiting/pending sessions
+            if (st === "pending" || st === "queued" || st === "waiting") {
+              queue.push(meta);
+            }
+          }
+          pending--;
+          if (pending <= 0) {
+            // Find active
+            var active = null;
+            for (var i = 0; i < sessions.length; i++) {
+              var s = (sessions[i].status || "").toLowerCase();
+              if (s === "recording" || s === "in_progress" || s === "active") {
+                if (!active || sessions[i].started_at > active.started_at) {
+                  active = sessions[i];
+                }
+              }
+            }
+            onSessionsLoaded(active, queue, todayCompleted);
+          }
+        });
+      });
+    });
+  }
+
+  function onSessionsLoaded(active, queue, todayCompleted) {
+    completedTodayEl.textContent = todayCompleted;
+
+    // Render queue
+    renderQueue(queue);
+
+    if (!active) {
+      if (currentSession) {
+        // Session just ended
+        currentSession = null;
+        lastClickCount = -1;
+        lastScreenshotKeys = [];
+        lastTranscriptText = "";
+        stopDurationTimer();
+      }
+      showIdle();
+      return;
+    }
+
+    var isNew = !currentSession || currentSession.session_id !== active.session_id;
+    currentSession = active;
+
+    if (isNew) {
+      lastClickCount = -1;
+      lastScreenshotKeys = [];
+      lastTranscriptText = "";
+      thumbStrip.innerHTML = '<div class="empty-thumb">No screenshots yet</div>';
+      transcriptLines.innerHTML = '<div class="transcript-empty">Waiting for audio...</div>';
+    }
+
+    showActive();
+    renderSessionInfo();
+    startDurationTimer();
+
+    // Fetch click count
+    pollClicks();
+    // Fetch screenshots
+    pollScreenshots();
+    // Fetch transcript
+    pollTranscript();
+  }
+
+  // ── Render session info ───────────────────────────────────────────────────
+  function renderSessionInfo() {
+    if (!currentSession) return;
+    visitorNameEl.textContent = currentSession.visitor_name || "Unknown Visitor";
+    var parts = [];
+    if (currentSession.se_name) parts.push("SE: " + currentSession.se_name);
+    if (currentSession.session_id) parts.push("ID: " + currentSession.session_id);
+    if (currentSession.demo_pc) parts.push("PC: " + currentSession.demo_pc);
+    sessionMetaEl.textContent = parts.join("  |  ");
+  }
+
+  // ── Poll clicks ───────────────────────────────────────────────────────────
+  function pollClicks() {
+    if (!currentSession || !currentSession._prefix) return;
+    s3GetJson(currentSession._prefix + "clicks/clicks.json", function (data) {
+      if (!data || !data.events) return;
+      var count = data.events.length;
+      clickValueEl.textContent = count;
+      clickSubEl.textContent = count === 1 ? "interaction tracked" : "interactions tracked";
+
+      if (lastClickCount >= 0 && count > lastClickCount) {
+        // Bump animation
+        clickValueEl.classList.add("bump");
+        setTimeout(function () { clickValueEl.classList.remove("bump"); }, 200);
+      }
+      lastClickCount = count;
+    });
+  }
+
+  // ── Poll screenshots ──────────────────────────────────────────────────────
+  function pollScreenshots() {
+    if (!currentSession || !currentSession._prefix) return;
+    s3ListKeys(currentSession._prefix + "screenshots/", function (keys) {
+      // Filter to image files only
+      var imgKeys = keys.filter(function (k) {
+        return /\.(jpg|jpeg|png|gif|webp)$/i.test(k);
+      });
+
+      // Sort by name (timestamps or indices) and take last 5
+      imgKeys.sort();
+      var last5 = imgKeys.slice(-5);
+
+      // Check if changed
+      var keysStr = last5.join(",");
+      if (keysStr === lastScreenshotKeys.join(",")) return;
+      lastScreenshotKeys = last5;
+
+      if (last5.length === 0) {
+        thumbStrip.innerHTML = '<div class="empty-thumb">No screenshots yet</div>';
+        return;
+      }
+
+      thumbStrip.innerHTML = "";
+      last5.forEach(function (key) {
+        var img = document.createElement("img");
+        img.src = s3SignedUrl(key);
+        img.alt = key.split("/").pop();
+        img.onerror = function () { img.style.display = "none"; };
+        thumbStrip.appendChild(img);
+      });
+    });
+  }
+
+  // ── Poll transcript ───────────────────────────────────────────────────────
+  function pollTranscript() {
+    if (!currentSession || !currentSession._prefix) return;
+    s3GetJson(currentSession._prefix + "transcript/transcript.json", function (data) {
+      if (!data || !data.entries || data.entries.length === 0) return;
+
+      // Take last 3 entries
+      var last3 = data.entries.slice(-3);
+      var text = last3.map(function (e) { return (e.speaker || "") + ": " + (e.text || ""); }).join("\n");
+
+      if (text === lastTranscriptText) return;
+      lastTranscriptText = text;
+
+      transcriptLines.innerHTML = "";
+      last3.forEach(function (entry) {
+        var div = document.createElement("div");
+        div.className = "transcript-line";
+        var spk = document.createElement("span");
+        spk.className = "speaker";
+        spk.textContent = entry.speaker || "?";
+        div.appendChild(spk);
+        div.appendChild(document.createTextNode(entry.text || ""));
+        transcriptLines.appendChild(div);
+      });
+    });
+  }
+
+  // ── Render queue ──────────────────────────────────────────────────────────
+  function renderQueue(queue) {
+    if (!queue || queue.length === 0) {
+      queueList.innerHTML = '<div class="queue-empty">No visitors waiting</div>';
+      return;
+    }
+    // Sort by created_at or started_at
+    queue.sort(function (a, b) {
+      return (a.started_at || a.created_at || "").localeCompare(b.started_at || b.created_at || "");
+    });
+    queueList.innerHTML = "";
+    queue.forEach(function (q, i) {
+      var div = document.createElement("div");
+      div.className = "queue-item";
+      var pos = document.createElement("span");
+      pos.className = "queue-pos";
+      pos.textContent = "#" + (i + 1);
+      var name = document.createElement("span");
+      name.className = "queue-name";
+      name.textContent = q.visitor_name || "Visitor " + (i + 1);
+      div.appendChild(pos);
+      div.appendChild(name);
+      queueList.appendChild(div);
+    });
+  }
+
+  // ── Main poll loop ────────────────────────────────────────────────────────
+  showIdle();
+  pollSessions();
+  setInterval(pollSessions, POLL_MS);
+
+  // Staggered polls for heavier operations
+  setInterval(function () {
+    if (currentSession) pollScreenshots();
+  }, SCREENSHOT_POLL_MS);
+
+  setInterval(function () {
+    if (currentSession) pollTranscript();
+  }, TRANSCRIPT_POLL_MS);
+
+})();
+</script>
+</body>
+</html>
