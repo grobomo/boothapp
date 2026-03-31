@@ -1,8 +1,9 @@
-// ─── V1-Helper Popup ──────────────────────────────────────────────────────────
+// V1-Helper Popup
+// Session states: idle (gray), active (green), uploading (blue), error (red), complete (green)
 
 const S3_KEYS = ['s3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
 
-// ─── DOM References ───────────────────────────────────────────────────────────
+// -- DOM References --
 
 const sessionIndicator = document.getElementById('sessionIndicator');
 const sessionLabel = document.getElementById('sessionLabel');
@@ -11,109 +12,97 @@ const clickCountEl = document.getElementById('clickCount');
 const screenshotCountEl = document.getElementById('screenshotCount');
 const s3Dot = document.getElementById('s3Dot');
 const s3StatusText = document.getElementById('s3StatusText');
-const demoActions = document.getElementById('demoActions');
-const startDemoBtn = document.getElementById('startDemoBtn');
-const endDemoBtn = document.getElementById('endDemoBtn');
+const startSessionBtn = document.getElementById('startSessionBtn');
+const stopSessionBtn = document.getElementById('stopSessionBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const s3Config = document.getElementById('s3Config');
 
-// ─── Session Status ───────────────────────────────────────────────────────────
+// -- Session State Management --
 
-// States: idle, recording, uploading, complete
 let currentSessionState = 'idle';
 
 function setSessionState(state, sessionId) {
   currentSessionState = state;
 
-  // Remove all state classes
   sessionIndicator.className = 'session-indicator ' + state;
   sessionLabel.className = 'session-label ' + state;
 
-  switch (state) {
-    case 'idle':
-      sessionLabel.textContent = 'Idle';
-      sessionIdEl.textContent = '';
-      break;
-    case 'recording':
-      sessionLabel.textContent = 'Recording';
-      sessionIdEl.textContent = sessionId || '';
-      break;
-    case 'uploading':
-      sessionLabel.textContent = 'Uploading...';
-      sessionIdEl.textContent = sessionId || '';
-      break;
-    case 'complete':
-      sessionLabel.textContent = 'Complete \u2713';
-      sessionIdEl.textContent = sessionId || '';
-      break;
-  }
+  var labels = {
+    idle: 'Idle',
+    active: 'Recording',
+    uploading: 'Uploading...',
+    error: 'Error',
+    complete: 'Complete'
+  };
 
-  updateDemoButtons();
+  sessionLabel.textContent = labels[state] || state;
+  sessionIdEl.textContent = sessionId || '';
+
+  // Persist state to chrome.storage so it survives popup close/reopen
+  chrome.storage.local.set({
+    v1helper_popup_state: { state: state, sessionId: sessionId || '' }
+  });
+
+  updateSessionButtons();
 }
 
-function updateDemoButtons() {
-  const isRecording = currentSessionState === 'recording';
-  startDemoBtn.disabled = isRecording;
-  endDemoBtn.disabled = !isRecording;
+function updateSessionButtons() {
+  var isActive = currentSessionState === 'active';
+  var isUploading = currentSessionState === 'uploading';
+
+  startSessionBtn.disabled = isActive || isUploading;
+  stopSessionBtn.disabled = !isActive;
 }
 
-// ─── Counters ─────────────────────────────────────────────────────────────────
+// -- Counter Updates --
 
 function updateCounters() {
-  chrome.storage.local.get(['v1helper_clicks'], (result) => {
-    const buffer = result.v1helper_clicks;
-    if (buffer && buffer.events) {
-      clickCountEl.textContent = buffer.events.length;
-    } else {
-      clickCountEl.textContent = '0';
-    }
+  chrome.storage.local.get(['v1helper_clicks'], function(result) {
+    var buffer = result.v1helper_clicks;
+    clickCountEl.textContent = (buffer && buffer.events) ? buffer.events.length : '0';
   });
 
-  // Screenshot count from IndexedDB via background
-  chrome.runtime.sendMessage({ type: 'get_screenshot_count' }, (response) => {
+  chrome.runtime.sendMessage({ type: 'get_screenshot_count' }, function(response) {
+    if (chrome.runtime.lastError) {
+      // Background not ready yet
+      return;
+    }
     if (response && typeof response.count === 'number') {
       screenshotCountEl.textContent = response.count;
-    } else {
-      // Fallback: use click count as approximate screenshot count
-      screenshotCountEl.textContent = clickCountEl.textContent;
     }
   });
 }
 
-// Poll counters while popup is open
 updateCounters();
-const counterInterval = setInterval(updateCounters, 2000);
+var counterInterval = setInterval(updateCounters, 2000);
 
-// ─── S3 Config Status ─────────────────────────────────────────────────────────
+// -- S3 Config Status --
 
 function isS3Configured(config) {
   return !!(config.s3Bucket && config.s3Region && config.awsAccessKeyId && config.awsSecretAccessKey);
 }
 
 function updateS3Status(config) {
-  const configured = isS3Configured(config);
+  var configured = isS3Configured(config);
 
   s3Dot.className = 's3-dot ' + (configured ? 'connected' : 'disconnected');
   s3StatusText.className = 's3-status-text ' + (configured ? 'connected' : 'disconnected');
   s3StatusText.textContent = configured
-    ? 'S3 Connected \u2014 ' + config.s3Bucket
+    ? 'S3 Connected -- ' + config.s3Bucket
     : 'S3 Not Configured';
-
-  // Show/hide demo buttons based on S3 config
-  if (configured) {
-    demoActions.classList.remove('hidden');
-  } else {
-    demoActions.classList.add('hidden');
-  }
 }
 
-// ─── Load Session State ───────────────────────────────────────────────────────
+// -- Load Persisted Session State --
 
 function loadSessionState() {
-  chrome.storage.local.get(['v1helper_session'], (result) => {
-    const session = result.v1helper_session;
+  chrome.storage.local.get(['v1helper_session', 'v1helper_popup_state'], function(result) {
+    var session = result.v1helper_session;
+    var popupState = result.v1helper_popup_state;
+
     if (session && session.active && session.session_id) {
-      setSessionState('recording', session.session_id);
+      setSessionState('active', session.session_id);
+    } else if (popupState && popupState.state === 'error') {
+      setSessionState('error', popupState.sessionId);
     } else {
       setSessionState('idle');
     }
@@ -122,9 +111,9 @@ function loadSessionState() {
 
 loadSessionState();
 
-// ─── Load S3 Config ───────────────────────────────────────────────────────────
+// -- Load S3 Config into form --
 
-chrome.storage.local.get(S3_KEYS, (config) => {
+chrome.storage.local.get(S3_KEYS, function(config) {
   if (config.s3Bucket) document.getElementById('s3Bucket').value = config.s3Bucket;
   if (config.s3Region) document.getElementById('s3Region').value = config.s3Region;
   if (config.awsAccessKeyId) document.getElementById('awsAccessKeyId').value = config.awsAccessKeyId;
@@ -133,82 +122,90 @@ chrome.storage.local.get(S3_KEYS, (config) => {
   updateS3Status(config);
 });
 
-// ─── Settings Toggle ──────────────────────────────────────────────────────────
+// -- Settings Toggle --
 
-settingsBtn.addEventListener('click', () => {
-  const isOpen = s3Config.classList.toggle('open');
+settingsBtn.addEventListener('click', function() {
+  var isOpen = s3Config.classList.toggle('open');
   settingsBtn.classList.toggle('active', isOpen);
 });
 
-// ─── Save S3 Config ───────────────────────────────────────────────────────────
+// -- Save S3 Config --
 
-document.getElementById('s3SaveBtn').addEventListener('click', () => {
-  const config = {
+document.getElementById('s3SaveBtn').addEventListener('click', function() {
+  var config = {
     s3Bucket: document.getElementById('s3Bucket').value.trim(),
     s3Region: document.getElementById('s3Region').value.trim(),
     awsAccessKeyId: document.getElementById('awsAccessKeyId').value.trim(),
     awsSecretAccessKey: document.getElementById('awsSecretAccessKey').value.trim(),
-    awsSessionToken: document.getElementById('awsSessionToken').value.trim(),
+    awsSessionToken: document.getElementById('awsSessionToken').value.trim()
   };
-  chrome.storage.local.set(config, () => {
+  chrome.storage.local.set(config, function() {
     updateS3Status(config);
-    const btn = document.getElementById('s3SaveBtn');
-    const orig = btn.textContent;
-    btn.textContent = 'Saved \u2713';
+    var btn = document.getElementById('s3SaveBtn');
+    var orig = btn.textContent;
+    btn.textContent = 'Saved!';
     btn.classList.add('saved');
-    setTimeout(() => {
+    setTimeout(function() {
       btn.textContent = orig;
       btn.classList.remove('saved');
     }, 1500);
   });
 });
 
-// ─── Pre-fill Demo ────────────────────────────────────────────────────────────
+// -- Pre-fill Demo --
 
-document.getElementById('s3DemoBtn').addEventListener('click', () => {
+document.getElementById('s3DemoBtn').addEventListener('click', function() {
   document.getElementById('s3Bucket').value = 'boothapp-sessions-752266476357';
   document.getElementById('s3Region').value = 'us-east-1';
 });
 
-// ─── Start Demo ───────────────────────────────────────────────────────────────
+// -- Start Session --
 
-startDemoBtn.addEventListener('click', () => {
-  chrome.storage.local.get(S3_KEYS, (config) => {
-    if (!isS3Configured(config)) return;
+startSessionBtn.addEventListener('click', function() {
+  chrome.storage.local.get(S3_KEYS, function(config) {
+    if (!isS3Configured(config)) {
+      setSessionState('error', '');
+      sessionLabel.textContent = 'Configure S3 first';
+      return;
+    }
 
-    const sessionId = 'demo-' + Date.now();
-    setSessionState('recording', sessionId);
+    var sessionId = 'demo-' + Date.now();
+    setSessionState('active', sessionId);
+
+    // Reset counters for new session
+    clickCountEl.textContent = '0';
+    screenshotCountEl.textContent = '0';
 
     // Signal background to start session
     chrome.runtime.sendMessage({
       type: 'session_start',
-      session_id: sessionId,
+      session_id: sessionId
     });
 
     // Write active-session.json to S3 so watcher picks it up
     chrome.runtime.sendMessage({
       type: 'write_active_session',
       session_id: sessionId,
-      active: true,
+      active: true
     });
   });
 });
 
-// ─── End Demo ─────────────────────────────────────────────────────────────────
+// -- Stop Session --
 
-endDemoBtn.addEventListener('click', () => {
-  const sessionId = sessionIdEl.textContent;
+stopSessionBtn.addEventListener('click', function() {
+  var sessionId = sessionIdEl.textContent;
   setSessionState('uploading', sessionId);
 
   // Signal background to end and upload
-  chrome.runtime.sendMessage({ type: 'session_end' }, () => {
-    chrome.storage.local.get(['v1helper_clicks'], (result) => {
-      const clickBuffer = result.v1helper_clicks || { session_id: sessionId, events: [] };
+  chrome.runtime.sendMessage({ type: 'session_end' }, function() {
+    chrome.storage.local.get(['v1helper_clicks'], function(result) {
+      var clickBuffer = result.v1helper_clicks || { session_id: sessionId, events: [] };
       chrome.runtime.sendMessage({
         type: 'upload_session',
         session_id: sessionId,
-        click_buffer: clickBuffer,
-      }, (response) => {
+        click_buffer: clickBuffer
+      }, function(response) {
         if (response && response.status === 'ok') {
           setSessionState('complete', sessionId);
           clickCountEl.textContent = '0';
@@ -217,29 +214,31 @@ endDemoBtn.addEventListener('click', () => {
           chrome.runtime.sendMessage({
             type: 'write_active_session',
             session_id: sessionId,
-            active: false,
+            active: false
           });
           // Return to idle after 3s
-          setTimeout(() => setSessionState('idle'), 3000);
+          setTimeout(function() { setSessionState('idle'); }, 3000);
         } else {
-          setSessionState('idle');
+          setSessionState('error', sessionId);
+          sessionLabel.textContent = 'Upload failed';
+          // Return to idle after 5s
+          setTimeout(function() { setSessionState('idle'); }, 5000);
         }
       });
     });
   });
 });
 
-// ─── Listen for storage changes (session state from background) ───────────────
+// -- Listen for storage changes (session state from background) --
 
-chrome.storage.onChanged.addListener((changes) => {
+chrome.storage.onChanged.addListener(function(changes) {
   if (changes.v1helper_session) {
-    const session = changes.v1helper_session.newValue;
+    var session = changes.v1helper_session.newValue;
     if (session && session.active) {
-      // Only switch to recording if we're not in uploading/complete state
       if (currentSessionState !== 'uploading' && currentSessionState !== 'complete') {
-        setSessionState('recording', session.session_id);
+        setSessionState('active', session.session_id);
       }
-    } else if (currentSessionState === 'recording') {
+    } else if (currentSessionState === 'active') {
       setSessionState('idle');
     }
   }

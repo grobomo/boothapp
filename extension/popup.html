@@ -19,7 +19,7 @@
       color: #e8e8f0;
     }
 
-    /* ── Header ── */
+    /* -- Header -- */
 
     .header {
       background: linear-gradient(135deg, #1a1a2e 0%, #1e1028 100%);
@@ -101,7 +101,7 @@
       transform: rotate(90deg);
     }
 
-    /* ── Session Status Bar ── */
+    /* -- Session Status Bar -- */
 
     .session-bar {
       padding: 12px 20px;
@@ -124,19 +124,23 @@
       background: #6b7280;
     }
 
-    .session-indicator.recording {
-      background: #D12B2B;
-      box-shadow: 0 0 8px #D12B2Baa;
-      animation: pulse-red 1.5s ease-in-out infinite;
+    .session-indicator.active {
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55eaa;
+      animation: pulse-green 1.5s ease-in-out infinite;
     }
 
     .session-indicator.uploading {
-      background: #3B82F6;
+      background: transparent;
       box-shadow: 0 0 8px #3B82F6aa;
       animation: spin-ring 1s linear infinite;
       border: 2px solid #3B82F6;
       border-top-color: transparent;
-      background: transparent;
+    }
+
+    .session-indicator.error {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444aa;
     }
 
     .session-indicator.complete {
@@ -144,9 +148,9 @@
       box-shadow: 0 0 8px #22c55eaa;
     }
 
-    @keyframes pulse-red {
+    @keyframes pulse-green {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.3); }
+      50% { opacity: 0.6; transform: scale(1.3); }
     }
 
     @keyframes spin-ring {
@@ -168,8 +172,9 @@
     }
 
     .session-label.idle { color: #6b7280; }
-    .session-label.recording { color: #D12B2B; }
+    .session-label.active { color: #22c55e; }
     .session-label.uploading { color: #3B82F6; }
+    .session-label.error { color: #ef4444; }
     .session-label.complete { color: #22c55e; }
 
     .session-id {
@@ -178,7 +183,7 @@
       font-family: 'SF Mono', 'Consolas', monospace;
     }
 
-    /* ── Counters ── */
+    /* -- Counters -- */
 
     .counters {
       padding: 16px 20px;
@@ -219,7 +224,7 @@
     .counter-card.clicks .counter-value { color: #D12B2B; }
     .counter-card.screenshots .counter-value { color: #a78bfa; }
 
-    /* ── S3 Status ── */
+    /* -- S3 Status -- */
 
     .s3-status-bar {
       padding: 8px 20px;
@@ -258,19 +263,15 @@
     .s3-status-text.connected { color: #22c55e; }
     .s3-status-text.disconnected { color: #ef4444; }
 
-    /* ── Demo Buttons ── */
+    /* -- Session Action Button -- */
 
-    .demo-actions {
+    .session-actions {
       padding: 0 20px 16px;
       display: flex;
       gap: 8px;
     }
 
-    .demo-actions.hidden {
-      display: none;
-    }
-
-    .demo-btn {
+    .session-btn {
       flex: 1;
       padding: 10px 12px;
       border-radius: 8px;
@@ -283,44 +284,44 @@
       letter-spacing: 0.3px;
     }
 
-    .demo-btn:hover {
+    .session-btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 3px 12px rgba(0,0,0,0.4);
     }
 
-    .demo-btn:active {
+    .session-btn:active {
       transform: translateY(0);
     }
 
-    .demo-btn-start {
-      background: #D12B2B;
+    .session-btn-start {
+      background: #22c55e;
       color: #fff;
     }
 
-    .demo-btn-start:hover {
-      background: #b91c1c;
+    .session-btn-start:hover {
+      background: #16a34a;
     }
 
-    .demo-btn-start:disabled {
-      background: #4b1a1a;
-      color: #6b4a4a;
+    .session-btn-start:disabled {
+      background: #1a3a2a;
+      color: #4b6b5b;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
     }
 
-    .demo-btn-end {
+    .session-btn-stop {
       background: #1a1a2e;
-      border: 1px solid #D12B2B44;
-      color: #D12B2B;
+      border: 1px solid #ef444444;
+      color: #ef4444;
     }
 
-    .demo-btn-end:hover {
-      background: #D12B2B11;
-      border-color: #D12B2B;
+    .session-btn-stop:hover {
+      background: #ef444411;
+      border-color: #ef4444;
     }
 
-    .demo-btn-end:disabled {
+    .session-btn-stop:disabled {
       border-color: #2a2a4a;
       color: #4b5563;
       background: #1a1a2e;
@@ -329,7 +330,7 @@
       box-shadow: none;
     }
 
-    /* ── S3 Config Panel ── */
+    /* -- S3 Config Panel -- */
 
     .s3-config {
       max-height: 0;
@@ -436,7 +437,7 @@
       border-color: #3a3a5a;
     }
 
-    /* ── Footer ── */
+    /* -- Footer -- */
 
     .footer {
       padding: 10px 20px;
@@ -453,18 +454,6 @@
     .footer-text span {
       color: #D12B2B;
       font-weight: 600;
-    }
-
-    /* ── Complete check icon ── */
-    .check-icon {
-      display: none;
-      color: #22c55e;
-      font-size: 10px;
-      font-weight: bold;
-    }
-
-    .session-indicator.complete + .session-info .check-icon {
-      display: inline;
     }
   </style>
 </head>
@@ -511,10 +500,10 @@
     <span class="s3-status-text disconnected" id="s3StatusText">S3 Not Configured</span>
   </div>
 
-  <!-- Demo Buttons (hidden until S3 configured) -->
-  <div class="demo-actions hidden" id="demoActions">
-    <button class="demo-btn demo-btn-start" id="startDemoBtn">Start Demo</button>
-    <button class="demo-btn demo-btn-end" id="endDemoBtn" disabled>End Demo</button>
+  <!-- Session Start/Stop Buttons -->
+  <div class="session-actions" id="sessionActions">
+    <button class="session-btn session-btn-start" id="startSessionBtn">Start Session</button>
+    <button class="session-btn session-btn-stop" id="stopSessionBtn" disabled>Stop Session</button>
   </div>
 
   <!-- S3 Config Panel (toggled by gear icon) -->
@@ -535,11 +524,11 @@
       </div>
       <div class="s3-field">
         <label class="s3-label" for="awsSecretAccessKey">Secret Access Key</label>
-        <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="••••••••" />
+        <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="secret key" />
       </div>
       <div class="s3-field">
         <label class="s3-label" for="awsSessionToken">Session Token <em style="font-style:normal;color:#3d3d5c">(optional)</em></label>
-        <input class="s3-input" id="awsSessionToken" type="password" placeholder="••••••••" />
+        <input class="s3-input" id="awsSessionToken" type="password" placeholder="session token" />
       </div>
       <div class="s3-config-actions">
         <button class="s3-btn s3-btn-save" id="s3SaveBtn">Save</button>
