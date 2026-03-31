@@ -12,18 +12,18 @@
     }
 
     body {
-      width: 420px;
+      width: 380px;
       min-height: 300px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #fafafa;
-      color: #212121;
+      background: #1a1a2e;
+      color: #e0e0e0;
     }
 
     /* ── Header ── */
 
     .header {
-      background: #D32F2F;
-      padding: 12px 20px;
+      background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+      padding: 14px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -36,36 +36,45 @@
     }
 
     .brand-name {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
       color: #fff;
       letter-spacing: 0.5px;
     }
 
     .brand-sub {
-      font-size: 11px;
-      color: rgba(255,255,255,0.75);
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
       font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .s3-status {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .s3-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.4);
+      background: #ef5350;
       flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
     }
 
     .s3-dot.active {
-      background: #A5D6A7;
-      box-shadow: 0 0 6px rgba(165,214,167,0.6);
+      background: #66bb6a;
+      box-shadow: 0 0 8px rgba(102,187,106,0.6);
     }
 
     .s3-status-text {
@@ -77,103 +86,180 @@
       color: #fff;
     }
 
-    /* ── Hero: Status Circle + Timer ── */
+    .gear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+    }
+
+    .gear-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .gear-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: rgba(255,255,255,0.8);
+      transition: transform 0.3s ease;
+    }
+
+    .gear-btn.open svg {
+      transform: rotate(90deg);
+      fill: #fff;
+    }
+
+    /* ── Hero: Status + Timer ── */
 
     .hero {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 24px 20px 16px;
-      background: #fff;
+      padding: 28px 20px 20px;
+      background: #16213e;
     }
 
-    .status-circle {
-      width: 140px;
-      height: 140px;
+    .status-ring {
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
-      background: #EEEEEE;
-      border: 4px solid #E0E0E0;
+      background: #1a1a2e;
+      border: 3px solid #2a2a4a;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+      position: relative;
     }
 
-    .status-circle.recording {
-      background: #FFEBEE;
+    .status-ring.recording {
       border-color: #D32F2F;
-      box-shadow: 0 0 0 8px rgba(211,47,47,0.1), 0 0 30px rgba(211,47,47,0.15);
-      animation: pulse-ring 2s ease-in-out infinite;
+      box-shadow: 0 0 0 6px rgba(211,47,47,0.15), 0 0 30px rgba(211,47,47,0.2);
+      animation: pulse-rec 2s ease-in-out infinite;
     }
 
-    .status-circle.uploading {
-      background: #FFF3E0;
-      border-color: #F57C00;
-      box-shadow: 0 0 0 8px rgba(245,124,0,0.1);
-      animation: pulse-ring-orange 1.5s ease-in-out infinite;
+    .status-ring.uploading {
+      border-color: #42a5f5;
+      box-shadow: 0 0 0 6px rgba(66,165,245,0.15), 0 0 30px rgba(66,165,245,0.2);
+      animation: pulse-upload 1.5s ease-in-out infinite;
     }
 
-    .status-circle.error {
-      background: #FFCDD2;
+    .status-ring.complete {
+      border-color: #66bb6a;
+      box-shadow: 0 0 0 6px rgba(102,187,106,0.15), 0 0 30px rgba(102,187,106,0.2);
+    }
+
+    .status-ring.error {
       border-color: #B71C1C;
-      box-shadow: 0 0 0 8px rgba(183,28,28,0.15);
+      box-shadow: 0 0 0 6px rgba(183,28,28,0.2);
     }
 
-    @keyframes pulse-ring {
-      0%, 100% { box-shadow: 0 0 0 8px rgba(211,47,47,0.1), 0 0 30px rgba(211,47,47,0.15); }
-      50% { box-shadow: 0 0 0 14px rgba(211,47,47,0.05), 0 0 50px rgba(211,47,47,0.2); }
+    @keyframes pulse-rec {
+      0%, 100% { box-shadow: 0 0 0 6px rgba(211,47,47,0.15), 0 0 30px rgba(211,47,47,0.2); }
+      50% { box-shadow: 0 0 0 12px rgba(211,47,47,0.08), 0 0 50px rgba(211,47,47,0.25); }
     }
 
-    @keyframes pulse-ring-orange {
-      0%, 100% { box-shadow: 0 0 0 8px rgba(245,124,0,0.1); }
-      50% { box-shadow: 0 0 0 14px rgba(245,124,0,0.05); }
+    @keyframes pulse-upload {
+      0%, 100% { box-shadow: 0 0 0 6px rgba(66,165,245,0.15), 0 0 30px rgba(66,165,245,0.2); }
+      50% { box-shadow: 0 0 0 10px rgba(66,165,245,0.08), 0 0 40px rgba(66,165,245,0.3); }
     }
 
-    .circle-timer {
-      font-size: 32px;
+    .ring-icon {
+      font-size: 36px;
+      line-height: 1;
+      display: none;
+    }
+
+    .status-ring.complete .ring-icon {
+      display: block;
+      color: #66bb6a;
+    }
+
+    .status-ring.complete .ring-timer,
+    .status-ring.complete .ring-label {
+      display: none;
+    }
+
+    .ring-timer {
+      font-size: 28px;
       font-weight: 700;
-      color: #424242;
+      color: #9e9e9e;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+      transition: color 0.3s;
     }
 
-    .circle-label {
-      font-size: 12px;
+    .ring-label {
+      font-size: 10px;
       font-weight: 700;
-      color: #9E9E9E;
+      color: #616161;
       margin-top: 4px;
       text-transform: uppercase;
       letter-spacing: 1.5px;
+      transition: color 0.3s;
     }
 
-    .status-circle.recording .circle-timer {
-      color: #D32F2F;
+    .status-ring.recording .ring-timer { color: #ef5350; }
+    .status-ring.recording .ring-label { color: #ef5350; }
+    .status-ring.uploading .ring-timer { color: #42a5f5; }
+    .status-ring.uploading .ring-label { color: #42a5f5; }
+    .status-ring.error .ring-timer { color: #ef5350; }
+    .status-ring.error .ring-label { color: #ef5350; }
+
+    /* Pulsing red dot for recording */
+    .rec-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #D32F2F;
+      display: none;
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      animation: blink-dot 1s ease-in-out infinite;
     }
 
-    .status-circle.recording .circle-label {
-      color: #D32F2F;
+    .status-ring.recording .rec-dot {
+      display: block;
     }
 
-    .status-circle.uploading .circle-timer {
-      color: #F57C00;
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
     }
 
-    .status-circle.uploading .circle-label {
-      color: #F57C00;
+    /* Blue spinner for uploading */
+    .upload-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(66,165,245,0.2);
+      border-top-color: #42a5f5;
+      border-radius: 50%;
+      display: none;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 4px;
     }
 
-    .status-circle.error .circle-timer {
-      color: #B71C1C;
+    .status-ring.uploading .upload-spinner {
+      display: block;
     }
 
-    .status-circle.error .circle-label {
-      color: #B71C1C;
+    .status-ring.uploading .ring-timer {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .hero-visitor {
-      font-size: 15px;
-      color: #D32F2F;
+      font-size: 14px;
+      color: #ef5350;
       font-weight: 600;
       margin-top: 10px;
       display: none;
@@ -184,12 +270,12 @@
     }
 
     .hero-error-msg {
-      font-size: 13px;
-      color: #C62828;
+      font-size: 12px;
+      color: #ef5350;
       margin-top: 8px;
       display: none;
       text-align: center;
-      max-width: 300px;
+      max-width: 280px;
     }
 
     .hero-error-msg.visible {
@@ -200,30 +286,35 @@
 
     .stats-row {
       display: flex;
-      gap: 12px;
-      margin: 0 20px 16px;
-      padding-top: 16px;
+      gap: 10px;
+      padding: 16px 20px;
+      background: #1a1a2e;
     }
 
     .stat-box {
       flex: 1;
-      background: #fff;
-      border: 1px solid #E0E0E0;
+      background: #16213e;
+      border: 1px solid #2a2a4a;
       border-radius: 10px;
       padding: 14px 8px;
       text-align: center;
+      transition: border-color 0.3s;
+    }
+
+    .stat-box:hover {
+      border-color: #3a3a5a;
     }
 
     .stat-value {
-      font-size: 36px;
+      font-size: 32px;
       font-weight: 700;
-      color: #D32F2F;
+      color: #ef5350;
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
 
     .stat-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -235,14 +326,19 @@
 
     .btn-wrap {
       padding: 0 20px 16px;
+      background: #1a1a2e;
+    }
+
+    .btn-wrap.hidden {
+      display: none;
     }
 
     .session-btn {
       width: 100%;
-      padding: 14px 20px;
+      padding: 13px 20px;
       border-radius: 10px;
       border: none;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
@@ -252,27 +348,26 @@
     }
 
     .session-btn.start {
-      background: #D32F2F;
+      background: linear-gradient(135deg, #D32F2F 0%, #C62828 100%);
       color: #fff;
-      box-shadow: 0 2px 8px rgba(211,47,47,0.3);
+      box-shadow: 0 3px 12px rgba(211,47,47,0.4);
     }
 
     .session-btn.start:hover {
-      background: #C62828;
-      box-shadow: 0 4px 16px rgba(211,47,47,0.4);
+      box-shadow: 0 5px 20px rgba(211,47,47,0.5);
       transform: translateY(-1px);
     }
 
     .session-btn.stop {
-      background: #fff;
-      color: #D32F2F;
-      border: 2px solid #D32F2F;
-      box-shadow: 0 2px 8px rgba(211,47,47,0.15);
+      background: transparent;
+      color: #ef5350;
+      border: 2px solid #ef5350;
+      box-shadow: 0 2px 8px rgba(211,47,47,0.2);
     }
 
     .session-btn.stop:hover {
-      background: #FFEBEE;
-      box-shadow: 0 4px 16px rgba(211,47,47,0.25);
+      background: rgba(211,47,47,0.1);
+      box-shadow: 0 4px 16px rgba(211,47,47,0.3);
       transform: translateY(-1px);
     }
 
@@ -280,126 +375,104 @@
       transform: translateY(0);
     }
 
-    /* ── Session Info (compact) ── */
+    /* ── Session Info ── */
 
     .session-info {
       padding: 0 20px 12px;
+      background: #1a1a2e;
     }
 
     .session-info-row {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      font-size: 11px;
       padding: 3px 0;
-      color: #757575;
+      color: #616161;
     }
 
     .session-info-val {
-      color: #616161;
+      color: #9e9e9e;
       text-align: right;
-      max-width: 220px;
+      max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .session-info-val.muted {
-      color: #BDBDBD;
+      color: #4a4a6a;
     }
 
     /* ── S3 Config (collapsible) ── */
 
     .s3-section {
-      border-top: 1px solid #E0E0E0;
+      border-top: 1px solid #2a2a4a;
       padding: 0 20px;
-      background: #fff;
+      background: #16213e;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding-top 0.35s ease, padding-bottom 0.35s ease;
     }
 
-    .s3-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      user-select: none;
-      padding: 10px 0;
+    .s3-section.open {
+      max-height: 600px;
+      padding-top: 16px;
+      padding-bottom: 16px;
     }
 
-    .s3-toggle:hover .s3-toggle-label {
-      color: #616161;
-    }
-
-    .s3-arrow {
-      font-size: 10px;
-      color: #9E9E9E;
-      transition: transform 0.2s;
-    }
-
-    .s3-arrow.open {
-      transform: rotate(90deg);
-    }
-
-    .s3-toggle-label {
+    .s3-section-title {
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #9E9E9E;
-    }
-
-    .s3-configured-badge {
-      font-size: 13px;
-      color: #4CAF50;
-      display: none;
+      color: #757575;
+      margin-bottom: 12px;
     }
 
     .s3-body {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      padding-bottom: 14px;
-    }
-
-    .s3-body.collapsed {
-      display: none;
     }
 
     .s3-field {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
 
     .s3-label {
-      font-size: 11px;
+      font-size: 10px;
       color: #757575;
       letter-spacing: 0.3px;
     }
 
     .s3-input {
-      background: #FAFAFA;
-      border: 1px solid #E0E0E0;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
       border-radius: 6px;
       padding: 8px 10px;
-      font-size: 13px;
-      color: #212121;
+      font-size: 12px;
+      color: #e0e0e0;
       outline: none;
       width: 100%;
       font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .s3-input:focus {
       border-color: #D32F2F;
-      box-shadow: 0 0 0 2px rgba(211,47,47,0.1);
+      box-shadow: 0 0 0 2px rgba(211,47,47,0.15);
     }
 
     .s3-input::placeholder {
-      color: #BDBDBD;
+      color: #4a4a6a;
     }
 
     .s3-actions {
       display: flex;
       gap: 8px;
-      margin-top: 4px;
+      margin-top: 6px;
     }
 
     .s3-btn {
@@ -407,11 +480,11 @@
       padding: 9px 10px;
       border-radius: 6px;
       border: none;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, background 0.2s;
     }
 
     .s3-btn:hover {
@@ -424,13 +497,17 @@
     }
 
     .s3-btn-save.saved {
-      background: #4CAF50;
+      background: #66bb6a;
     }
 
     .s3-btn-demo {
-      background: #FAFAFA;
-      border: 1px solid #E0E0E0;
-      color: #757575;
+      background: #2a2a4a;
+      color: #9e9e9e;
+      border: 1px solid #3a3a5a;
+    }
+
+    .s3-btn-demo:hover {
+      color: #e0e0e0;
     }
   </style>
 </head>
@@ -438,26 +515,36 @@
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <div class="brand-name">V1-Helper</div>
-      <div class="brand-sub">Booth Capture</div>
+      <div>
+        <div class="brand-name">V1-Helper</div>
+        <div class="brand-sub">Booth Capture</div>
+      </div>
     </div>
-    <div class="s3-status">
-      <div class="s3-dot" id="s3PollDot"></div>
-      <span class="s3-status-text" id="s3PollText">S3: --</span>
+    <div class="header-right">
+      <div class="s3-status">
+        <div class="s3-dot" id="s3PollDot"></div>
+        <span class="s3-status-text" id="s3PollText">S3</span>
+      </div>
+      <button class="gear-btn" id="gearBtn" title="Settings">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg>
+      </button>
     </div>
   </div>
 
-  <!-- Hero: status circle with timer inside -->
+  <!-- Hero: status ring with timer -->
   <div class="hero">
-    <div class="status-circle" id="statusCircle">
-      <div class="circle-timer" id="circleTimer">--:--</div>
-      <div class="circle-label" id="circleLabel">IDLE</div>
+    <div class="status-ring" id="statusRing">
+      <div class="rec-dot"></div>
+      <div class="upload-spinner"></div>
+      <div class="ring-icon" id="ringIcon">&#10003;</div>
+      <div class="ring-timer" id="ringTimer">--:--</div>
+      <div class="ring-label" id="ringLabel">IDLE</div>
     </div>
     <div class="hero-visitor" id="heroVisitor"></div>
     <div class="hero-error-msg" id="heroError"></div>
   </div>
 
-  <!-- Stats: Clicks + Screenshots (big numbers) -->
+  <!-- Stats: Clicks + Screenshots -->
   <div class="stats-row">
     <div class="stat-box">
       <div class="stat-value" id="statClicks">0</div>
@@ -469,12 +556,12 @@
     </div>
   </div>
 
-  <!-- Start / Stop button -->
-  <div class="btn-wrap">
-    <button class="session-btn start" id="sessionBtn">Start Session</button>
+  <!-- Start Demo / End Demo button (hidden when S3 not configured) -->
+  <div class="btn-wrap hidden" id="btnWrap">
+    <button class="session-btn start" id="sessionBtn">Start Demo</button>
   </div>
 
-  <!-- Compact session info -->
+  <!-- Session info -->
   <div class="session-info">
     <div class="session-info-row">
       <span>Session</span>
@@ -490,15 +577,10 @@
     </div>
   </div>
 
-  <!-- S3 Config (collapsible, starts collapsed) -->
-  <div class="s3-section">
-    <div class="s3-toggle" id="s3ConfigToggle">
-      <span class="s3-arrow" id="s3Arrow">&#9654;</span>
-      <span class="s3-toggle-label">S3 Configuration</span>
-      <span class="s3-configured-badge" id="s3ConfiguredBadge">&#10003;</span>
-    </div>
-
-    <div class="s3-body collapsed" id="s3ConfigBody">
+  <!-- S3 Config (hidden by default, toggled by gear) -->
+  <div class="s3-section" id="s3Section">
+    <div class="s3-section-title">S3 Configuration</div>
+    <div class="s3-body">
       <div class="s3-field">
         <label class="s3-label" for="s3Bucket">S3 Bucket</label>
         <input class="s3-input" id="s3Bucket" type="text" placeholder="my-bucket-name" />
@@ -509,7 +591,7 @@
       </div>
       <div class="s3-field">
         <label class="s3-label" for="presignEndpoint">Presign Endpoint URL</label>
-        <input class="s3-input" id="presignEndpoint" type="url" placeholder="https://xxxxxxx.lambda-url.us-east-1.on.aws/" />
+        <input class="s3-input" id="presignEndpoint" type="url" placeholder="https://xxx.lambda-url.us-east-1.on.aws/" />
       </div>
       <div class="s3-field">
         <label class="s3-label" for="awsAccessKeyId">Access Key ID</label>
@@ -520,7 +602,7 @@
         <input class="s3-input" id="awsSecretAccessKey" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
       </div>
       <div class="s3-field">
-        <label class="s3-label" for="awsSessionToken">Session Token <em style="font-style:normal;color:#BDBDBD">(optional)</em></label>
+        <label class="s3-label" for="awsSessionToken">Session Token <span style="color:#4a4a6a">(optional)</span></label>
         <input class="s3-input" id="awsSessionToken" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
       </div>
       <div class="s3-actions">

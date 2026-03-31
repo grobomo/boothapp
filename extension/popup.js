@@ -3,6 +3,8 @@
 var currentSessionActive = false;
 var sessionStartIso = null;
 var durationTimer = null;
+var s3Configured = false;
+var lastSessionWasActive = false;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -38,32 +40,44 @@ function truncateId(id) {
 // ─── Duration Timer ──────────────────────────────────────────────────────────
 
 function updateDuration() {
-  document.getElementById('circleTimer').textContent = formatDuration(sessionStartIso);
+  document.getElementById('ringTimer').textContent = formatDuration(sessionStartIso);
 }
 
 // ─── UI State Machine ────────────────────────────────────────────────────────
 
-function setCircleState(state) {
-  var circle = document.getElementById('statusCircle');
-  var timerEl = document.getElementById('circleTimer');
-  var labelEl = document.getElementById('circleLabel');
+function setRingState(state) {
+  var ring = document.getElementById('statusRing');
+  var timerEl = document.getElementById('ringTimer');
+  var labelEl = document.getElementById('ringLabel');
 
-  circle.classList.remove('recording', 'uploading', 'error');
+  ring.classList.remove('recording', 'uploading', 'complete', 'error');
 
   if (state === 'recording') {
-    circle.classList.add('recording');
+    ring.classList.add('recording');
     labelEl.textContent = 'REC';
   } else if (state === 'uploading') {
-    circle.classList.add('uploading');
-    timerEl.textContent = '...';
+    ring.classList.add('uploading');
     labelEl.textContent = 'UPLOADING';
+  } else if (state === 'complete') {
+    ring.classList.add('complete');
   } else if (state === 'error') {
-    circle.classList.add('error');
+    ring.classList.add('error');
     timerEl.textContent = '!!';
     labelEl.textContent = 'ERROR';
   } else {
     timerEl.textContent = '--:--';
     labelEl.textContent = 'IDLE';
+  }
+}
+
+// ─── Button Visibility ──────────────────────────────────────────────────────
+
+function updateButtonVisibility() {
+  var wrap = document.getElementById('btnWrap');
+  if (s3Configured) {
+    wrap.classList.remove('hidden');
+  } else {
+    wrap.classList.add('hidden');
   }
 }
 
@@ -73,18 +87,20 @@ function refreshStatus() {
   chrome.runtime.sendMessage({ type: 'get_popup_status' }, function(response) {
     if (chrome.runtime.lastError || !response || response.status !== 'ok') return;
 
-    // S3 polling indicator (header)
+    // S3 connection indicator
     var s3Dot = document.getElementById('s3PollDot');
     var s3Text = document.getElementById('s3PollText');
-    if (response.s3_polling) {
+    s3Configured = !!response.s3_polling;
+    if (s3Configured) {
       s3Dot.classList.add('active');
-      s3Text.textContent = 'S3: Connected';
+      s3Text.textContent = 'S3';
       s3Text.classList.add('active');
     } else {
       s3Dot.classList.remove('active');
-      s3Text.textContent = 'S3: --';
+      s3Text.textContent = 'S3';
       s3Text.classList.remove('active');
     }
+    updateButtonVisibility();
 
     var heroVisitor = document.getElementById('heroVisitor');
     var heroError = document.getElementById('heroError');
@@ -95,15 +111,16 @@ function refreshStatus() {
     heroError.classList.remove('visible');
 
     if (response.error_message) {
-      setCircleState('error');
+      setRingState('error');
       heroError.textContent = response.error_message;
       heroError.classList.add('visible');
       heroVisitor.classList.remove('visible');
     } else if (response.uploading) {
-      setCircleState('uploading');
+      setRingState('uploading');
       heroVisitor.classList.remove('visible');
     } else if (response.session_active) {
-      setCircleState('recording');
+      setRingState('recording');
+      lastSessionWasActive = true;
 
       sessionStartIso = response.start_time || null;
       if (!durationTimer && sessionStartIso) {
@@ -118,7 +135,19 @@ function refreshStatus() {
         heroVisitor.classList.remove('visible');
       }
     } else {
-      setCircleState('idle');
+      // Session not active -- show complete if we just ended one
+      if (lastSessionWasActive && !response.uploading) {
+        setRingState('complete');
+        lastSessionWasActive = false;
+        // Auto-clear complete state after 5 seconds
+        setTimeout(function() {
+          if (!currentSessionActive) {
+            setRingState('idle');
+          }
+        }, 5000);
+      } else if (!lastSessionWasActive) {
+        setRingState('idle');
+      }
       heroVisitor.classList.remove('visible');
 
       if (durationTimer) {
@@ -131,7 +160,7 @@ function refreshStatus() {
     // Session button
     updateSessionButton(response.session_active);
 
-    // Stats (large numbers)
+    // Stats
     document.getElementById('statClicks').textContent = response.click_count || '0';
     document.getElementById('statScreenshots').textContent = response.screenshot_count || '0';
 
@@ -159,11 +188,11 @@ setInterval(refreshStatus, 1000);
 function updateSessionButton(isActive) {
   var btn = document.getElementById('sessionBtn');
   if (isActive) {
-    btn.textContent = 'Stop Session';
+    btn.textContent = 'End Demo';
     btn.classList.remove('start');
     btn.classList.add('stop');
   } else {
-    btn.textContent = 'Start Session';
+    btn.textContent = 'Start Demo';
     btn.classList.remove('stop');
     btn.classList.add('start');
   }
@@ -182,17 +211,18 @@ document.getElementById('sessionBtn').addEventListener('click', function() {
   }
 });
 
+// ─── Gear Toggle ─────────────────────────────────────────────────────────────
+
+document.getElementById('gearBtn').addEventListener('click', function() {
+  var section = document.getElementById('s3Section');
+  var gear = document.getElementById('gearBtn');
+  var isOpen = section.classList.toggle('open');
+  gear.classList.toggle('open', isOpen);
+});
+
 // ─── S3 Config ────────────────────────────────────────────────────────────────
 
 var S3_KEYS = ['s3Bucket', 's3Region', 'presignEndpoint', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
-
-function isConfigured(config) {
-  return !!(config.s3Bucket && config.s3Region && config.presignEndpoint && config.awsAccessKeyId && config.awsSecretAccessKey);
-}
-
-function updateConfiguredBadge(config) {
-  document.getElementById('s3ConfiguredBadge').style.display = isConfigured(config) ? 'inline' : 'none';
-}
 
 // Load saved values
 chrome.storage.local.get(S3_KEYS, function(config) {
@@ -202,7 +232,6 @@ chrome.storage.local.get(S3_KEYS, function(config) {
   if (config.awsAccessKeyId)      document.getElementById('awsAccessKeyId').value = config.awsAccessKeyId;
   if (config.awsSecretAccessKey)  document.getElementById('awsSecretAccessKey').value = config.awsSecretAccessKey;
   if (config.awsSessionToken)     document.getElementById('awsSessionToken').value = config.awsSessionToken;
-  updateConfiguredBadge(config);
 });
 
 // Save
@@ -216,7 +245,6 @@ document.getElementById('s3SaveBtn').addEventListener('click', function() {
     awsSessionToken:    document.getElementById('awsSessionToken').value.trim(),
   };
   chrome.storage.local.set(config, function() {
-    updateConfiguredBadge(config);
     var btn = document.getElementById('s3SaveBtn');
     var orig = btn.textContent;
     btn.textContent = 'Saved!';
@@ -225,6 +253,8 @@ document.getElementById('s3SaveBtn').addEventListener('click', function() {
       btn.textContent = orig;
       btn.classList.remove('saved');
     }, 1500);
+    // Refresh to pick up new S3 status
+    refreshStatus();
   });
 });
 
@@ -234,18 +264,4 @@ document.getElementById('s3DemoBtn').addEventListener('click', function() {
   document.getElementById('s3Region').value = 'us-east-1';
   document.getElementById('presignEndpoint').focus();
   document.getElementById('presignEndpoint').setAttribute('placeholder', 'Paste Lambda Function URL here');
-});
-
-// Collapsible toggle
-document.getElementById('s3ConfigToggle').addEventListener('click', function() {
-  var body = document.getElementById('s3ConfigBody');
-  var arrow = document.getElementById('s3Arrow');
-  var collapsed = body.classList.toggle('collapsed');
-  if (collapsed) {
-    arrow.classList.remove('open');
-    arrow.textContent = '\u25B6';
-  } else {
-    arrow.classList.add('open');
-    arrow.textContent = '\u25BC';
-  }
 });
