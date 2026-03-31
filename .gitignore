@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 .env
 *.log
+logs/
 .DS_Store
 continuous-claude.log
 examples/sample_report.html
