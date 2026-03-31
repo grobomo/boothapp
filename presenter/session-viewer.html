@@ -325,7 +325,7 @@
     padding: 24px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
     gap: 20px;
   }
 
@@ -431,7 +431,7 @@
   }
 
   /* ── Timeline ──────────────────────────────────────────── */
-  .timeline-card { grid-column: 1; grid-row: 2 / 4; }
+  .timeline-card { grid-column: 1; grid-row: 2 / 5; }
   .timeline-scroll {
     max-height: 700px;
     overflow-y: auto;
@@ -522,10 +522,52 @@
   }
   .t-speaker.se { color: var(--accent); }
   .t-speaker.visitor { color: var(--green); }
-  .t-text { color: var(--text); }
+  .t-text { color: var(--text); flex: 1; }
+  .t-sentiment {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 5px;
+    margin-left: auto;
+    transition: transform 0.15s;
+  }
+  .t-sentiment:hover { transform: scale(1.6); }
+  .t-sentiment.positive { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .t-sentiment.neutral  { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .t-sentiment.negative { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  /* ── Sentiment Timeline ──────────────────────────────────── */
+  .sentiment-card { grid-column: 2; grid-row: 3; }
+  .sentiment-chart-wrap {
+    padding: 16px 20px;
+    position: relative;
+  }
+  .sentiment-chart-wrap canvas {
+    width: 100%;
+    height: 140px;
+    display: block;
+  }
+  .sentiment-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .sentiment-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sentiment-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
 
   /* ── Analysis Summary ──────────────────────────────────── */
-  .analysis-card { grid-column: 2; grid-row: 3; }
+  .analysis-card { grid-column: 2; grid-row: 4; }
   .analysis-scroll {
     max-height: 340px;
     overflow-y: auto;
@@ -847,6 +889,7 @@
     }
     .timeline-card { grid-column: 1; grid-row: auto; }
     .transcript-card { grid-column: 1; grid-row: auto; }
+    .sentiment-card { grid-column: 1; grid-row: auto; }
     .analysis-card { grid-column: 1; grid-row: auto; }
     .timeline-scroll, .transcript-scroll, .analysis-scroll { max-height: 500px; }
     .visitor-info { flex-wrap: wrap; }
@@ -1399,6 +1442,19 @@ if (!BoothAuth.requireAwsCreds()) {
     <div class="card transcript-card">
       <div class="card-header"><span class="icon">["]</span> Transcript</div>
       <div class="transcript-scroll" id="transcript"></div>
+    </div>
+
+    <!-- Sentiment Timeline -->
+    <div class="card sentiment-card">
+      <div class="card-header"><span class="icon">[^]</span> Sentiment Timeline</div>
+      <div class="sentiment-chart-wrap">
+        <canvas id="sentiment-canvas"></canvas>
+        <div class="sentiment-legend">
+          <div class="sentiment-legend-item"><div class="sentiment-legend-dot" style="background:var(--green)"></div> Positive</div>
+          <div class="sentiment-legend-item"><div class="sentiment-legend-dot" style="background:var(--yellow)"></div> Neutral</div>
+          <div class="sentiment-legend-item"><div class="sentiment-legend-dot" style="background:var(--red)"></div> Negative</div>
+        </div>
+      </div>
     </div>
 
     <!-- Analysis Summary + Products + Follow-up -->
@@ -2318,6 +2374,156 @@ if (!BoothAuth.requireAwsCreds()) {
     });
   }
 
+  // ── Sentiment Analysis ─────────────────────────────────────────
+  var POSITIVE_WORDS = ["great", "excellent", "interested", "love", "perfect",
+    "impressive", "useful", "amazing", "fantastic", "wonderful", "good",
+    "easy", "powerful", "nice", "best", "strong", "key", "differentiator"];
+  var NEGATIVE_WORDS = ["concern", "expensive", "complicated", "difficult",
+    "problem", "issue", "confusing", "slow", "hard", "worried", "frustrating",
+    "headache", "pushed back", "limited"];
+
+  function analyzeSentiment(text) {
+    var lower = (text || "").toLowerCase();
+    var pos = 0;
+    var neg = 0;
+    for (var i = 0; i < POSITIVE_WORDS.length; i++) {
+      if (lower.indexOf(POSITIVE_WORDS[i]) !== -1) pos++;
+    }
+    for (var j = 0; j < NEGATIVE_WORDS.length; j++) {
+      if (lower.indexOf(NEGATIVE_WORDS[j]) !== -1) neg++;
+    }
+    var score = pos - neg;
+    if (score > 0) return { label: "positive", score: Math.min(score, 3) };
+    if (score < 0) return { label: "negative", score: Math.max(score, -3) };
+    return { label: "neutral", score: 0 };
+  }
+
+  // ── Render: Sentiment Timeline Chart ──────────────────────────
+  function renderSentimentChart(entries) {
+    var canvas = document.getElementById("sentiment-canvas");
+    if (!canvas || !entries || entries.length === 0) return;
+
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    var W = rect.width;
+    var H = rect.height;
+
+    var sentiments = [];
+    for (var i = 0; i < entries.length; i++) {
+      sentiments.push(analyzeSentiment(entries[i].text));
+    }
+
+    var padL = 30;
+    var padR = 10;
+    var padT = 15;
+    var padB = 25;
+    var chartW = W - padL - padR;
+    var chartH = H - padT - padB;
+    var midY = padT + chartH / 2;
+
+    // Grid lines and labels
+    ctx.strokeStyle = "#30363d";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    for (var g = -3; g <= 3; g++) {
+      var gy = midY - (g / 3) * (chartH / 2);
+      ctx.beginPath();
+      ctx.moveTo(padL, gy);
+      ctx.lineTo(W - padR, gy);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Y-axis labels
+    ctx.font = "10px monospace";
+    ctx.fillStyle = "#484f58";
+    ctx.textAlign = "right";
+    ctx.fillText("+", padL - 6, padT + 4);
+    ctx.fillText("0", padL - 6, midY + 3);
+    ctx.fillText("-", padL - 6, padT + chartH + 4);
+
+    // Plot area fill zones
+    var gradPos = ctx.createLinearGradient(0, padT, 0, midY);
+    gradPos.addColorStop(0, "rgba(63,185,80,0.08)");
+    gradPos.addColorStop(1, "rgba(63,185,80,0)");
+    ctx.fillStyle = gradPos;
+    ctx.fillRect(padL, padT, chartW, chartH / 2);
+
+    var gradNeg = ctx.createLinearGradient(0, midY, 0, padT + chartH);
+    gradNeg.addColorStop(0, "rgba(248,81,73,0)");
+    gradNeg.addColorStop(1, "rgba(248,81,73,0.08)");
+    ctx.fillStyle = gradNeg;
+    ctx.fillRect(padL, midY, chartW, chartH / 2);
+
+    // Zero line
+    ctx.strokeStyle = "#484f58";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, midY);
+    ctx.lineTo(W - padR, midY);
+    ctx.stroke();
+
+    // Plot the line
+    var step = sentiments.length > 1 ? chartW / (sentiments.length - 1) : 0;
+    var points = [];
+    for (var s = 0; s < sentiments.length; s++) {
+      var px = padL + s * step;
+      var py = midY - (sentiments[s].score / 3) * (chartH / 2);
+      points.push({ x: px, y: py, sentiment: sentiments[s] });
+    }
+
+    // Smooth line
+    if (points.length > 1) {
+      ctx.strokeStyle = "#58a6ff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (var p = 1; p < points.length; p++) {
+        var cpx = (points[p - 1].x + points[p].x) / 2;
+        ctx.bezierCurveTo(cpx, points[p - 1].y, cpx, points[p].y, points[p].x, points[p].y);
+      }
+      ctx.stroke();
+
+      // Fill under curve
+      var grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+      grad.addColorStop(0, "rgba(88,166,255,0.15)");
+      grad.addColorStop(0.5, "rgba(88,166,255,0)");
+      grad.addColorStop(1, "rgba(88,166,255,0.15)");
+      ctx.lineTo(points[points.length - 1].x, midY);
+      ctx.lineTo(points[0].x, midY);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // Data points
+    var colors = { positive: "#3fb950", neutral: "#d29922", negative: "#f85149" };
+    for (var d = 0; d < points.length; d++) {
+      ctx.beginPath();
+      ctx.arc(points[d].x, points[d].y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = colors[points[d].sentiment.label];
+      ctx.fill();
+      ctx.strokeStyle = "#0d1117";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // X-axis segment labels (show a few timestamps)
+    ctx.fillStyle = "#484f58";
+    ctx.font = "9px monospace";
+    ctx.textAlign = "center";
+    var labelInterval = Math.max(1, Math.floor(entries.length / 6));
+    for (var lbl = 0; lbl < entries.length; lbl += labelInterval) {
+      var lx = padL + lbl * step;
+      var ts = (entries[lbl].timestamp || "").replace(/\.\d+$/, "");
+      ctx.fillText(ts, lx, H - 4);
+    }
+  }
+
   // ── Render: Transcript ──────────────────────────────────────────
   function renderTranscript(transcript) {
     var container = document.getElementById("transcript");
@@ -2331,10 +2537,13 @@ if (!BoothAuth.requireAwsCreds()) {
     for (var i = 0; i < transcript.entries.length; i++) {
       var entry = transcript.entries[i];
       var speakerCls = (entry.speaker || "").toLowerCase() === "se" ? "se" : "visitor";
+      var sentiment = analyzeSentiment(entry.text);
+      var sentimentTitle = sentiment.label + " (" + (sentiment.score > 0 ? "+" : "") + sentiment.score + ")";
       html += '<div class="t-entry">' +
         '<span class="t-ts">' + esc(entry.timestamp) + '</span>' +
         '<span class="t-speaker ' + speakerCls + '">' + esc(entry.speaker) + '</span>' +
         '<span class="t-text">' + esc(entry.text) + '</span>' +
+        '<span class="t-sentiment ' + sentiment.label + '" title="' + sentimentTitle + '"></span>' +
         '</div>';
     }
     container.innerHTML = html;
@@ -2345,6 +2554,9 @@ if (!BoothAuth.requireAwsCreds()) {
       tEntries[te].classList.add("t-entry-animated");
       tEntries[te].style.animationDelay = (te * 0.04) + "s";
     }
+
+    // Render the sentiment chart
+    renderSentimentChart(transcript.entries);
   }
 
   // ── Render: Analysis (summary + products + follow-up) ───────────
