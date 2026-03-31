@@ -138,14 +138,39 @@ def _dispatch_to_worker(child, task):
         _handle_child_failure(child["name"], task, str(e))
 
 
+def _self_execute(task):
+    """Leaf node: no children, execute task locally and report completion."""
+    name = os.environ.get("MANAGER_NAME", socket.gethostname())
+    time.sleep(0.05)  # simulate minimal work
+    output = f"[leaf:{name}] executed: {task['prompt'][:100]}"
+    parent_task_id = task.get("parent_task_id")
+    with lock:
+        task["status"] = "completed"
+        task["completed_at"] = now_iso()
+        task["output"] = output
+        task["assigned_to"] = f"self:{name}"
+        completed_tasks.append(task)
+        if len(completed_tasks) > 50:
+            completed_tasks.pop(0)
+
+    # Escalate to parent
+    parent_url = os.environ.get("PARENT_URL")
+    if parent_url and parent_task_id:
+        threading.Thread(target=_escalate_complete,
+                         args=(parent_url, parent_task_id, output),
+                         daemon=True).start()
+
+
 def _complete_task(task_id, child_name, output=""):
-    """Mark task complete, free the child."""
+    """Mark task complete, free the child, and escalate to parent if needed."""
+    parent_task_id = None
     with lock:
         for t in task_queue:
             if t["id"] == task_id:
                 t["status"] = "completed"
                 t["completed_at"] = now_iso()
                 t["output"] = output
+                parent_task_id = t.get("parent_task_id")
                 completed_tasks.append(t)
                 if len(completed_tasks) > 50:
                     completed_tasks.pop(0)
@@ -153,6 +178,31 @@ def _complete_task(task_id, child_name, output=""):
         if child_name in children:
             children[child_name]["status"] = "idle"
             children[child_name]["current_task"] = None
+
+    # Escalate completion to parent manager
+    parent_url = os.environ.get("PARENT_URL")
+    if parent_url and parent_task_id:
+        threading.Thread(target=_escalate_complete,
+                         args=(parent_url, parent_task_id, output),
+                         daemon=True).start()
+
+
+def _escalate_complete(parent_url, parent_task_id, output):
+    """Notify parent manager that a task completed."""
+    try:
+        payload = json.dumps({
+            "task_id": parent_task_id,
+            "child_name": os.environ.get("MANAGER_NAME", socket.gethostname()),
+            "output": output,
+        }).encode()
+        req = urllib.request.Request(
+            f"{parent_url}/api/task-complete",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
 
 
 def _handle_child_failure(child_name, task, error):
@@ -392,6 +442,11 @@ class ManagerHandler(BaseHTTPRequestHandler):
             idle = find_idle_child()
             if idle:
                 dispatch_to_child(idle, task)
+            elif not children:
+                # Leaf node: no children registered, self-execute
+                task["status"] = "self-executing"
+                threading.Thread(target=_self_execute, args=(task,),
+                                 daemon=True).start()
 
         self._respond(202, {"task_id": task["id"], "status": task["status"],
                             "assigned_to": task["assigned_to"]})
@@ -407,24 +462,7 @@ class ManagerHandler(BaseHTTPRequestHandler):
             return
 
         _complete_task(task_id, child_name, output)
-
-        # escalate completion to parent if we have one
-        parent_url = os.environ.get("PARENT_URL")
-        if parent_url and data.get("parent_task_id"):
-            try:
-                payload = json.dumps({
-                    "task_id": data["parent_task_id"],
-                    "child_name": os.environ.get("MANAGER_NAME", socket.gethostname()),
-                    "output": output,
-                }).encode()
-                req = urllib.request.Request(
-                    f"{parent_url}/api/task-complete",
-                    data=payload,
-                    headers={"Content-Type": "application/json"},
-                )
-                urllib.request.urlopen(req, timeout=10)
-            except Exception:
-                pass
+        # Note: _complete_task handles parent escalation automatically
 
         self._respond(200, {"status": "completed", "task_id": task_id})
 
