@@ -476,6 +476,63 @@
         }
 
         /* ============================================================
+           MICRO-ANIMATIONS
+           ============================================================ */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            animation: fadeInUp .6s ease-out both;
+        }
+
+        .card.anim-entrance {
+            opacity: 0;
+            animation: fadeInUp .5s ease-out both;
+        }
+        .card.anim-entrance:nth-child(1) { animation-delay: .15s; }
+        .card.anim-entrance:nth-child(2) { animation-delay: .3s; }
+        .card.anim-entrance:nth-child(3) { animation-delay: .45s; }
+
+        .feed-section {
+            opacity: 0;
+            animation: fadeInUp .5s ease-out .55s both;
+        }
+
+        .panel-box {
+            opacity: 0;
+            animation: fadeInUp .5s ease-out both;
+        }
+        .panel-box:nth-child(1) { animation-delay: .65s; }
+        .panel-box:nth-child(2) { animation-delay: .8s; }
+
+        .footer {
+            opacity: 0;
+            animation: fadeInUp .4s ease-out .9s both;
+        }
+
+        .stagger-in .feed-item {
+            opacity: 0;
+            animation: fadeInUp .35s ease-out both;
+            animation-delay: calc(var(--i, 0) * 0.07s + .6s);
+        }
+
+        .stagger-in .product-item {
+            opacity: 0;
+            animation: fadeInUp .35s ease-out both;
+            animation-delay: calc(var(--i, 0) * 0.1s + .85s);
+        }
+
+        .ring-legend-item {
+            opacity: 0;
+            animation: fadeInUp .3s ease-out both;
+        }
+        .ring-legend-item:nth-child(1) { animation-delay: .75s; }
+        .ring-legend-item:nth-child(2) { animation-delay: .85s; }
+        .ring-legend-item:nth-child(3) { animation-delay: .95s; }
+
+        /* ============================================================
            RESPONSIVE
            ============================================================ */
         @media (max-width: 1100px) {
@@ -797,9 +854,22 @@
     function animateValue(el, newVal) {
         var old = parseInt(el.textContent, 10) || 0;
         if (old === newVal) return;
-        el.textContent = newVal;
-        el.setAttribute('data-animate', '');
-        setTimeout(function () { el.removeAttribute('data-animate'); }, 400);
+        var duration = 800;
+        var startTime = null;
+        function step(ts) {
+            if (!startTime) startTime = ts;
+            var progress = Math.min((ts - startTime) / duration, 1);
+            var eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            el.textContent = Math.round(old + (newVal - old) * eased);
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                el.textContent = newVal;
+                el.setAttribute('data-animate', '');
+                setTimeout(function () { el.removeAttribute('data-animate'); }, 400);
+            }
+        }
+        requestAnimationFrame(step);
     }
 
     function renderCards() {
@@ -841,6 +911,7 @@
             var pct = Math.round((count / max) * 100);
             var div = document.createElement('div');
             div.className = 'product-item';
+            div.style.setProperty('--i', i);
             div.innerHTML =
                 '<div class="product-rank">' + (i + 1) + '</div>' +
                 '<div class="product-info">' +
@@ -855,9 +926,10 @@
     function renderFeed() {
         var list = document.getElementById('feedList');
         list.innerHTML = '';
-        state.events.forEach(function (ev) {
+        state.events.forEach(function (ev, idx) {
             var li = document.createElement('li');
             li.className = 'feed-item';
+            li.style.setProperty('--i', idx);
             li.innerHTML =
                 '<span class="feed-dot feed-dot--' + ev.type + '"></span>' +
                 '<div class="feed-content">' +
@@ -938,7 +1010,41 @@
         state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
     });
 
+    // Add entrance animation classes (removed after animation to preserve hover effects)
+    document.querySelector('.container').classList.add('stagger-in');
+    var cards = document.querySelectorAll('.card');
+    for (var ci = 0; ci < cards.length; ci++) {
+        cards[ci].classList.add('anim-entrance');
+        (function(card) {
+            card.addEventListener('animationend', function() {
+                card.classList.remove('anim-entrance');
+            }, { once: true });
+        })(cards[ci]);
+    }
+
+    // Initial count-up from 0: temporarily set to 0, render, then animate to real values
+    var realSessions = state.activeSessions;
+    var realDemos = state.totalDemos;
+    var realReports = state.reportsGenerated;
+    state.activeSessions = 0;
+    state.totalDemos = 0;
+    state.reportsGenerated = 0;
     renderAll();
+
+    // Animate to real values after cards fade in
+    setTimeout(function () {
+        state.activeSessions = realSessions;
+        state.totalDemos = realDemos;
+        state.reportsGenerated = realReports;
+        renderCards();
+        renderRingChart();
+    }, 500);
+
+    // Remove stagger class after initial animations complete
+    setTimeout(function () {
+        document.querySelector('.container').classList.remove('stagger-in');
+    }, 2000);
+
     renderClock();
     setInterval(renderClock, 1000);
     setInterval(tickCountdown, 1000);
