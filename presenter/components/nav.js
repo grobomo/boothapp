@@ -8,7 +8,8 @@
     { label: 'Architecture', href: '/architecture.html' },
     { label: 'Contacts', href: '/contacts.html' },
     { label: 'Demo Script', href: '/demo-script.html' },
-    { label: 'Slides', href: '/slides.html' }
+    { label: 'Slides', href: '/slides.html' },
+    { label: 'Tasks', href: '/feature-tasks.html' }
   ];
 
   var HEALTH_POLL_MS = 10000;

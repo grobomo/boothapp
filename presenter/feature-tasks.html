@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/error-boundary.js"></script>
+<script src="components/nav.js"></script>
+<title>BoothApp — Feature Tasks</title>
+<link rel="stylesheet" href="styles/mobile.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #58a6ff;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    color: #8b949e;
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  .refresh-info {
+    font-size: 0.8rem;
+    color: #484f58;
+    font-family: monospace;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    background: #161b22;
+    border: 1px solid #30363d;
+  }
+
+  /* -- Summary cards -- */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .summary-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1.2rem;
+    text-align: center;
+  }
+
+  .summary-card .num {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: monospace;
+  }
+
+  .summary-card .label {
+    font-size: 0.8rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.3rem;
+  }
+
+  .num.total { color: #58a6ff; }
+  .num.active { color: #f0883e; }
+  .num.done { color: #3fb950; }
+  .num.pending { color: #8b949e; }
+
+  /* -- Task list -- */
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .task-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .task-card:hover {
+    border-color: #58a6ff;
+  }
+
+  .task-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .task-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e6edf3;
+  }
+
+  .task-tag {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tag-in-progress {
+    background: rgba(240, 136, 62, 0.15);
+    color: #f0883e;
+    border: 1px solid rgba(240, 136, 62, 0.3);
+  }
+
+  .tag-completed {
+    background: rgba(63, 185, 80, 0.15);
+    color: #3fb950;
+    border: 1px solid rgba(63, 185, 80, 0.3);
+  }
+
+  .tag-pending {
+    background: rgba(139, 148, 158, 0.15);
+    color: #8b949e;
+    border: 1px solid rgba(139, 148, 158, 0.3);
+  }
+
+  .tag-submitted {
+    background: rgba(88, 166, 255, 0.15);
+    color: #58a6ff;
+    border: 1px solid rgba(88, 166, 255, 0.3);
+  }
+
+  .task-desc {
+    font-size: 0.9rem;
+    color: #8b949e;
+    line-height: 1.5;
+    margin-bottom: 0.8rem;
+  }
+
+  .task-meta {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.8rem;
+    color: #484f58;
+    flex-wrap: wrap;
+  }
+
+  .task-meta a {
+    color: #58a6ff;
+    text-decoration: none;
+  }
+
+  .task-meta a:hover {
+    text-decoration: underline;
+  }
+
+  .pr-list {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .pr-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    color: #58a6ff;
+    text-decoration: none;
+    font-family: monospace;
+  }
+
+  .pr-badge:hover {
+    background: rgba(88, 166, 255, 0.2);
+  }
+
+  .pr-badge.merged {
+    background: rgba(163, 113, 247, 0.1);
+    border-color: rgba(163, 113, 247, 0.2);
+    color: #a371f7;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #484f58;
+    font-size: 1.1rem;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 3rem;
+    color: #8b949e;
+  }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 0.5rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 768px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Feature Tasks</h1>
+    <span class="refresh-info" id="refresh-info">loading...</span>
+  </header>
+  <p class="subtitle">CaseyApp feature development — submitted to CCC worker fleet</p>
+
+  <div class="summary">
+    <div class="summary-card"><div class="num total" id="total-count">-</div><div class="label">Total</div></div>
+    <div class="summary-card"><div class="num active" id="active-count">-</div><div class="label">Active</div></div>
+    <div class="summary-card"><div class="num done" id="done-count">-</div><div class="label">Done</div></div>
+    <div class="summary-card"><div class="num pending" id="pending-count">-</div><div class="label">Pending</div></div>
+  </div>
+
+  <div id="task-list" class="task-list">
+    <div class="loading"><div class="loading-spinner"></div><br>Loading tasks...</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var REFRESH_MS = 30000;
+  var lastUpdate = null;
+
+  function statusClass(status) {
+    if (status === 'completed') return 'tag-completed';
+    if (status === 'in_progress') return 'tag-in-progress';
+    if (status === 'submitted') return 'tag-submitted';
+    return 'tag-pending';
+  }
+
+  function renderTask(task) {
+    var card = document.createElement('div');
+    card.className = 'task-card';
+
+    var header = '<div class="task-header">' +
+      '<span class="task-name">' + escHtml(task.feature) + '</span>' +
+      '<span class="task-tag ' + statusClass(task.status) + '">' + escHtml(task.status.replace('_', ' ')) + '</span>' +
+    '</div>';
+
+    var desc = '<div class="task-desc">' + escHtml(task.description) + '</div>';
+
+    var meta = '<div class="task-meta">';
+    if (task.assignee) meta += '<span>Assignee: ' + escHtml(task.assignee) + '</span>';
+    if (task.submitted_at) meta += '<span>Submitted: ' + escHtml(task.submitted_at) + '</span>';
+    meta += '</div>';
+
+    var prs = '';
+    if (task.prs && task.prs.length > 0) {
+      prs = '<div class="pr-list">';
+      task.prs.forEach(function(pr) {
+        var cls = pr.merged ? 'pr-badge merged' : 'pr-badge';
+        prs += '<a class="' + cls + '" href="' + escHtml(pr.url) + '" target="_blank">#' + pr.number + '</a>';
+      });
+      prs += '</div>';
+    }
+
+    card.innerHTML = header + desc + meta + prs;
+    return card;
+  }
+
+  function escHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function updateSummary(tasks) {
+    var total = tasks.length;
+    var active = tasks.filter(function(t) { return t.status === 'in_progress' || t.status === 'submitted'; }).length;
+    var done = tasks.filter(function(t) { return t.status === 'completed'; }).length;
+    var pending = tasks.filter(function(t) { return t.status === 'pending'; }).length;
+
+    document.getElementById('total-count').textContent = total;
+    document.getElementById('active-count').textContent = active;
+    document.getElementById('done-count').textContent = done;
+    document.getElementById('pending-count').textContent = pending;
+  }
+
+  function load() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/feature-tasks', true);
+    xhr.timeout = 10000;
+    xhr.onload = function() {
+      if (xhr.status !== 200) {
+        document.getElementById('task-list').innerHTML = '<div class="empty-state">Failed to load tasks (HTTP ' + xhr.status + ')</div>';
+        return;
+      }
+      try {
+        var data = JSON.parse(xhr.responseText);
+        var tasks = data.tasks || [];
+        var container = document.getElementById('task-list');
+        container.innerHTML = '';
+
+        if (tasks.length === 0) {
+          container.innerHTML = '<div class="empty-state">No feature tasks submitted yet</div>';
+          updateSummary([]);
+          return;
+        }
+
+        updateSummary(tasks);
+        tasks.forEach(function(task) {
+          container.appendChild(renderTask(task));
+        });
+
+        lastUpdate = new Date();
+        document.getElementById('refresh-info').textContent = 'updated ' + lastUpdate.toLocaleTimeString();
+      } catch (e) {
+        document.getElementById('task-list').innerHTML = '<div class="empty-state">Error parsing task data</div>';
+      }
+    };
+    xhr.onerror = function() {
+      document.getElementById('task-list').innerHTML = '<div class="empty-state">Network error loading tasks</div>';
+    };
+    xhr.send();
+  }
+
+  load();
+  setInterval(load, REFRESH_MS);
+})();
+</script>
+</body>
+</html>

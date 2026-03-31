@@ -135,6 +135,10 @@ app.get('/api/errors', (req, res) => {
   res.json({ errors: clientErrors, count: clientErrors.length });
 });
 
+// --- Feature tasks API ---
+const { createRouter: featureTasksRouter } = require('./lib/feature-tasks');
+app.use(featureTasksRouter());
+
 // --- Share link API (public, no auth) ---
 app.get('/api/share/:sessionId', (req, res) => {
   const sid = req.params.sessionId.replace(/[^a-zA-Z0-9_-]/g, '');
