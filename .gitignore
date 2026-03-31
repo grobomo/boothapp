@@ -3,3 +3,7 @@ node_modules/
 *.log
 .DS_Store
 continuous-claude.log
+__pycache__/
+*.pyc
+output/draft-email.html
+output/draft-email.txt
