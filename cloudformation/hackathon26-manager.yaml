@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CCC Fleet Manager Node (hierarchical tier)
+
+Parameters:
+  ManagerTier:
+    Type: String
+    AllowedValues: [t1, t2, t3]
+    Description: Hierarchy tier for this manager
+  NodeId:
+    Type: String
+    Description: Unique node identifier (e.g. T1-001)
+  ParentEndpoint:
+    Type: String
+    Default: ''
+    Description: HTTP endpoint of parent manager (empty for T1 nodes)
+  InstanceType:
+    Type: String
+    Default: t3.medium
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  ManagerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub 'CCC Manager ${NodeId} SG'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 10.0.0.0/8
+      Tags:
+        - Key: Name
+          Value: !Sub 'ccc-manager-${NodeId}'
+
+  ManagerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref ManagerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub 'ccc-manager-${NodeId}'
+        - Key: ManagerTier
+          Value: !Ref ManagerTier
+        - Key: Environment
+          Value: !Ref Environment
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y docker
+          systemctl enable --now docker
+          docker run -d --name ccc-manager \
+            -p 8080:8080 \
+            -e NODE_ID=${NodeId} \
+            -e MANAGER_TIER=${ManagerTier} \
+            -e PARENT_ENDPOINT=${ParentEndpoint} \
+            ghcr.io/altarr/ccc-manager:latest
+
+Outputs:
+  InstanceId:
+    Value: !Ref ManagerInstance
+  PrivateIp:
+    Value: !GetAtt ManagerInstance.PrivateIp
+  Endpoint:
+    Value: !Sub 'http://${ManagerInstance.PrivateIp}:8080'

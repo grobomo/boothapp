@@ -19,3 +19,7 @@ android/local.properties
 *.apk
 *.aab
 *.hprof
+
+# Fleet (generated at deploy time)
+fleet-hierarchy.json
+test-fleet-hierarchy.json

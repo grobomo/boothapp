@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CCC Fleet Worker Node
+
+Parameters:
+  NodeId:
+    Type: String
+    Description: Unique worker identifier (e.g. W-001)
+  ManagerEndpoint:
+    Type: String
+    Description: HTTP endpoint of T3 manager this worker reports to
+  InstanceType:
+    Type: String
+    Default: t3.small
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  WorkerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub 'CCC Worker ${NodeId} SG'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 10.0.0.0/8
+      Tags:
+        - Key: Name
+          Value: !Sub 'ccc-worker-${NodeId}'
+
+  WorkerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref WorkerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub 'ccc-worker-${NodeId}'
+        - Key: Role
+          Value: worker
+        - Key: Environment
+          Value: !Ref Environment
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y docker
+          systemctl enable --now docker
+          docker run -d --name ccc-worker \
+            -p 8080:8080 \
+            -e NODE_ID=${NodeId} \
+            -e MANAGER_ENDPOINT=${ManagerEndpoint} \
+            ghcr.io/altarr/ccc-worker:latest
+
+Outputs:
+  InstanceId:
+    Value: !Ref WorkerInstance
+  PrivateIp:
+    Value: !GetAtt WorkerInstance.PrivateIp
+  Endpoint:
+    Value: !Sub 'http://${WorkerInstance.PrivateIp}:8080'
