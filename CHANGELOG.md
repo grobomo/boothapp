@@ -2,6 +2,18 @@
 
 All notable changes to BoothApp, organized by date.
 
+## 2026-03-31
+
+### Security
+- #113 Session ID validation -- rejects non-alphanumeric, empty, null, path traversal, and overlength IDs with HTTP 400; 13 new unit tests
+
+### Fixes
+- #114 Correlator error handling -- guard parseOffset against non-string/empty input, skip events with missing timestamps
+- #116 Fix extension manifest.json description to reflect BoothApp functionality
+
+### Docs
+- #112 Add JSDoc docstrings to top 3 exported functions in analysis/analyze.py
+
 ## 2026-03-30
 
 ### Features
