@@ -100,7 +100,8 @@ async function processSession(sessionId, clients, config) {
  * Create an HTTP health-check server.
  * GET /health returns JSON with watcher status.
  */
-function createHealthServer(startedAt) {
+function createHealthServer(startedAt, port) {
+  const listenPort = port || HEALTH_PORT;
   const server = http.createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/health') {
       const body = JSON.stringify({
@@ -117,8 +118,8 @@ function createHealthServer(startedAt) {
     }
   });
 
-  server.listen(HEALTH_PORT, () => {
-    log(`health endpoint listening on :${HEALTH_PORT}/health`);
+  server.listen(listenPort, () => {
+    log(`health endpoint listening on :${listenPort}/health`);
   });
 
   return server;

@@ -17,7 +17,7 @@ function get(port, path) {
 const PORT = 18932; // high port to avoid conflicts
 
 async function runTests() {
-  const server = createHealthServer(Date.now());
+  const server = createHealthServer(Date.now(), PORT);
 
   // Wait for server to be listening
   await new Promise((resolve) => server.on('listening', resolve));
