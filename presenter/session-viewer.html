@@ -1004,17 +1004,28 @@ if (!BoothAuth.requireAwsCreds()) {
     if (meta.visitor_company) parts.push(meta.visitor_company);
     subEl.textContent = parts.join(" at ") || "";
 
-    // Avatar initials
+    // Avatar initials with name-based color
     var initials = (meta.visitor_name || "?").split(" ").map(function (w) { return w[0]; }).join("").substring(0, 2).toUpperCase();
     avatarEl.textContent = initials;
+    var avatarColors = ["#1f6feb", "#8b5cf6", "#d97706", "#059669", "#dc2626", "#0891b2", "#7c3aed", "#c026d3"];
+    var hash = 0;
+    var nameStr = meta.visitor_name || "";
+    for (var ci = 0; ci < nameStr.length; ci++) { hash = nameStr.charCodeAt(ci) + ((hash << 5) - hash); }
+    var colorIdx = Math.abs(hash) % avatarColors.length;
+    avatarEl.style.background = avatarColors[colorIdx];
+    avatarEl.style.color = "#fff";
+    avatarEl.style.border = "2px solid " + avatarColors[colorIdx] + "88";
 
     // Try loading badge photo
     fetchS3ImageUrl(prefix + "badge.jpg").then(function (url) {
       if (url) {
         avatarEl.textContent = "";
+        avatarEl.style.background = "";
+        avatarEl.style.color = "";
+        avatarEl.style.border = "";
         var img = document.createElement("img");
         img.src = url;
-        img.alt = "Badge";
+        img.alt = "Badge photo";
         avatarEl.appendChild(img);
       }
     });
