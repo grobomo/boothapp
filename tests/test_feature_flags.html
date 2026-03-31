@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head><title>Feature Flags Tests</title></head>
+<body>
+<pre id="output"></pre>
+<script src="../infra/feature-flags.js"></script>
+<script>
+(function () {
+    var out = document.getElementById('output');
+    var pass = 0, fail = 0;
+
+    function assert(label, condition) {
+        if (condition) { pass++; out.textContent += '[PASS] ' + label + '\n'; }
+        else { fail++; out.textContent += '[FAIL] ' + label + '\n'; }
+    }
+
+    // Clear any previous state
+    localStorage.removeItem(FeatureFlags.STORAGE_KEY);
+    FeatureFlags.resetFlags();
+
+    // Test defaults
+    var defaults = FeatureFlags.getDefaults();
+    assert('Default audio_recording is true', defaults.audio_recording === true);
+    assert('Default cost_estimation is false', defaults.cost_estimation === false);
+
+    // Test getFlag
+    assert('getFlag audio_recording returns true', FeatureFlags.getFlag('audio_recording') === true);
+    assert('getFlag cost_estimation returns false', FeatureFlags.getFlag('cost_estimation') === false);
+    assert('getFlag unknown returns false', FeatureFlags.getFlag('nonexistent') === false);
+
+    // Test setFlag
+    FeatureFlags.setFlag('cost_estimation', true);
+    assert('setFlag cost_estimation to true works', FeatureFlags.getFlag('cost_estimation') === true);
+
+    FeatureFlags.setFlag('audio_recording', false);
+    assert('setFlag audio_recording to false works', FeatureFlags.getFlag('audio_recording') === false);
+
+    // Test localStorage persistence
+    var stored = JSON.parse(localStorage.getItem(FeatureFlags.STORAGE_KEY));
+    assert('localStorage has cost_estimation=true', stored.cost_estimation === true);
+    assert('localStorage has audio_recording=false', stored.audio_recording === false);
+
+    // Test getAllFlags
+    var all = FeatureFlags.getAllFlags();
+    assert('getAllFlags returns object with all keys', Object.keys(all).length >= 5);
+    assert('getAllFlags returns a copy (not reference)', all !== FeatureFlags.getAllFlags());
+
+    // Test resetFlags
+    FeatureFlags.resetFlags();
+    assert('After reset, cost_estimation is false', FeatureFlags.getFlag('cost_estimation') === false);
+    assert('After reset, audio_recording is true', FeatureFlags.getFlag('audio_recording') === true);
+
+    // Test event dispatch
+    var eventFired = false;
+    window.addEventListener('boothapp:flagchange', function () { eventFired = true; });
+    FeatureFlags.setFlag('badge_ocr', false);
+    assert('flagchange event fires on setFlag', eventFired === true);
+
+    // Summary
+    out.textContent += '\n' + pass + ' passed, ' + fail + ' failed\n';
+    if (fail === 0) out.textContent += 'ALL TESTS PASSED\n';
+})();
+</script>
+</body>
+</html>
