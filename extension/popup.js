@@ -273,3 +273,46 @@ document.getElementById('s3DemoBtn').addEventListener('click', function() {
   document.getElementById('presignEndpoint').focus();
   document.getElementById('presignEndpoint').setAttribute('placeholder', 'Paste Lambda Function URL here');
 });
+
+// ─── QR Code Pairing ─────────────────────────────────────────────────────────
+
+document.getElementById('pairBtn').addEventListener('click', function() {
+  chrome.storage.local.get(S3_KEYS, function(config) {
+    // Build pairing payload with current S3 config
+    var payload = {
+      type: 'boothapp-pair',
+      v: 1,
+      s3Bucket: config.s3Bucket || '',
+      s3Region: config.s3Region || '',
+      presignEndpoint: config.presignEndpoint || '',
+      awsAccessKeyId: config.awsAccessKeyId || '',
+      awsSecretAccessKey: config.awsSecretAccessKey || '',
+      awsSessionToken: config.awsSessionToken || '',
+    };
+
+    var json = JSON.stringify(payload);
+
+    // Generate QR code using qrcode-generator (Kazuhiko Arase, MIT)
+    // typeNumber 0 = auto-detect version, 'M' = medium error correction
+    var qr = qrcode(0, 'M');
+    qr.addData(json);
+    qr.make();
+
+    // Render as SVG (no canvas dependency)
+    var svgTag = qr.createSvgTag(4, 0);
+    var container = document.getElementById('qrImage');
+    container.innerHTML = svgTag;
+    document.getElementById('qrOverlay').classList.add('visible');
+  });
+});
+
+document.getElementById('qrCloseBtn').addEventListener('click', function() {
+  document.getElementById('qrOverlay').classList.remove('visible');
+});
+
+// Hide QR overlay when clicking outside the container
+document.getElementById('qrOverlay').addEventListener('click', function(e) {
+  if (e.target === this) {
+    this.classList.remove('visible');
+  }
+});

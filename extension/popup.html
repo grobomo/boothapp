@@ -536,6 +536,103 @@
       color: #e0e0e0;
     }
 
+    /* ── QR Overlay ── */
+
+    .qr-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .qr-overlay.visible {
+      display: flex;
+    }
+
+    .qr-container {
+      background: #16213e;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      border: 1px solid #2a2a4a;
+      max-width: 340px;
+    }
+
+    .qr-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .qr-subtitle {
+      font-size: 11px;
+      color: #757575;
+      margin-bottom: 16px;
+    }
+
+    .qr-image-wrap {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+
+    .qr-image-wrap svg {
+      width: 200px;
+      height: 200px;
+      display: block;
+    }
+
+    .qr-close-btn {
+      background: #2a2a4a;
+      color: #e0e0e0;
+      border: 1px solid #3a3a5a;
+      border-radius: 8px;
+      padding: 10px 32px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .qr-close-btn:hover {
+      background: #3a3a5a;
+    }
+
+    .pair-btn {
+      width: 100%;
+      padding: 13px 20px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+      color: #fff;
+      box-shadow: 0 3px 12px rgba(66,165,245,0.4);
+      transition: all 0.2s ease;
+    }
+
+    .pair-btn:hover {
+      box-shadow: 0 5px 20px rgba(66,165,245,0.5);
+      transform: translateY(-1px);
+    }
+
+    .pair-btn:active {
+      transform: translateY(0);
+    }
+
     /* ── Footer ── */
 
     .footer {
@@ -633,6 +730,23 @@
     </div>
   </div>
 
+  <!-- Pair Device QR Code -->
+  <div class="btn-wrap" id="qrBtnWrap">
+    <button class="pair-btn" id="pairBtn">Pair Mobile App</button>
+  </div>
+  <div class="qr-overlay" id="qrOverlay">
+    <div class="qr-container">
+      <div class="qr-title">Scan with BoothApp</div>
+      <div class="qr-subtitle">Point your phone camera at this QR code</div>
+      <div class="qr-image-wrap">
+        <div id="qrImage" style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;"></div>
+      </div>
+      <div class="qr-close-btn-wrap">
+        <button class="qr-close-btn" id="qrCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- S3 Config (hidden by default, toggled by gear) -->
   <div class="s3-section" id="s3Section">
     <div class="s3-section-title">S3 Configuration</div>
@@ -674,6 +788,7 @@
     <span class="footer-ver" id="footerVer">v1.0.0</span>
   </div>
 
+  <script src="qrcode.min.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

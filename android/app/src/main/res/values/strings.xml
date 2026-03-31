@@ -34,4 +34,8 @@
     <string name="end_session_confirm_message">This will stop recording on the demo PC. The session data will be sent for AI analysis.</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
+    <string name="qr_scan_hint">Scan QR code from Chrome extension</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="paired_success">Paired with demo PC</string>
+    <string name="auto_starting_session">Starting session automatically...</string>
 </resources>

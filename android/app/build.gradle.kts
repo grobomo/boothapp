@@ -63,8 +63,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraVersion")
     implementation("androidx.camera:camera-view:$cameraVersion")
 
-    // ML Kit Text Recognition
+    // ML Kit Text Recognition + Barcode Scanning
     implementation("com.google.mlkit:text-recognition:16.0.0")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
     // AWS SDK for Android (S3)
     implementation("com.amazonaws:aws-android-sdk-s3:2.73.0")

@@ -60,6 +60,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val qrScanLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val paired = result.data?.getBooleanExtra(QrScanActivity.EXTRA_PAIRED, false) ?: false
+            if (paired) {
+                toast(getString(R.string.paired_success))
+                // Refresh defaults from newly saved prefs
+                binding.etDemoPc.setText(prefs.defaultDemoPc)
+                binding.etSeName.setText(prefs.defaultSeName)
+            }
+        }
+    }
+
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -90,6 +104,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        binding.btnScanQr.setOnClickListener {
+            qrScanLauncher.launch(Intent(this, QrScanActivity::class.java))
         }
 
         binding.btnCapture.setOnClickListener {
@@ -168,6 +186,13 @@ class MainActivity : AppCompatActivity() {
 
                     // Change capture to retake
                     binding.btnCapture.text = getString(R.string.retake)
+
+                    // Auto-start session if we got a valid name and orchestrator is configured
+                    if (info.name.isNotBlank() && prefs.orchestratorUrl.isNotBlank()) {
+                        Log.d(TAG, "Auto-starting session for: ${info.name}")
+                        toast(getString(R.string.auto_starting_session))
+                        startSession()
+                    }
                 }
             }
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "V1-Helper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "BoothApp demo capture extension: tracks clicks, captures screenshots, and records browsing activity during trade show demos for AI-powered follow-up generation.",
   "permissions": [
     "activeTab",
