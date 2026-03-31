@@ -41,7 +41,11 @@
   }
 
   /* ── Loading / Error ─────────────────────────────────── */
-  #loading, #error {
+  #loading {
+    display: block;
+    min-height: 100vh;
+  }
+  #error {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -50,14 +54,213 @@
     gap: 16px;
     padding: 24px;
   }
-  #loading .spinner {
-    width: 40px; height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── Skeleton Loading ─────────────────────────────────── */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+    border-radius: 6px;
+  }
+  .skeleton-line {
+    height: 14px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
+  .skeleton-line.w60 { width: 60%; }
+  .skeleton-line.w80 { width: 80%; }
+  .skeleton-line.w40 { width: 40%; }
+  .skeleton-line.w100 { width: 100%; }
+  .skeleton-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+  }
+  .skeleton-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .skeleton-card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .skeleton-card-body { padding: 20px; }
+  .skeleton-thumb {
+    width: 120px;
+    height: 68px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .skeleton-row {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #21262d;
+    align-items: center;
+  }
+  #skeleton-loading {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .skeleton-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .skeleton-visitor { grid-column: 1 / -1; }
+  .skeleton-timeline { grid-row: span 2; }
+  @media (max-width: 900px) {
+    .skeleton-grid { grid-template-columns: 1fr; }
+    .skeleton-timeline { grid-row: auto; }
+  }
+
+  /* ── Animated Entrance ────────────────────────────────── */
+  #app {
+    animation: fadeIn 0.4s ease-out;
+  }
+  .card {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.25s ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(88, 166, 255, 0.1);
+    border-color: #3d444d;
+  }
+  .card.animate-in {
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  /* stagger delays applied per card */
+  .card.animate-in:nth-child(1) { animation-delay: 0s; }
+  .card.animate-in:nth-child(2) { animation-delay: 0.08s; }
+  .card.animate-in:nth-child(3) { animation-delay: 0.16s; }
+  .card.animate-in:nth-child(4) { animation-delay: 0.24s; }
+  .card.animate-in:nth-child(5) { animation-delay: 0.32s; }
+
+  /* Analysis section staggered entrance */
+  .analysis-section-animated {
+    animation: slideUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  /* Chip hover effects */
+  .chip {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Timeline item hover */
+  .tl-item {
+    transition: background 0.2s ease, padding-left 0.2s ease;
+    border-radius: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+  .tl-item:hover {
+    background: var(--surface2);
+  }
+
+  /* Thumbnail hover scale */
+  .tl-thumb {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .tl-thumb:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Feed item entrance */
+  .feed-item {
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .feed-item:hover {
+    background: var(--surface2);
+    transform: translateX(2px);
+  }
+
+  /* Score badge animation */
+  .score-badge .score-value {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .score-badge:hover .score-value {
+    transform: scale(1.1);
+  }
+
+  /* Notes save button */
+  .notes-save-btn {
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .notes-save-btn:hover:not(:disabled) {
+    background: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4);
+  }
+  .notes-save-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  /* Topbar link hover underline */
+  .topbar-right a {
+    transition: color 0.15s ease;
+    position: relative;
+  }
+  .topbar-right a::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .topbar-right a:hover::after {
+    width: 100%;
+  }
+
+  /* Lightbox entrance */
+  .lightbox {
+    animation: fadeIn 0.2s ease-out;
+  }
+  .lightbox img {
+    animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   #error { color: var(--red); }
   #error .msg { max-width: 500px; text-align: center; color: var(--text2); }
 
@@ -759,10 +962,77 @@ if (!BoothAuth.requireAwsCreds()) {
 } else if (!BoothAuth.requireLogin()) { /* redirects */ }
 </script>
 
-<!-- Loading -->
+<!-- Loading: Skeleton Screen -->
 <div id="loading">
-  <div class="spinner"></div>
-  <div style="color:var(--text2)">Loading session data...</div>
+  <div class="skeleton-topbar">
+    <div class="skeleton skeleton-line w40" style="height:16px;margin:0"></div>
+  </div>
+  <div id="skeleton-loading">
+    <div class="skeleton-grid">
+      <!-- Visitor skeleton -->
+      <div class="skeleton-card skeleton-visitor">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-line w40" style="height:12px;margin:0"></div>
+        </div>
+        <div class="skeleton-card-body" style="display:flex;gap:24px;align-items:center">
+          <div class="skeleton skeleton-circle"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line w60" style="height:22px"></div>
+            <div class="skeleton skeleton-line w40" style="height:14px"></div>
+            <div style="display:flex;gap:6px;margin-top:10px">
+              <div class="skeleton" style="width:70px;height:24px;border-radius:12px"></div>
+              <div class="skeleton" style="width:100px;height:24px;border-radius:12px"></div>
+              <div class="skeleton" style="width:60px;height:24px;border-radius:12px"></div>
+            </div>
+          </div>
+          <div style="text-align:center">
+            <div class="skeleton" style="width:60px;height:48px;border-radius:8px;margin:0 auto"></div>
+            <div class="skeleton skeleton-line" style="width:60px;height:10px;margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Timeline skeleton -->
+      <div class="skeleton-card skeleton-timeline">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-line w40" style="height:12px;margin:0"></div>
+        </div>
+        <div class="skeleton-card-body">
+          <div class="skeleton-row"><div class="skeleton" style="width:50px;height:14px"></div><div style="flex:1"><div class="skeleton skeleton-line w80"></div><div class="skeleton skeleton-line w60"></div></div><div class="skeleton skeleton-thumb"></div></div>
+          <div class="skeleton-row"><div class="skeleton" style="width:50px;height:14px"></div><div style="flex:1"><div class="skeleton skeleton-line w60"></div><div class="skeleton skeleton-line w80"></div></div><div class="skeleton skeleton-thumb"></div></div>
+          <div class="skeleton-row"><div class="skeleton" style="width:50px;height:14px"></div><div style="flex:1"><div class="skeleton skeleton-line w80"></div><div class="skeleton skeleton-line w40"></div></div><div class="skeleton skeleton-thumb"></div></div>
+          <div class="skeleton-row"><div class="skeleton" style="width:50px;height:14px"></div><div style="flex:1"><div class="skeleton skeleton-line w60"></div><div class="skeleton skeleton-line w60"></div></div><div class="skeleton skeleton-thumb"></div></div>
+        </div>
+      </div>
+      <!-- Transcript skeleton -->
+      <div class="skeleton-card">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-line w40" style="height:12px;margin:0"></div>
+        </div>
+        <div class="skeleton-card-body">
+          <div style="display:flex;gap:10px;padding:6px 0"><div class="skeleton" style="width:55px;height:14px"></div><div class="skeleton" style="width:45px;height:14px"></div><div class="skeleton skeleton-line w80" style="flex:1"></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0"><div class="skeleton" style="width:55px;height:14px"></div><div class="skeleton" style="width:45px;height:14px"></div><div class="skeleton skeleton-line w60" style="flex:1"></div></div>
+          <div style="display:flex;gap:10px;padding:6px 0"><div class="skeleton" style="width:55px;height:14px"></div><div class="skeleton" style="width:45px;height:14px"></div><div class="skeleton skeleton-line w100" style="flex:1"></div></div>
+        </div>
+      </div>
+      <!-- Analysis skeleton -->
+      <div class="skeleton-card">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-line w40" style="height:12px;margin:0"></div>
+        </div>
+        <div class="skeleton-card-body">
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w80"></div>
+          <div class="skeleton skeleton-line w60"></div>
+          <div style="margin-top:16px"><div class="skeleton skeleton-line w40" style="height:10px"></div></div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <div class="skeleton" style="width:80px;height:24px;border-radius:12px"></div>
+            <div class="skeleton" style="width:90px;height:24px;border-radius:12px"></div>
+            <div class="skeleton" style="width:70px;height:24px;border-radius:12px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Error -->
@@ -927,7 +1197,7 @@ if (!BoothAuth.requireAwsCreds()) {
   }
 
   function show(screen) {
-    loadingEl.style.display = screen === "loading" ? "flex" : "none";
+    loadingEl.style.display = screen === "loading" ? "block" : "none";
     errorEl.style.display   = screen === "error"   ? "flex" : "none";
     appEl.style.display     = screen === "app"     ? "block" : "none";
   }
@@ -1191,6 +1461,7 @@ if (!BoothAuth.requireAwsCreds()) {
       counter.textContent = (idx + 1) + " / " + DEMO_SESSIONS.length;
 
       show("app");
+      animateCardsIn();
       renderVisitorCard(sess.metadata, sess.summary);
       renderTimeline(sess.clicks, sess.metadata);
       renderTranscript(sess.transcript);
@@ -1261,6 +1532,7 @@ if (!BoothAuth.requireAwsCreds()) {
         }
 
         show("app");
+        animateCardsIn();
         renderVisitorCard(metadata, summary);
         renderTimeline(clicks, metadata);
         renderTranscript(transcript);
@@ -1270,6 +1542,16 @@ if (!BoothAuth.requireAwsCreds()) {
       .catch(function (err) {
         showError("Error loading session data: " + (err.message || err));
       });
+  }
+
+  function animateCardsIn() {
+    var cards = document.querySelectorAll(".layout .card");
+    for (var ci = 0; ci < cards.length; ci++) {
+      cards[ci].classList.remove("animate-in");
+      // Force reflow to restart animation
+      void cards[ci].offsetWidth;
+      cards[ci].classList.add("animate-in");
+    }
   }
 
   // ── Render: Visitor Card ────────────────────────────────────────
@@ -1449,24 +1731,32 @@ if (!BoothAuth.requireAwsCreds()) {
     }
 
     var html = "";
+    var sectionIdx = 0;
 
     // Executive summary
     if (summary && summary.executive_summary) {
+      html += '<div class="analysis-section-animated" style="animation-delay:' + (sectionIdx * 0.1) + 's">';
       html += '<div class="summary-text">' + esc(summary.executive_summary) + '</div>';
+      html += '</div>';
+      sectionIdx++;
     }
 
     // Products demonstrated
     if (summary && summary.products_demonstrated && summary.products_demonstrated.length) {
+      html += '<div class="analysis-section-animated" style="animation-delay:' + (sectionIdx * 0.1) + 's">';
       html += '<div class="section-label">Products Demonstrated</div>';
       html += '<div class="products-list">';
       for (var i = 0; i < summary.products_demonstrated.length; i++) {
         html += '<span class="chip purple">' + esc(summary.products_demonstrated[i]) + '</span>';
       }
       html += '</div>';
+      html += '</div>';
+      sectionIdx++;
     }
 
     // Key interests
     if (summary && summary.key_interests && summary.key_interests.length) {
+      html += '<div class="analysis-section-animated" style="animation-delay:' + (sectionIdx * 0.1) + 's">';
       html += '<div class="section-label">Visitor Interests</div>';
       html += '<table class="interests-tbl"><thead><tr><th>Topic</th><th>Confidence</th><th>Evidence</th></tr></thead><tbody>';
       for (var k = 0; k < summary.key_interests.length; k++) {
@@ -1479,10 +1769,13 @@ if (!BoothAuth.requireAwsCreds()) {
           '</tr>';
       }
       html += '</tbody></table>';
+      html += '</div>';
+      sectionIdx++;
     }
 
     // Key moments
     if (summary && summary.key_moments && summary.key_moments.length) {
+      html += '<div class="analysis-section-animated" style="animation-delay:' + (sectionIdx * 0.1) + 's">';
       html += '<div class="section-label">Key Moments</div>';
       for (var m = 0; m < summary.key_moments.length; m++) {
         var moment = summary.key_moments[m];
@@ -1494,21 +1787,27 @@ if (!BoothAuth.requireAwsCreds()) {
           '</div>' +
           '</div>';
       }
+      html += '</div>';
+      sectionIdx++;
     }
 
     // Follow-up actions
     var actions = (summary && summary.follow_up_actions) ? summary.follow_up_actions : [];
     if (actions.length > 0) {
+      html += '<div class="analysis-section-animated" style="animation-delay:' + (sectionIdx * 0.1) + 's">';
       html += '<div class="section-label">Follow-up Actions</div>';
       html += '<ul class="actions-list">';
       for (var a = 0; a < actions.length; a++) {
         html += '<li><span class="arrow">></span><span>' + esc(actions[a]) + '</span></li>';
       }
       html += '</ul>';
+      html += '</div>';
+      sectionIdx++;
     }
 
     // Follow-up metadata (priority, tags)
     if (followUp) {
+      html += '<div class="analysis-section-animated" style="animation-delay:' + (sectionIdx * 0.1) + 's">';
       if (followUp.priority) {
         var pColor = { high: "var(--red)", medium: "var(--yellow)", low: "var(--text3)" };
         var pc = pColor[(followUp.priority || "").toLowerCase()] || pColor.medium;
@@ -1529,6 +1828,7 @@ if (!BoothAuth.requireAwsCreds()) {
           '<div style="font-size:13px;color:var(--text2);background:var(--surface2);padding:12px;border-radius:8px;border:1px solid var(--border)">' +
           esc(followUp.sdr_notes) + '</div>';
       }
+      html += '</div>';
     }
 
     container.innerHTML = html || '<div class="empty">No analysis data</div>';
