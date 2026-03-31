@@ -1,0 +1,870 @@
+<!-- BoothApp Booth Display - Hackathon 2026 -->
+<!-- Full-screen display mode for 55" TV at booth -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Booth Display</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --card-bg: #111;
+    --card-border: #1e1e1e;
+    --text: #f0f0f0;
+    --muted: #555;
+    --dim: #333;
+    --tm-red: #D71920;
+    --tm-red-glow: rgba(215, 25, 32, 0.35);
+    --green: #00e676;
+    --green-glow: rgba(0, 230, 118, 0.3);
+    --blue: #58a6ff;
+    --amber: #ffb300;
+  }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  /* ── Particle canvas ─────────────────────────────────────────────────── */
+  #particles {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  .container {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    padding: 2rem 3rem;
+    gap: 1.5rem;
+  }
+
+  /* ── Header / Title ──────────────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    padding-top: 0.5rem;
+  }
+
+  .title {
+    font-size: 4.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, var(--tm-red) 50%, #ff6b6b 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 6s ease-in-out infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  /* ── Main content grid ───────────────────────────────────────────────── */
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 360px;
+    gap: 2rem;
+    min-height: 0;
+  }
+
+  /* ── Session counter (left column) ───────────────────────────────────── */
+  .stats-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-value {
+    font-size: 4rem;
+    font-weight: 700;
+    font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    line-height: 1;
+  }
+
+  .stat-value.active {
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green-glow);
+  }
+
+  .stat-card.has-active {
+    border-color: var(--green);
+    box-shadow: 0 0 20px var(--green-glow);
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 20px var(--green-glow); }
+    50% { box-shadow: 0 0 40px var(--green-glow), 0 0 60px rgba(0, 230, 118, 0.1); }
+  }
+
+  .stat-value.total { color: var(--blue); }
+  .stat-value.completed { color: var(--amber); }
+
+  .stat-sub {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-top: 0.3rem;
+  }
+
+  /* ── Visitor cards (center column) ───────────────────────────────────── */
+  .visitors-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .section-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.8rem;
+    padding-left: 0.5rem;
+  }
+
+  .visitors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    overflow: hidden;
+    flex: 1;
+    align-content: start;
+  }
+
+  .visitor-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: card-in 0.6s ease-out forwards;
+  }
+
+  .visitor-card.fade-out {
+    animation: card-out 0.5s ease-in forwards;
+  }
+
+  @keyframes card-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes card-out {
+    to { opacity: 0; transform: translateY(-10px); }
+  }
+
+  .visitor-card.is-active {
+    border-color: var(--green);
+    box-shadow: 0 0 12px var(--green-glow);
+  }
+
+  .visitor-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .visitor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .visitor-info {
+    min-width: 0;
+  }
+
+  .visitor-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .visitor-company {
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .visitor-time {
+    font-size: 0.7rem;
+    color: var(--dim);
+    margin-top: 0.15rem;
+  }
+
+  /* ── Activity feed (right column) ────────────────────────────────────── */
+  .feed-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .feed-list {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .feed-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .feed-item {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    opacity: 0;
+    transform: translateX(30px);
+    animation: feed-in 0.4s ease-out forwards;
+  }
+
+  @keyframes feed-in {
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .feed-item .feed-type {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
+  }
+
+  .feed-type.session-start { color: var(--green); }
+  .feed-type.session-end { color: var(--amber); }
+  .feed-type.analysis { color: var(--blue); }
+  .feed-type.recording { color: var(--tm-red); }
+
+  .feed-text {
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .feed-time {
+    font-size: 0.65rem;
+    color: var(--dim);
+    margin-top: 0.15rem;
+  }
+
+  /* ── Footer / branding ───────────────────────────────────────────────── */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .team-name {
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .hackathon-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, var(--tm-red), #ff4444);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.35rem 0.9rem;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .footer-right {
+    font-size: 0.7rem;
+    color: var(--dim);
+    font-family: monospace;
+  }
+
+  .tm-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .tm-logo svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .tm-logo-text {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* ── Setup overlay ───────────────────────────────────────────────────── */
+  .setup-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 100;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .setup-box {
+    text-align: center;
+    max-width: 480px;
+  }
+
+  .setup-box h2 {
+    font-size: 2rem;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .setup-box p {
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+
+  .setup-box label {
+    display: block;
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .setup-box input {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-family: monospace;
+    margin-bottom: 1.5rem;
+  }
+
+  .setup-box input:focus { outline: 2px solid var(--tm-red); }
+
+  .setup-box button {
+    font-size: 1.2rem;
+    padding: 0.7rem 3rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--tm-red);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .setup-box button:hover { background: #b5161c; }
+
+  .hidden { display: none !important; }
+
+  /* ── No-visitor placeholder ──────────────────────────────────────────── */
+  .no-visitors {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--dim);
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- Setup overlay -->
+<div id="setup-overlay" class="setup-overlay">
+  <div class="setup-box">
+    <h2>Booth Display</h2>
+    <p>Enter the API endpoint to start the live display.</p>
+    <label for="api-url">API Endpoint URL</label>
+    <input id="api-url" type="text" placeholder="https://your-api.example.com">
+    <br>
+    <button id="save-btn">Launch Display</button>
+  </div>
+</div>
+
+<!-- Main display -->
+<div id="display" class="container hidden">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">BoothApp</div>
+    <div class="subtitle">AI-Powered Demo Capture &amp; Follow-Up</div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- Left: stats -->
+    <div class="stats-col">
+      <div class="stat-card" id="active-card">
+        <div class="stat-label">Active Sessions</div>
+        <div class="stat-value active" id="active-count">0</div>
+        <div class="stat-sub" id="active-sub">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Sessions</div>
+        <div class="stat-value total" id="total-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Completed</div>
+        <div class="stat-value completed" id="completed-count">0</div>
+      </div>
+    </div>
+
+    <!-- Center: visitor cards -->
+    <div class="visitors-col">
+      <div class="section-label">Recent Visitors</div>
+      <div class="visitors-grid" id="visitors-grid">
+        <div class="no-visitors" id="no-visitors">Waiting for visitors...</div>
+      </div>
+    </div>
+
+    <!-- Right: activity feed -->
+    <div class="feed-col">
+      <div class="section-label">Activity Feed</div>
+      <div class="feed-list">
+        <div class="feed-inner" id="feed-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="tm-logo">
+        <!-- Trend Micro T logo -->
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="6" fill="#D71920"/>
+          <path d="M8 10h16v3H18.5v11h-5V13H8v-3z" fill="#fff"/>
+        </svg>
+        <span class="tm-logo-text">Trend Micro</span>
+      </div>
+      <div class="team-name">Smells Like Machine Learning</div>
+      <div class="hackathon-badge">Hackathon 2026</div>
+    </div>
+    <div class="footer-right" id="clock">--:--:--</div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // ── Config ────────────────────────────────────────────────────────────
+  var POLL_MS = 5000;
+  var MAX_VISITORS = 8;
+  var MAX_FEED = 15;
+  var LS_KEY = "boothapp_display_api_url";
+
+  var apiUrl = null;
+  var prevSessions = [];
+  var feedItems = [];
+  var visitorCards = [];
+
+  // ── Elements ──────────────────────────────────────────────────────────
+  var setupOverlay = document.getElementById("setup-overlay");
+  var displayEl    = document.getElementById("display");
+  var activeCountEl    = document.getElementById("active-count");
+  var activeCardEl     = document.getElementById("active-card");
+  var activeSubEl      = document.getElementById("active-sub");
+  var totalCountEl     = document.getElementById("total-count");
+  var completedCountEl = document.getElementById("completed-count");
+  var visitorsGrid     = document.getElementById("visitors-grid");
+  var noVisitorsEl     = document.getElementById("no-visitors");
+  var feedListEl       = document.getElementById("feed-list");
+  var clockEl          = document.getElementById("clock");
+  var saveBtn          = document.getElementById("save-btn");
+  var apiInput         = document.getElementById("api-url");
+
+  // ── Particle background ───────────────────────────────────────────────
+  (function initParticles() {
+    var canvas = document.getElementById("particles");
+    var ctx = canvas.getContext("2d");
+    var particles = [];
+    var count = 80;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 2 + 0.5,
+        a: Math.random() * 0.3 + 0.05
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw connections
+      for (var i = 0; i < particles.length; i++) {
+        for (var j = i + 1; j < particles.length; j++) {
+          var dx = particles[i].x - particles[j].x;
+          var dy = particles[i].y - particles[j].y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(215, 25, 32, " + (0.06 * (1 - dist / 150)) + ")";
+            ctx.lineWidth = 0.5;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw particles
+      for (var k = 0; k < particles.length; k++) {
+        var p = particles[k];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(215, 25, 32, " + p.a + ")";
+        ctx.fill();
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      }
+
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  // ── Clock ─────────────────────────────────────────────────────────────
+  function updateClock() {
+    var now = new Date();
+    clockEl.textContent =
+      (now.getHours() < 10 ? "0" : "") + now.getHours() + ":" +
+      (now.getMinutes() < 10 ? "0" : "") + now.getMinutes() + ":" +
+      (now.getSeconds() < 10 ? "0" : "") + now.getSeconds();
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── Setup ─────────────────────────────────────────────────────────────
+  function loadConfig() {
+    var url = localStorage.getItem(LS_KEY);
+    if (url) { apiUrl = url.replace(/\/+$/, ""); return true; }
+    return false;
+  }
+
+  saveBtn.addEventListener("click", function () {
+    var val = apiInput.value.trim();
+    if (!val) return;
+    localStorage.setItem(LS_KEY, val);
+    apiUrl = val.replace(/\/+$/, "");
+    launch();
+  });
+
+  apiInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") saveBtn.click();
+  });
+
+  if (loadConfig()) {
+    launch();
+  }
+
+  function launch() {
+    setupOverlay.classList.add("hidden");
+    displayEl.classList.remove("hidden");
+    poll();
+    setInterval(poll, POLL_MS);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
+  }
+
+  function timeAgo(isoStr) {
+    if (!isoStr) return "";
+    var diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+    if (diff < 60) return diff + "s ago";
+    if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+    if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+    return Math.floor(diff / 86400) + "d ago";
+  }
+
+  function initials(name) {
+    if (!name) return "?";
+    var parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0][0].toUpperCase();
+  }
+
+  function isActive(s) {
+    var st = (s.status || "").toLowerCase();
+    return st === "recording" || st === "in_progress" || st === "active";
+  }
+
+  function isCompleted(s) {
+    var st = (s.status || "").toLowerCase();
+    return st === "completed" || st === "ended";
+  }
+
+  // ── Polling ───────────────────────────────────────────────────────────
+  function poll() {
+    fetch(apiUrl + "/sessions")
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (sessions) {
+        if (!Array.isArray(sessions)) return;
+        updateStats(sessions);
+        updateVisitors(sessions);
+        detectEvents(sessions);
+        prevSessions = sessions;
+      })
+      .catch(function () { /* network hiccup -- ignore */ });
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────
+  function updateStats(sessions) {
+    var active = 0, completed = 0;
+    for (var i = 0; i < sessions.length; i++) {
+      if (isActive(sessions[i])) active++;
+      if (isCompleted(sessions[i])) completed++;
+    }
+
+    activeCountEl.textContent = active;
+    totalCountEl.textContent = sessions.length;
+    completedCountEl.textContent = completed;
+
+    if (active > 0) {
+      activeCardEl.classList.add("has-active");
+      activeSubEl.textContent = "LIVE NOW";
+    } else {
+      activeCardEl.classList.remove("has-active");
+      activeSubEl.textContent = "No active demos";
+    }
+  }
+
+  // ── Visitors ──────────────────────────────────────────────────────────
+  function updateVisitors(sessions) {
+    // Sort by started_at descending, take most recent
+    var sorted = sessions.slice().sort(function (a, b) {
+      return (b.started_at || "").localeCompare(a.started_at || "");
+    });
+
+    var recent = sorted.slice(0, MAX_VISITORS);
+
+    if (recent.length === 0) {
+      noVisitorsEl.classList.remove("hidden");
+      visitorsGrid.innerHTML = "";
+      visitorsGrid.appendChild(noVisitorsEl);
+      return;
+    }
+
+    noVisitorsEl.classList.add("hidden");
+
+    // Build new card set
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < recent.length; i++) {
+      var s = recent[i];
+      var card = document.createElement("div");
+      card.className = "visitor-card" + (isActive(s) ? " is-active" : "");
+      card.style.animationDelay = (i * 0.08) + "s";
+
+      var avatarHtml;
+      if (s.badge_photo_url) {
+        avatarHtml = '<img src="' + esc(s.badge_photo_url) + '" alt="">';
+      } else {
+        avatarHtml = initials(s.visitor_name);
+      }
+
+      card.innerHTML =
+        '<div class="visitor-avatar">' + avatarHtml + '</div>' +
+        '<div class="visitor-info">' +
+          '<div class="visitor-name">' + esc(s.visitor_name || "Unknown") + '</div>' +
+          '<div class="visitor-company">' + esc(s.visitor_company || s.se_name || "") + '</div>' +
+          '<div class="visitor-time">' + esc(timeAgo(s.started_at)) + '</div>' +
+        '</div>';
+
+      frag.appendChild(card);
+    }
+
+    // Replace grid contents
+    while (visitorsGrid.firstChild && visitorsGrid.firstChild !== noVisitorsEl) {
+      visitorsGrid.removeChild(visitorsGrid.firstChild);
+    }
+    visitorsGrid.innerHTML = "";
+    visitorsGrid.appendChild(frag);
+  }
+
+  // ── Event detection ───────────────────────────────────────────────────
+  function detectEvents(sessions) {
+    if (prevSessions.length === 0 && sessions.length > 0) {
+      // First load -- add recent completed as history
+      for (var h = Math.min(sessions.length, 5) - 1; h >= 0; h--) {
+        var hs = sessions[h];
+        if (isCompleted(hs)) {
+          addFeedItem("session-end", "Session ended", hs.visitor_name || hs.session_id, hs.ended_at);
+        }
+      }
+      return;
+    }
+
+    var prevMap = {};
+    for (var p = 0; p < prevSessions.length; p++) {
+      prevMap[prevSessions[p].session_id] = prevSessions[p];
+    }
+
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i];
+      var prev = prevMap[s.session_id];
+
+      if (!prev) {
+        // New session
+        addFeedItem("session-start", "Session started", s.visitor_name || s.session_id, s.started_at);
+        continue;
+      }
+
+      var prevStatus = (prev.status || "").toLowerCase();
+      var curStatus = (s.status || "").toLowerCase();
+
+      if (prevStatus !== curStatus) {
+        if (curStatus === "recording" || curStatus === "in_progress") {
+          addFeedItem("recording", "Recording started", s.visitor_name || s.session_id);
+        } else if (curStatus === "completed" || curStatus === "ended") {
+          addFeedItem("session-end", "Session ended", s.visitor_name || s.session_id, s.ended_at);
+        } else if (curStatus === "analyzing" || curStatus === "analysis_complete") {
+          addFeedItem("analysis", "Analysis complete", s.visitor_name || s.session_id);
+        }
+      }
+
+      // Check if analysis output appeared
+      if (!prev.has_summary && s.has_summary) {
+        addFeedItem("analysis", "Summary generated", s.visitor_name || s.session_id);
+      }
+    }
+  }
+
+  function addFeedItem(type, label, detail, timestamp) {
+    feedItems.unshift({
+      type: type,
+      label: label,
+      detail: detail || "",
+      time: timestamp || new Date().toISOString()
+    });
+
+    if (feedItems.length > MAX_FEED) feedItems.length = MAX_FEED;
+    renderFeed();
+  }
+
+  function renderFeed() {
+    var html = "";
+    for (var i = 0; i < feedItems.length; i++) {
+      var item = feedItems[i];
+      html +=
+        '<div class="feed-item" style="animation-delay:' + (i * 0.05) + 's">' +
+          '<div class="feed-type ' + esc(item.type) + '">' + esc(item.label) + '</div>' +
+          '<div class="feed-text">' + esc(item.detail) + '</div>' +
+          '<div class="feed-time">' + esc(timeAgo(item.time)) + '</div>' +
+        '</div>';
+    }
+    feedListEl.innerHTML = html;
+  }
+
+  // ── Fullscreen on click (for kiosk) ───────────────────────────────────
+  document.addEventListener("dblclick", function () {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
