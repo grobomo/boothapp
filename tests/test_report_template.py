@@ -32,6 +32,10 @@ SAMPLE_DATA = {
         {"topic": "ZTNA", "confidence": "medium", "detail": "Evaluating"},
         {"topic": "MDR", "confidence": "low", "detail": "Low priority"},
     ],
+    "se_notes": [
+        {"timestamp": "09:03", "text": "Visitor asked about SIEM integration"},
+        {"timestamp": "09:10", "text": "Budget approved for Q2"},
+    ],
     "recommendations": [
         {"action": "Schedule follow-up call", "priority": "high"},
         {"action": "Send datasheet", "priority": "medium"},
@@ -117,6 +121,44 @@ class TestGenerateReport(unittest.TestCase):
     def test_recommendation_text(self):
         self.assertIn("Schedule follow-up call", self.html)
         self.assertIn("Plain string recommendation", self.html)
+
+    # -- SE annotations --
+
+    def test_se_notes_section_present(self):
+        self.assertIn("SE Annotations", self.html)
+
+    def test_se_notes_timestamps(self):
+        self.assertIn("09:03", self.html)
+        self.assertIn("09:10", self.html)
+
+    def test_se_notes_text(self):
+        self.assertIn("Visitor asked about SIEM integration", self.html)
+        self.assertIn("Budget approved for Q2", self.html)
+
+    def test_se_notes_icon(self):
+        self.assertIn("note-icon", self.html)
+        # SE badge appears in notes
+        self.assertIn(">SE<", self.html)
+
+    def test_se_notes_empty(self):
+        data = {**SAMPLE_DATA, "se_notes": []}
+        result = generate_report(data)
+        self.assertNotIn("SE Annotations", result)
+
+    def test_se_notes_missing(self):
+        data = {k: v for k, v in SAMPLE_DATA.items() if k != "se_notes"}
+        result = generate_report(data)
+        self.assertNotIn("SE Annotations", result)
+
+    def test_se_notes_xss(self):
+        data = {
+            **SAMPLE_DATA,
+            "se_notes": [{"timestamp": "09:00", "text": '<script>alert("xss")</script>'}],
+        }
+        result = generate_report(data)
+        body = result.split("<style>")[0] + result.split("</style>")[1]
+        self.assertNotIn("<script>alert", body)
+        self.assertIn("&lt;script&gt;", body)
 
     # -- print CSS --
 

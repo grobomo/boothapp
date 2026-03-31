@@ -226,6 +226,42 @@ body {{
     margin-top: 2px;
 }}
 
+/* ---------- SE annotations ---------- */
+.se-note {{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid {_BRAND['border']};
+}}
+.se-note:last-child {{ border-bottom: none; }}
+.se-note .note-time {{
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: {_BRAND['text_muted']};
+    flex-shrink: 0;
+    min-width: 50px;
+    padding-top: 2px;
+}}
+.se-note .note-icon {{
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    background: {_BRAND['dark']};
+    color: #FFF;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+}}
+.se-note .note-text {{
+    font-size: 14px;
+    color: {_BRAND['text']};
+    line-height: 1.5;
+}}
+
 /* ---------- actions checklist ---------- */
 .action-item {{
     display: flex;
@@ -430,6 +466,29 @@ def _render_recommendations(data: dict) -> str:
     """
 
 
+def _render_se_notes(data: dict) -> str:
+    notes = data.get("se_notes", [])
+    if not notes:
+        return ""
+    items = []
+    for n in notes:
+        time = _esc(n.get("timestamp", ""))
+        text = _esc(n.get("text", ""))
+        items.append(f"""
+            <div class="se-note">
+                <span class="note-time">{time}</span>
+                <span class="note-icon">SE</span>
+                <span class="note-text">{text}</span>
+            </div>
+        """)
+    return f"""
+    <div class="section-title">SE Annotations</div>
+    <div class="card">
+        {"".join(items)}
+    </div>
+    """
+
+
 # ---- Public API ---------------------------------------------------------
 
 def generate_report(data: dict) -> str:
@@ -444,6 +503,8 @@ def generate_report(data: dict) -> str:
             - products_demonstrated (list[dict]): each with name, timestamp, note
             - interests (list[dict]): each with topic, confidence (high/medium/low),
               detail
+            - se_notes (list[dict]): each with timestamp, text -- SE annotations
+              added during the session via Ctrl+Shift+N hotkey
             - recommendations (list[dict|str]): each with action, priority
               (high/medium/low) -- or plain strings
 
@@ -456,6 +517,7 @@ def generate_report(data: dict) -> str:
         _render_visitor_info(data),
         _render_products(data),
         _render_interests(data),
+        _render_se_notes(data),
         _render_recommendations(data),
         f"""
         <div class="report-footer">

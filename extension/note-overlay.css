@@ -1,0 +1,122 @@
+/* BoothApp SE Note Overlay */
+
+#boothapp-note-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 2147483647;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 120px;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.boothapp-note-dialog {
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+    width: 480px;
+    max-width: 90vw;
+    overflow: hidden;
+}
+
+.boothapp-note-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #DFE6E9;
+}
+
+.boothapp-note-badge {
+    background: #1A1A2E;
+    color: #FFFFFF;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.boothapp-note-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1A1A2E;
+}
+
+.boothapp-note-hint {
+    margin-left: auto;
+    font-size: 12px;
+    color: #636E72;
+}
+
+#boothapp-note-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #2D3436;
+    resize: none;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+#boothapp-note-input::placeholder {
+    color: #B2BEC3;
+}
+
+.boothapp-note-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid #DFE6E9;
+    background: #F8F9FA;
+}
+
+.boothapp-note-counter {
+    font-size: 12px;
+    color: #636E72;
+}
+
+#boothapp-note-save {
+    background: #D71920;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#boothapp-note-save:hover {
+    background: #B5161C;
+}
+
+/* Toast notification */
+.boothapp-note-toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: #1A1A2E;
+    color: #FFFFFF;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 2147483647;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s;
+}
+
+.boothapp-note-toast-fade {
+    opacity: 0;
+}

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "BoothApp Session Capture",
+  "version": "1.0.0",
+  "description": "Captures screen activity, audio, and SE notes during trade show demos",
+  "permissions": ["activeTab"],
+  "commands": {
+    "add-note": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+N",
+        "mac": "Command+Shift+N"
+      },
+      "description": "Add a timestamped SE note to the session"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["note-overlay.css"]
+    }
+  ],
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
