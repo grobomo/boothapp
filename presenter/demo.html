@@ -476,6 +476,219 @@
         }
 
         /* ============================================================
+           FILTER BAR
+           ============================================================ */
+        .filter-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px 28px;
+            margin-bottom: 28px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-width: 160px;
+        }
+        .filter-group--search {
+            flex: 2;
+            min-width: 240px;
+        }
+        .filter-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+        }
+        .filter-input,
+        .filter-select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 13px;
+            padding: 8px 12px;
+            font-family: inherit;
+            transition: border-color .2s;
+        }
+        .filter-input:focus,
+        .filter-select:focus {
+            border-color: var(--red);
+            outline: none;
+        }
+        .filter-input::placeholder { color: var(--text-dim); }
+        .filter-input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(.6);
+        }
+        .filter-select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B93A5'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        .filter-range {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .filter-range .filter-input { width: 100%; }
+        .filter-range-sep {
+            color: var(--text-dim);
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .filter-products-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 12px;
+        }
+        .filter-chip {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 5px 14px;
+            font-size: 12px;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all .2s;
+            user-select: none;
+        }
+        .filter-chip:hover {
+            border-color: var(--red);
+            color: var(--text);
+        }
+        .filter-chip.active {
+            background: rgba(215,25,32,.15);
+            border-color: var(--red);
+            color: #FF4D52;
+        }
+        .filter-actions {
+            display: flex;
+            align-items: flex-end;
+        }
+        .filter-clear {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-dim);
+            font-size: 12px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+        .filter-clear:hover {
+            border-color: var(--text-dim);
+            color: var(--text);
+        }
+        .filter-count {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 12px;
+            text-align: right;
+        }
+        .filter-count strong { color: var(--text); }
+
+        /* ============================================================
+           SESSION TABLE
+           ============================================================ */
+        .sessions-table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+        .sessions-table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sessions-table-title {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sessions-table-title svg { width: 18px; height: 18px; fill: var(--red); }
+        .sessions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .sessions-table th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sessions-table th:first-child { padding-left: 28px; }
+        .sessions-table th:last-child { padding-right: 28px; }
+        .sessions-table td {
+            font-size: 13px;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,.03);
+            color: var(--text);
+            vertical-align: middle;
+        }
+        .sessions-table td:first-child { padding-left: 28px; }
+        .sessions-table td:last-child { padding-right: 28px; }
+        .sessions-table tr:last-child td { border-bottom: none; }
+        .sessions-table tbody tr { transition: background .15s; }
+        .sessions-table tbody tr:hover { background: rgba(255,255,255,.02); }
+        .session-score {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .session-score--high   { background: rgba(0,230,118,.12); color: var(--success); }
+        .session-score--medium { background: rgba(255,171,0,.12); color: var(--amber); }
+        .session-score--low    { background: rgba(215,25,32,.12); color: #FF4D52; }
+        .session-products {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .session-product-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+        .sessions-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        /* ============================================================
            RESPONSIVE
            ============================================================ */
         @media (max-width: 1100px) {
@@ -486,6 +699,7 @@
             .container { padding: 24px 20px; }
             .logo-text { font-size: 36px; }
             .tagline { font-size: 14px; letter-spacing: 3px; }
+            .filter-group { min-width: 100%; }
         }
     </style>
 </head>
@@ -540,6 +754,66 @@
             <div class="card-value" id="reportsGenerated">0</div>
             <div class="card-label">Reports Generated</div>
         </div>
+    </div>
+
+    <!-- ============ FILTER BAR ============ -->
+    <div class="filter-bar" id="filterBar">
+        <div class="filter-row">
+            <div class="filter-group filter-group--search">
+                <label class="filter-label" for="filterSearch">Search</label>
+                <input class="filter-input" type="text" id="filterSearch" placeholder="Visitor name or company...">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="filterCompany">Company</label>
+                <select class="filter-select" id="filterCompany">
+                    <option value="">All Companies</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Score Range</label>
+                <div class="filter-range">
+                    <input class="filter-input" type="number" id="filterScoreMin" placeholder="Min" min="0" max="100">
+                    <span class="filter-range-sep">--</span>
+                    <input class="filter-input" type="number" id="filterScoreMax" placeholder="Max" min="0" max="100">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Date Range</label>
+                <div class="filter-range">
+                    <input class="filter-input" type="date" id="filterDateFrom">
+                    <span class="filter-range-sep">--</span>
+                    <input class="filter-input" type="date" id="filterDateTo">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="filter-clear" id="filterClear" type="button">Clear</button>
+            </div>
+        </div>
+        <div class="filter-products-row" id="filterProducts"></div>
+        <div class="filter-count" id="filterCount"></div>
+    </div>
+
+    <!-- ============ SESSIONS TABLE ============ -->
+    <div class="sessions-table-wrap">
+        <div class="sessions-table-header">
+            <div class="sessions-table-title">
+                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                Sessions
+            </div>
+        </div>
+        <table class="sessions-table">
+            <thead>
+                <tr>
+                    <th>Visitor</th>
+                    <th>Company</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Products</th>
+                </tr>
+            </thead>
+            <tbody id="sessionsBody"></tbody>
+        </table>
+        <div class="sessions-empty" id="sessionsEmpty" style="display:none">No sessions match your filters.</div>
     </div>
 
     <!-- ============ CONTENT GRID ============ -->
@@ -740,7 +1014,8 @@
         totalDemos: 0,
         reportsGenerated: 0,
         events: [],
-        productCounts: {}
+        productCounts: {},
+        sessions: []       // session records for filter table
     };
     var countdown = 5;
 
@@ -760,6 +1035,273 @@
         return Math.floor(diff / 3600) + 'h ago';
     }
 
+    function formatDate(d) {
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var dd = String(d.getDate()).padStart(2, '0');
+        return d.getFullYear() + '-' + mm + '-' + dd;
+    }
+
+    function formatDateDisplay(d) {
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // ------------------------------------------------------------------
+    // GENERATE SESSION RECORDS (seeded mock data)
+    // ------------------------------------------------------------------
+    function generateSessions() {
+        var sessions = [];
+        var now = Date.now();
+        var dayMs = 86400000;
+
+        for (var i = 0; i < 24; i++) {
+            var name = NAMES[i % NAMES.length];
+            var company = COMPANIES[i % COMPANIES.length];
+            var score = Math.floor(Math.random() * 60) + 40; // 40-99
+            var date = new Date(now - (i * dayMs * 0.4) - Math.random() * dayMs * 0.3);
+            var numProducts = 1 + Math.floor(Math.random() * 3);
+            var prods = [];
+            var used = {};
+            for (var j = 0; j < numProducts; j++) {
+                var p = pick(PRODUCTS);
+                if (!used[p.name]) {
+                    prods.push(p.name);
+                    used[p.name] = true;
+                }
+            }
+            sessions.push({
+                id: 'S-' + String(1000 + i),
+                name: name,
+                company: company,
+                score: score,
+                date: date,
+                dateStr: formatDate(date),
+                products: prods
+            });
+        }
+        return sessions;
+    }
+
+    // ------------------------------------------------------------------
+    // URL PARAMETER PERSISTENCE
+    // ------------------------------------------------------------------
+    function getFilterParams() {
+        var params = new URLSearchParams(window.location.search);
+        return {
+            q:        params.get('q') || '',
+            company:  params.get('company') || '',
+            scoreMin: params.get('scoreMin') || '',
+            scoreMax: params.get('scoreMax') || '',
+            dateFrom: params.get('dateFrom') || '',
+            dateTo:   params.get('dateTo') || '',
+            products: params.get('products') ? params.get('products').split(',') : []
+        };
+    }
+
+    function setFilterParams(filters) {
+        var params = new URLSearchParams();
+        if (filters.q)        params.set('q', filters.q);
+        if (filters.company)  params.set('company', filters.company);
+        if (filters.scoreMin) params.set('scoreMin', filters.scoreMin);
+        if (filters.scoreMax) params.set('scoreMax', filters.scoreMax);
+        if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+        if (filters.dateTo)   params.set('dateTo', filters.dateTo);
+        if (filters.products && filters.products.length) params.set('products', filters.products.join(','));
+
+        var qs = params.toString();
+        var url = window.location.pathname + (qs ? '?' + qs : '');
+        history.replaceState(null, '', url);
+    }
+
+    // ------------------------------------------------------------------
+    // FILTER STATE
+    // ------------------------------------------------------------------
+    var filterState = {
+        q: '',
+        company: '',
+        scoreMin: '',
+        scoreMax: '',
+        dateFrom: '',
+        dateTo: '',
+        products: []
+    };
+
+    function readFiltersFromUI() {
+        filterState.q        = document.getElementById('filterSearch').value.trim();
+        filterState.company  = document.getElementById('filterCompany').value;
+        filterState.scoreMin = document.getElementById('filterScoreMin').value;
+        filterState.scoreMax = document.getElementById('filterScoreMax').value;
+        filterState.dateFrom = document.getElementById('filterDateFrom').value;
+        filterState.dateTo   = document.getElementById('filterDateTo').value;
+        // products are read from chip clicks (already in filterState.products)
+    }
+
+    function writeFiltersToUI() {
+        document.getElementById('filterSearch').value   = filterState.q;
+        document.getElementById('filterCompany').value  = filterState.company;
+        document.getElementById('filterScoreMin').value = filterState.scoreMin;
+        document.getElementById('filterScoreMax').value = filterState.scoreMax;
+        document.getElementById('filterDateFrom').value = filterState.dateFrom;
+        document.getElementById('filterDateTo').value   = filterState.dateTo;
+        // Update product chips
+        var chips = document.querySelectorAll('.filter-chip');
+        for (var i = 0; i < chips.length; i++) {
+            var pName = chips[i].getAttribute('data-product');
+            if (filterState.products.indexOf(pName) >= 0) {
+                chips[i].classList.add('active');
+            } else {
+                chips[i].classList.remove('active');
+            }
+        }
+    }
+
+    function clearFilters() {
+        filterState.q = '';
+        filterState.company = '';
+        filterState.scoreMin = '';
+        filterState.scoreMax = '';
+        filterState.dateFrom = '';
+        filterState.dateTo = '';
+        filterState.products = [];
+        writeFiltersToUI();
+        applyFilters();
+    }
+
+    // ------------------------------------------------------------------
+    // FILTER LOGIC (client-side)
+    // ------------------------------------------------------------------
+    function applyFilters() {
+        readFiltersFromUI();
+        setFilterParams(filterState);
+
+        var q = filterState.q.toLowerCase();
+        var filtered = state.sessions.filter(function (s) {
+            // Text search: name or company
+            if (q && s.name.toLowerCase().indexOf(q) < 0 && s.company.toLowerCase().indexOf(q) < 0) {
+                return false;
+            }
+            // Company dropdown
+            if (filterState.company && s.company !== filterState.company) {
+                return false;
+            }
+            // Score range
+            if (filterState.scoreMin !== '' && s.score < parseInt(filterState.scoreMin, 10)) {
+                return false;
+            }
+            if (filterState.scoreMax !== '' && s.score > parseInt(filterState.scoreMax, 10)) {
+                return false;
+            }
+            // Date range
+            if (filterState.dateFrom && s.dateStr < filterState.dateFrom) {
+                return false;
+            }
+            if (filterState.dateTo && s.dateStr > filterState.dateTo) {
+                return false;
+            }
+            // Products (any match)
+            if (filterState.products.length > 0) {
+                var hasMatch = false;
+                for (var i = 0; i < filterState.products.length; i++) {
+                    if (s.products.indexOf(filterState.products[i]) >= 0) {
+                        hasMatch = true;
+                        break;
+                    }
+                }
+                if (!hasMatch) return false;
+            }
+            return true;
+        });
+
+        renderSessionsTable(filtered);
+        renderFilterCount(filtered.length, state.sessions.length);
+    }
+
+    // ------------------------------------------------------------------
+    // FILTER UI SETUP
+    // ------------------------------------------------------------------
+    function setupFilterBar() {
+        // Populate company dropdown
+        var companySelect = document.getElementById('filterCompany');
+        COMPANIES.forEach(function (c) {
+            var opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            companySelect.appendChild(opt);
+        });
+
+        // Populate product chips
+        var chipsContainer = document.getElementById('filterProducts');
+        PRODUCTS.forEach(function (p) {
+            var chip = document.createElement('span');
+            chip.className = 'filter-chip';
+            chip.textContent = p.name;
+            chip.setAttribute('data-product', p.name);
+            chip.addEventListener('click', function () {
+                var idx = filterState.products.indexOf(p.name);
+                if (idx >= 0) {
+                    filterState.products.splice(idx, 1);
+                    chip.classList.remove('active');
+                } else {
+                    filterState.products.push(p.name);
+                    chip.classList.add('active');
+                }
+                applyFilters();
+            });
+            chipsContainer.appendChild(chip);
+        });
+
+        // Bind filter inputs
+        document.getElementById('filterSearch').addEventListener('input', applyFilters);
+        document.getElementById('filterCompany').addEventListener('change', applyFilters);
+        document.getElementById('filterScoreMin').addEventListener('input', applyFilters);
+        document.getElementById('filterScoreMax').addEventListener('input', applyFilters);
+        document.getElementById('filterDateFrom').addEventListener('change', applyFilters);
+        document.getElementById('filterDateTo').addEventListener('change', applyFilters);
+        document.getElementById('filterClear').addEventListener('click', clearFilters);
+    }
+
+    // ------------------------------------------------------------------
+    // RENDERING: SESSION TABLE
+    // ------------------------------------------------------------------
+    function renderSessionsTable(sessions) {
+        var tbody = document.getElementById('sessionsBody');
+        var empty = document.getElementById('sessionsEmpty');
+        tbody.innerHTML = '';
+
+        if (sessions.length === 0) {
+            empty.style.display = '';
+            return;
+        }
+        empty.style.display = 'none';
+
+        sessions.forEach(function (s) {
+            var tr = document.createElement('tr');
+            var scoreClass = s.score >= 80 ? 'high' : (s.score >= 60 ? 'medium' : 'low');
+            var prodTags = s.products.map(function (p) {
+                return '<span class="session-product-tag">' + p + '</span>';
+            }).join('');
+
+            tr.innerHTML =
+                '<td>' + s.name + '</td>' +
+                '<td>' + s.company + '</td>' +
+                '<td>' + formatDateDisplay(s.date) + '</td>' +
+                '<td><span class="session-score session-score--' + scoreClass + '">' + s.score + '</span></td>' +
+                '<td><div class="session-products">' + prodTags + '</div></td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderFilterCount(shown, total) {
+        var el = document.getElementById('filterCount');
+        if (shown === total) {
+            el.textContent = '';
+        } else {
+            el.innerHTML = 'Showing <strong>' + shown + '</strong> of <strong>' + total + '</strong> sessions';
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // RENDERING: DASHBOARD
+    // ------------------------------------------------------------------
     function generateMockEvent() {
         var t = pick(EVENT_TEMPLATES);
         var prod = pick(PRODUCTS);
@@ -768,7 +1310,6 @@
             .replace('{company}', pick(COMPANIES))
             .replace('{product}', prod.name);
 
-        // Track product popularity
         if (t.type === 'session') {
             state.productCounts[prod.name] = (state.productCounts[prod.name] || 0) + 1;
         }
@@ -791,9 +1332,6 @@
         if (state.events.length > 25) state.events.length = 25;
     }
 
-    // ------------------------------------------------------------------
-    // RENDERING
-    // ------------------------------------------------------------------
     function animateValue(el, newVal) {
         var old = parseInt(el.textContent, 10) || 0;
         if (old === newVal) return;
@@ -924,6 +1462,10 @@
     // ------------------------------------------------------------------
     // BOOT
     // ------------------------------------------------------------------
+    // Generate session records
+    state.sessions = generateSessions();
+
+    // Seed activity feed
     for (var i = 0; i < 8; i++) {
         var ev = generateMockEvent();
         ev.ts = Date.now() - (i * 15000);
@@ -937,6 +1479,19 @@
     PRODUCTS.forEach(function (p, i) {
         state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
     });
+
+    // Setup filter bar and restore state from URL
+    setupFilterBar();
+    var urlFilters = getFilterParams();
+    filterState.q        = urlFilters.q;
+    filterState.company  = urlFilters.company;
+    filterState.scoreMin = urlFilters.scoreMin;
+    filterState.scoreMax = urlFilters.scoreMax;
+    filterState.dateFrom = urlFilters.dateFrom;
+    filterState.dateTo   = urlFilters.dateTo;
+    filterState.products = urlFilters.products;
+    writeFiltersToUI();
+    applyFilters();
 
     renderAll();
     renderClock();
