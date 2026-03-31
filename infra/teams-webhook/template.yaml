@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Teams outgoing webhook that creates GitHub issues for BoothApp
+
+Parameters:
+  GitHubToken:
+    Type: String
+    NoEcho: true
+    Description: GitHub personal access token with repo scope
+  GitHubRepo:
+    Type: String
+    Default: altarr/boothapp
+    Description: GitHub owner/repo to create issues in
+  TeamsWebhookSecret:
+    Type: String
+    NoEcho: true
+    Description: HMAC secret from Teams outgoing webhook configuration
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs20.x
+    MemorySize: 128
+
+Resources:
+  TeamsWebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          GITHUB_TOKEN: !Ref GitHubToken
+          GITHUB_REPO: !Ref GitHubRepo
+          TEAMS_WEBHOOK_SECRET: !Ref TeamsWebhookSecret
+      Events:
+        Webhook:
+          Type: Api
+          Properties:
+            Path: /teams-webhook
+            Method: POST
+
+Outputs:
+  WebhookUrl:
+    Description: URL to configure in Teams outgoing webhook
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/teams-webhook"
