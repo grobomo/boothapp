@@ -276,10 +276,24 @@ class S3Cache {
     const meta = await this._getCachedJson(key) || {};
     meta.tags = Array.isArray(tags) ? tags : [];
     await this._putJson(key, meta);
-    // Invalidate session list cache so next fetch picks up new tags
+    this._invalidateSession(sessionId);
+    return meta.tags;
+  }
+
+  async updateSessionField(sessionId, field, value) {
+    const key = `sessions/${sessionId}/metadata.json`;
+    const meta = await this._getCachedJson(key) || {};
+    meta[field] = value;
+    meta.updated_at = new Date().toISOString();
+    await this._putJson(key, meta);
+    this._invalidateSession(sessionId);
+    return meta;
+  }
+
+  _invalidateSession(sessionId) {
     this.cache.invalidate('_sessions_list');
     this.cache.invalidate(`_detail_${sessionId}`);
-    return meta.tags;
+    this.cache.invalidate(`sessions/${sessionId}/metadata.json`);
   }
 
   // ── Cache stats ─────────────────────────────────────────────────────────

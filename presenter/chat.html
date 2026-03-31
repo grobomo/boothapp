@@ -407,6 +407,49 @@
     margin: 0 auto;
     line-height: 1.6;
   }
+
+  /* -- Mutation badge -- */
+  .msg-body .mutation-badge {
+    display: inline-block;
+    background: var(--green);
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    margin-right: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* -- Confirm bar -- */
+  .confirm-bar {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--yellow);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    color: var(--yellow);
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .confirm-bar.active { display: flex; }
+  .confirm-bar .confirm-text { flex: 1; }
+
+  .confirm-bar button {
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .confirm-yes { background: var(--yellow); color: #000; font-weight: 600; }
+  .confirm-no { background: var(--surface2); color: var(--text2); }
 </style>
 </head>
 <body>
@@ -444,8 +487,17 @@
     <button class="quick-btn" data-msg="hot lead">Hot Lead</button>
     <button class="quick-btn" data-msg="follow up">Follow Up</button>
     <div class="quick-divider"></div>
+    <span class="quick-group-label">Batch</span>
+    <button class="quick-btn" data-msg="mark all pending as completed">Close Pending</button>
+    <div class="quick-divider"></div>
     <button class="quick-btn" data-msg="stats">Stats</button>
     <button class="quick-btn" data-msg="help">Help</button>
+  </div>
+
+  <div class="confirm-bar" id="confirmBar">
+    <span class="confirm-text" id="confirmText"></span>
+    <button class="confirm-yes" id="confirmYes">Confirm</button>
+    <button class="confirm-no" id="confirmNo">Cancel</button>
   </div>
 
   <div class="typing" id="typing">
@@ -476,10 +528,20 @@
   var bannerName = document.getElementById('bannerName');
   var bannerTimer = document.getElementById('bannerTimer');
   var bannerEndBtn = document.getElementById('bannerEndBtn');
+  var confirmBar = document.getElementById('confirmBar');
+  var confirmText = document.getElementById('confirmText');
+  var confirmYes = document.getElementById('confirmYes');
+  var confirmNo = document.getElementById('confirmNo');
   var sending = false;
   var activeSession = null;
   var sessionStartTime = null;
   var timerInterval = null;
+
+  // Command history
+  var cmdHistory = [];
+  var historyIdx = -1;
+  var MAX_CMD_HISTORY = 50;
+  var pendingConfirm = null;
 
   // --- Markdown-lite renderer ---
   function renderMarkdown(text) {
@@ -518,7 +580,11 @@
 
     var body = document.createElement('div');
     body.className = 'msg-body';
-    body.innerHTML = type === 'user' ? escapeHtml(text) : renderMarkdown(text);
+    var html = type === 'user' ? escapeHtml(text) : renderMarkdown(text);
+    if (meta && meta.mutation) {
+      html = '<span class="mutation-badge">Changed</span>' + html;
+    }
+    body.innerHTML = html;
 
     var time = document.createElement('div');
     time.className = 'msg-time';
@@ -596,15 +662,64 @@
     sendMessage();
   });
 
+  // --- Batch commands that need confirmation ---
+  var BATCH_PATTERN = /^(?:set|mark|change)\s+all\s+/i;
+
+  function showConfirm(text) {
+    pendingConfirm = text;
+    confirmText.textContent = 'Batch operation: "' + text + '" -- apply to all matching sessions?';
+    confirmBar.classList.add('active');
+    inputEl.disabled = true;
+  }
+
+  function hideConfirm() {
+    pendingConfirm = null;
+    confirmBar.classList.remove('active');
+    inputEl.disabled = false;
+    inputEl.focus();
+  }
+
+  confirmYes.addEventListener('click', function() {
+    var text = pendingConfirm;
+    hideConfirm();
+    if (text) doSend(text);
+  });
+
+  confirmNo.addEventListener('click', function() {
+    hideConfirm();
+    addMessage('system', 'Cancelled.');
+  });
+
   // --- Send message ---
   async function sendMessage() {
     var text = inputEl.value.trim();
     if (!text || sending) return;
 
-    sending = true;
-    sendBtn.disabled = true;
+    // Save to command history
+    if (cmdHistory[cmdHistory.length - 1] !== text) {
+      cmdHistory.push(text);
+      if (cmdHistory.length > MAX_CMD_HISTORY) cmdHistory.shift();
+    }
+    historyIdx = -1;
+
     inputEl.value = '';
     autoResize();
+
+    // Confirm batch operations
+    if (BATCH_PATTERN.test(text)) {
+      addMessage('user', text);
+      showConfirm(text);
+      return;
+    }
+
+    doSend(text);
+  }
+
+  var MUTATION_INTENTS = /^(set_status|set_visitor|assign_se|add_note|add_tag|remove_tag|batch_status|session_started|session_ended)$/;
+
+  async function doSend(text) {
+    sending = true;
+    sendBtn.disabled = true;
 
     addMessage('user', text);
     showTyping();
@@ -625,7 +740,8 @@
       }
 
       var data = await resp.json();
-      addMessage('system', data.text, { duration_ms: data.duration_ms });
+      var isMutation = data.intent && MUTATION_INTENTS.test(data.intent);
+      addMessage('system', data.text, { duration_ms: data.duration_ms, mutation: isMutation });
 
       // Update active session banner based on response
       if (data.data && data.data.type === 'session_started') {
@@ -659,6 +775,30 @@
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+      return;
+    }
+    // Command history: up/down arrows
+    if (e.key === 'ArrowUp' && cmdHistory.length > 0) {
+      e.preventDefault();
+      if (historyIdx === -1) historyIdx = cmdHistory.length;
+      if (historyIdx > 0) {
+        historyIdx--;
+        inputEl.value = cmdHistory[historyIdx];
+        autoResize();
+      }
+      return;
+    }
+    if (e.key === 'ArrowDown' && historyIdx !== -1) {
+      e.preventDefault();
+      historyIdx++;
+      if (historyIdx >= cmdHistory.length) {
+        historyIdx = -1;
+        inputEl.value = '';
+      } else {
+        inputEl.value = cmdHistory[historyIdx];
+      }
+      autoResize();
+      return;
     }
   });
 

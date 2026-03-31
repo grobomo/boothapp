@@ -34,9 +34,13 @@ function createRouter(opts) {
   let activeSessionId = null;
   let activeSessionStart = null;
 
+  // Valid session statuses for set_status and batch_status
+  const VALID_STATUSES = ['pending', 'active', 'recording', 'completed', 'processing', 'analyzed', 'sent', 'cancelled'];
+
   // --- Intent detection from user message ---
   function detectIntent(message) {
     const lower = message.toLowerCase().trim();
+    const trimmed = message.trim();
 
     // Start session: "start session for Joel Ginsberg" or "new session Joel"
     const startMatch = lower.match(/(?:start|new|begin|create)\s+(?:session|demo)\s+(?:for\s+)?(.+)/i);
@@ -80,9 +84,33 @@ function createRouter(opts) {
     }
 
     // Switch active session: "switch to A726594"
-    const switchMatch = lower.match(/(?:switch|set|use)\s+(?:to\s+)?(?:session\s+)?([a-z0-9_-]{5,12})/i);
+    const switchMatch = lower.match(/(?:switch|use)\s+(?:to\s+)?(?:session\s+)?([a-z0-9_-]{5,12})/i);
     if (switchMatch) {
       return { type: 'switch_session', sessionId: switchMatch[1].toUpperCase() };
+    }
+
+    // Batch status: "mark all pending as completed" (must be before set_status)
+    const batchMatch = lower.match(/(?:set|mark|change)\s+all\s+(\w+)\s+(?:to|as)\s+(\w+)/i);
+    if (batchMatch && VALID_STATUSES.includes(batchMatch[1]) && VALID_STATUSES.includes(batchMatch[2])) {
+      return { type: 'batch_status', from: batchMatch[1], to: batchMatch[2] };
+    }
+
+    // Set session status: "mark A726594 as completed", "set A726594 to processing"
+    const statusMatch = lower.match(/(?:set|mark|change|update)\s+(?:session\s+)?([a-z0-9_-]+)\s+(?:to|as|status\s+(?:to)?)\s+(\w+)/i);
+    if (statusMatch && VALID_STATUSES.includes(statusMatch[2].toLowerCase())) {
+      return { type: 'set_status', sessionId: statusMatch[1].toUpperCase(), status: statusMatch[2].toLowerCase() };
+    }
+
+    // Rename visitor: "rename A726594 visitor to John Smith"
+    const renameMatch = trimmed.match(/(?:rename|update)\s+(?:session\s+)?([a-z0-9_-]+)\s+(?:visitor\s+(?:to\s+)?|name\s+(?:to\s+)?)(.+)/i);
+    if (renameMatch) {
+      return { type: 'set_visitor', sessionId: renameMatch[1].toUpperCase(), name: renameMatch[2].trim() };
+    }
+
+    // Assign SE: "assign A726594 to Joel"
+    const assignMatch = trimmed.match(/(?:assign)\s+(?:session\s+)?([a-z0-9_-]+)\s+(?:to)\s+(.+)/i);
+    if (assignMatch) {
+      return { type: 'assign_se', sessionId: assignMatch[1].toUpperCase(), se: assignMatch[2].trim() };
     }
 
     // Session listing
@@ -305,6 +333,61 @@ function createRouter(opts) {
         }
       }
 
+      case 'set_status': {
+        try {
+          await s3cache.updateSessionField(intent.sessionId, 'status', intent.status);
+          return {
+            text: `Updated **${intent.sessionId}** status to **${intent.status}**.`,
+            data: { type: 'status_changed', sessionId: intent.sessionId, status: intent.status }
+          };
+        } catch (err) {
+          return { text: `Failed to update status: ${err.message}`, data: null };
+        }
+      }
+
+      case 'set_visitor': {
+        try {
+          await s3cache.updateSessionField(intent.sessionId, 'visitor_name', intent.name);
+          return {
+            text: `Updated visitor name for **${intent.sessionId}** to **${intent.name}**.`,
+            data: { type: 'visitor_changed', sessionId: intent.sessionId, name: intent.name }
+          };
+        } catch (err) {
+          return { text: `Failed to update visitor: ${err.message}`, data: null };
+        }
+      }
+
+      case 'assign_se': {
+        try {
+          await s3cache.updateSessionField(intent.sessionId, 'se_name', intent.se);
+          return {
+            text: `Assigned **${intent.sessionId}** to SE **${intent.se}**.`,
+            data: { type: 'se_assigned', sessionId: intent.sessionId, se: intent.se }
+          };
+        } catch (err) {
+          return { text: `Failed to assign SE: ${err.message}`, data: null };
+        }
+      }
+
+      case 'batch_status': {
+        try {
+          const sessions = await s3cache.listSessions();
+          const matching = sessions.filter(s => (s.status || '').toLowerCase() === intent.from);
+          if (matching.length === 0) {
+            return { text: `No sessions with status "${intent.from}" found.`, data: null };
+          }
+          await Promise.all(matching.map(s =>
+            s3cache.updateSessionField(s.session_id, 'status', intent.to)
+          ));
+          return {
+            text: `Updated **${matching.length}** sessions from **${intent.from}** to **${intent.to}**.`,
+            data: { type: 'batch_updated', count: matching.length, from: intent.from, to: intent.to }
+          };
+        } catch (err) {
+          return { text: `Batch update failed: ${err.message}`, data: null };
+        }
+      }
+
       case 'remove_tag': {
         const sid = intent.sessionId;
         if (!sid) {
@@ -508,6 +591,14 @@ function createRouter(opts) {
             '| Tag hot lead | "hot lead" |',
             '| Tag follow-up | "follow up" |',
             '| Tag not interested | "cold" |',
+            '',
+            '**Modify Sessions**',
+            '| Command | Example |',
+            '|---------|---------|',
+            '| Change status | "mark A726594 as completed" |',
+            '| Rename visitor | "rename A726594 visitor to John Smith" |',
+            '| Assign SE | "assign A726594 to Joel" |',
+            '| Batch update | "mark all pending as completed" |',
             '',
             '**Query & Search**',
             '| Command | Example |',
