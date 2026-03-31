@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="components/error-boundary.js"></script>
 <script src="components/nav.js"></script>
+<script src="components/annotator-overlay.js"></script>
 <title>BoothApp — Session Viewer</title>
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
 <script src="auth.js"></script>
@@ -647,16 +648,26 @@ if (!BoothAuth.requireAwsCreds()) {
       " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   }
 
-  // ── Lightbox ────────────────────────────────────────────────────
-  function openLightbox(src) {
-    var lb = document.createElement("div");
-    lb.className = "lightbox";
-    var img = document.createElement("img");
-    img.src = src;
-    img.alt = "Screenshot";
-    lb.appendChild(img);
-    lb.addEventListener("click", function () { document.body.removeChild(lb); });
-    document.body.appendChild(lb);
+  // ── Lightbox / Annotator ─────────────────────────────────────────
+  var _screenshotFileMap = {}; // url -> screenshotFile name mapping
+  function openLightbox(src, screenshotFile) {
+    if (typeof BoothAnnotator !== 'undefined') {
+      new BoothAnnotator(document.body, src, {
+        sessionId: sessionId,
+        screenshotFile: screenshotFile || _screenshotFileMap[src] || '',
+        s3: s3,
+        bucket: BUCKET
+      });
+    } else {
+      var lb = document.createElement("div");
+      lb.className = "lightbox";
+      var img = document.createElement("img");
+      img.src = src;
+      img.alt = "Screenshot";
+      lb.appendChild(img);
+      lb.addEventListener("click", function () { document.body.removeChild(lb); });
+      document.body.appendChild(lb);
+    }
   }
   window.openLightbox = openLightbox;
 
@@ -803,7 +814,8 @@ if (!BoothAuth.requireAwsCreds()) {
             img.alt = "Screenshot";
             img.loading = "lazy";
             thumbEl.appendChild(img);
-            thumbEl.addEventListener("click", function () { openLightbox(url); });
+            _screenshotFileMap[url] = ssFile;
+            thumbEl.addEventListener("click", function () { openLightbox(url, ssFile); });
           });
         })(j);
       }

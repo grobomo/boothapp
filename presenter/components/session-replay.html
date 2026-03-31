@@ -6,6 +6,7 @@
 <title>BoothApp — Session Replay</title>
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
 <script src="../auth.js"></script>
+<script src="annotator-overlay.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -747,6 +748,19 @@
   // Reposition click indicator on window resize
   window.addEventListener("resize", function () {
     if (events.length > 0) positionClickIndicator(events[currentIndex]);
+  });
+
+  // Double-click screenshot to open annotator
+  imgEl.addEventListener("dblclick", function () {
+    if (typeof BoothAnnotator === 'undefined' || !sessionId) return;
+    var evt = events[currentIndex];
+    var ssFile = evt ? (evt.screenshot_file || '').replace(/^screenshots\//, '') : '';
+    new BoothAnnotator(document.body, imgEl.src, {
+      sessionId: sessionId,
+      screenshotFile: ssFile,
+      s3: s3,
+      bucket: BUCKET
+    });
   });
 
 })();

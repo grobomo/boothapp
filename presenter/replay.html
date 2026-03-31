@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="components/error-boundary.js"></script>
 <script src="components/nav.js"></script>
+  <script src="components/annotator-overlay.js"></script>
   <title>Session Replay</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -621,7 +622,7 @@ function selectEvent(idx) {
     var ssFile = ev.data.screenshot_file;
     var ssUrl = ssFile ? STATE.screenshotUrls[ssFile] : null;
     if (ssUrl) {
-      html += '<div class="detail-screenshot"><img src="' + esc(ssUrl) + '" alt="Screenshot" onclick="openLightbox(\'' + esc(ssUrl) + '\')"></div>';
+      html += '<div class="detail-screenshot"><img src="' + esc(ssUrl) + '" alt="Screenshot" onclick="openLightbox(\'' + esc(ssUrl) + '\', \'' + esc(ssFile) + '\')"></div>';
     } else {
       html += '<div class="detail-screenshot"><div class="ss-placeholder">' + (ssFile ? 'Screenshot: ' + esc(ssFile) : 'No screenshot') + '</div></div>';
     }
@@ -801,9 +802,19 @@ function formatMs(ms) {
 
 // ── Lightbox ────────────────────────────────────────────────
 
-window.openLightbox = function(url) {
-  document.getElementById('lightbox-img').src = url;
-  document.getElementById('lightbox').classList.add('active');
+window.openLightbox = function(url, screenshotFile) {
+  if (typeof BoothAnnotator !== 'undefined') {
+    var sid = getSessionId();
+    new BoothAnnotator(document.body, url, {
+      sessionId: sid,
+      screenshotFile: screenshotFile || '',
+      s3: s3Client,
+      bucket: bucketName
+    });
+  } else {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('active');
+  }
 };
 
 // ── Event Bindings ──────────────────────────────────────────
