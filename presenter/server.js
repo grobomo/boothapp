@@ -102,6 +102,90 @@ app.get('/api/sessions/:id/summary', async (req, res) => {
     }
 });
 
+// GET /api/sessions/:id/screenshots - list screenshots with click metadata
+app.get('/api/sessions/:id/screenshots', async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+
+        // List all screenshot files in the session
+        const listCmd = new ListObjectsV2Command({
+            Bucket: BUCKET,
+            Prefix: `${sessionId}/screenshots/`,
+        });
+        const listResult = await s3.send(listCmd);
+        const objects = (listResult.Contents || [])
+            .filter(obj => /\.(jpg|jpeg|png)$/i.test(obj.Key))
+            .sort((a, b) => (a.Key > b.Key ? 1 : -1));
+
+        // Try to load clicks.json for metadata
+        let clickEvents = [];
+        try {
+            const clicksCmd = new GetObjectCommand({
+                Bucket: BUCKET,
+                Key: `${sessionId}/clicks/clicks.json`,
+            });
+            const clicksResult = await s3.send(clicksCmd);
+            const body = await clicksResult.Body.transformToString();
+            const parsed = JSON.parse(body);
+            clickEvents = parsed.events || [];
+        } catch {
+            // clicks.json missing - continue without metadata
+        }
+
+        // Build a lookup from screenshot filename to click event
+        const clickByScreenshot = {};
+        for (const evt of clickEvents) {
+            if (evt.screenshot_file) {
+                const basename = evt.screenshot_file.replace(/^screenshots\//, '');
+                clickByScreenshot[basename] = evt;
+            }
+        }
+
+        const screenshots = objects.map((obj, idx) => {
+            const filename = obj.Key.split('/').pop();
+            const evt = clickByScreenshot[filename] || {};
+
+            // Parse click number from filename: screenshot_click{N}_{timestamp}.jpg
+            const clickMatch = filename.match(/click(\d+)/);
+            const clickNumber = clickMatch ? parseInt(clickMatch[1], 10) : idx + 1;
+
+            return {
+                filename,
+                url: `/api/sessions/${sessionId}/screenshots/${filename}`,
+                click_number: clickNumber,
+                timestamp: evt.timestamp || obj.LastModified || null,
+                element: evt.element || evt.selector || null,
+                page_url: evt.url || null,
+            };
+        });
+
+        res.json({ screenshots });
+    } catch (err) {
+        console.error('Failed to list screenshots:', err.message);
+        res.status(500).json({ error: 'Failed to list screenshots', detail: err.message });
+    }
+});
+
+// GET /api/sessions/:id/screenshots/:filename - proxy screenshot image from S3
+app.get('/api/sessions/:id/screenshots/:filename', async (req, res) => {
+    try {
+        const cmd = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: `${req.params.id}/screenshots/${req.params.filename}`,
+        });
+        const result = await s3.send(cmd);
+        res.setHeader('Content-Type', result.ContentType || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        result.Body.pipe(res);
+    } catch (err) {
+        if (err.name === 'NoSuchKey') {
+            res.status(404).json({ error: 'Screenshot not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch screenshot', detail: err.message });
+        }
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Presenter server running on http://localhost:${PORT}`);
 });
