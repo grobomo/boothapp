@@ -1,0 +1,14 @@
+{
+  "name": "boothapp",
+  "version": "1.0.0",
+  "description": "AI-Powered Trade Show Demo Capture",
+  "main": "analysis/watcher.js",
+  "scripts": {
+    "watcher": "node analysis/watcher.js",
+    "test": "node --test analysis/test/"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}
