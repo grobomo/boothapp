@@ -9,7 +9,12 @@
 
 'use strict';
 
-const { sendNotification, buildNotification } = require('../lib/notify');
+const {
+  sendNotification,
+  buildNotification,
+  buildWebhookPayload,
+  parseWebhookUrls,
+} = require('../lib/notify');
 
 const sampleMetadata = {
   session_id: 'TEST-001',
@@ -29,6 +34,7 @@ const sampleSummary = {
   products_demonstrated: ['XDR', 'Endpoint Security'],
   key_interests: [
     { topic: 'XDR correlation', confidence: 'high', evidence: 'asked 3 questions about it' },
+    { topic: 'Splunk Integration', confidence: 'medium', evidence: 'asked about native app' },
   ],
   follow_up_actions: [
     'Schedule deep-dive on XDR workbench',
@@ -147,6 +153,150 @@ async function runTest() {
     process.exit(1);
   }
   console.log('PASS: Missing fields default correctly (null / empty array)');
+
+  // Test 6: parseWebhookUrls
+  console.log('\n--- Test 6: parseWebhookUrls ---');
+  const empty = parseWebhookUrls('');
+  if (empty.length !== 0) {
+    console.error(`FAIL: empty string should return [], got ${JSON.stringify(empty)}`);
+    process.exit(1);
+  }
+  const undef = parseWebhookUrls(undefined);
+  if (undef.length !== 0) {
+    console.error(`FAIL: undefined should return [], got ${JSON.stringify(undef)}`);
+    process.exit(1);
+  }
+  const single = parseWebhookUrls('https://hooks.slack.com/abc');
+  if (single.length !== 1 || single[0] !== 'https://hooks.slack.com/abc') {
+    console.error(`FAIL: single URL parse failed: ${JSON.stringify(single)}`);
+    process.exit(1);
+  }
+  const multi = parseWebhookUrls('https://a.com/hook , https://b.com/hook, https://c.com/hook');
+  if (multi.length !== 3) {
+    console.error(`FAIL: multi URL parse expected 3, got ${multi.length}: ${JSON.stringify(multi)}`);
+    process.exit(1);
+  }
+  if (multi[0] !== 'https://a.com/hook' || multi[1] !== 'https://b.com/hook' || multi[2] !== 'https://c.com/hook') {
+    console.error(`FAIL: multi URL trimming failed: ${JSON.stringify(multi)}`);
+    process.exit(1);
+  }
+  const withBlanks = parseWebhookUrls('https://a.com,,, https://b.com, ,');
+  if (withBlanks.length !== 2) {
+    console.error(`FAIL: blanks not filtered: ${JSON.stringify(withBlanks)}`);
+    process.exit(1);
+  }
+  console.log('PASS: parseWebhookUrls handles empty, single, multi, and blank entries');
+
+  // Test 7: buildWebhookPayload
+  console.log('\n--- Test 7: buildWebhookPayload ---');
+  const webhookPayload = buildWebhookPayload({
+    sessionId: 'TEST-WH',
+    bucket: 'b',
+    metadata: { company: 'Acme Corp' },
+    summary: sampleSummary,
+    followUp: sampleFollowUp,
+  });
+  const whFields = ['session_id', 'visitor_name', 'company', 'products_demonstrated', 'key_interests', 'engagement_score', 'follow_up_priority', 'analysis_url'];
+  const whMissing = whFields.filter((f) => !(f in webhookPayload));
+  if (whMissing.length > 0) {
+    console.error(`FAIL: Webhook payload missing fields: ${whMissing.join(', ')}`);
+    process.exit(1);
+  }
+  if (webhookPayload.session_id !== 'TEST-WH') {
+    console.error(`FAIL: session_id=${webhookPayload.session_id}, expected TEST-WH`);
+    process.exit(1);
+  }
+  if (webhookPayload.engagement_score !== 8) {
+    console.error(`FAIL: engagement_score=${webhookPayload.engagement_score}, expected 8`);
+    process.exit(1);
+  }
+  if (webhookPayload.follow_up_priority !== 'high') {
+    console.error(`FAIL: follow_up_priority=${webhookPayload.follow_up_priority}, expected high`);
+    process.exit(1);
+  }
+  if (!webhookPayload.analysis_url.includes('TEST-WH')) {
+    console.error(`FAIL: analysis_url doesn't contain session ID`);
+    process.exit(1);
+  }
+  console.log('PASS: All webhook payload fields present and correct');
+  console.log(`  Payload: ${JSON.stringify(webhookPayload, null, 2)}`);
+
+  // Test 8: key_interests extraction (object -> string topic)
+  console.log('\n--- Test 8: key_interests extraction ---');
+  if (!Array.isArray(webhookPayload.key_interests) || webhookPayload.key_interests.length !== 2) {
+    console.error(`FAIL: key_interests should have 2 entries, got ${JSON.stringify(webhookPayload.key_interests)}`);
+    process.exit(1);
+  }
+  if (webhookPayload.key_interests[0] !== 'XDR correlation') {
+    console.error(`FAIL: key_interests[0]=${webhookPayload.key_interests[0]}, expected 'XDR correlation'`);
+    process.exit(1);
+  }
+  console.log('PASS: key_interests correctly extracted topic strings from objects');
+
+  // Test 9: key_interests with plain string array
+  console.log('\n--- Test 9: key_interests with string array ---');
+  const stringInterests = buildWebhookPayload({
+    sessionId: 'TEST-STR',
+    bucket: 'b',
+    metadata: {},
+    summary: { key_interests: ['XDR', 'Cloud'] },
+    followUp: { priority: 'medium' },
+  });
+  if (stringInterests.key_interests[0] !== 'XDR' || stringInterests.key_interests[1] !== 'Cloud') {
+    console.error(`FAIL: string key_interests not passed through: ${JSON.stringify(stringInterests.key_interests)}`);
+    process.exit(1);
+  }
+  console.log('PASS: Plain string key_interests passed through correctly');
+
+  // Test 10: sparse webhook payload defaults
+  console.log('\n--- Test 10: Sparse webhook payload defaults ---');
+  const sparseWh = buildWebhookPayload({
+    sessionId: 'TEST-SPARSE-WH',
+    bucket: 'b',
+    metadata: {},
+    summary: {},
+    followUp: {},
+  });
+  if (sparseWh.engagement_score !== null) {
+    console.error(`FAIL: engagement_score should be null, got ${sparseWh.engagement_score}`);
+    process.exit(1);
+  }
+  if (sparseWh.follow_up_priority !== 'medium') {
+    console.error(`FAIL: follow_up_priority should default to medium, got ${sparseWh.follow_up_priority}`);
+    process.exit(1);
+  }
+  if (!Array.isArray(sparseWh.key_interests) || sparseWh.key_interests.length !== 0) {
+    console.error(`FAIL: key_interests should be empty array`);
+    process.exit(1);
+  }
+  console.log('PASS: Sparse webhook payload defaults correctly');
+
+  // Test 11: dry-run with WEBHOOK_URL logs but doesn't POST
+  console.log('\n--- Test 11: Dry-run with WEBHOOK_URL ---');
+  const origUrl = process.env.WEBHOOK_URL;
+  process.env.WEBHOOK_URL = 'https://example.com/hook1,https://example.com/hook2';
+  const dryResult = await sendNotification({
+    sessionId: 'TEST-DRY-WH',
+    bucket: 'test-bucket',
+    metadata: sampleMetadata,
+    summary: sampleSummary,
+    followUp: sampleFollowUp,
+    dryRun: true,
+  });
+  if (origUrl) {
+    process.env.WEBHOOK_URL = origUrl;
+  } else {
+    delete process.env.WEBHOOK_URL;
+  }
+  if (!Array.isArray(dryResult.webhook_results)) {
+    console.error('FAIL: webhook_results should be an array');
+    process.exit(1);
+  }
+  if (dryResult.webhook_results.length !== 0) {
+    console.error('FAIL: dry run should not deliver webhooks');
+    process.exit(1);
+  }
+  console.log('PASS: Dry-run skips webhook delivery, returns empty results');
 
   console.log('\n=== All tests passed ===');
 }
