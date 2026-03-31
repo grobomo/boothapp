@@ -1,0 +1,41 @@
+{
+  "company_name": "Acme Financial Corp",
+  "industry_vertical": "Financial Services",
+  "estimated_company_size": {
+    "estimate": "1,000 - 10,000 employees",
+    "category": "Large",
+    "confidence": "medium"
+  },
+  "likely_security_stack": {
+    "likely_tools": [
+      "SIEM (Splunk/QRadar)",
+      "EDR (CrowdStrike/Carbon Black)",
+      "DLP (Symantec/Forcepoint)",
+      "WAF (F5/Akamai)",
+      "PAM (CyberArk)"
+    ],
+    "compliance_frameworks": [
+      "PCI-DSS",
+      "SOX",
+      "GLBA",
+      "FFIEC"
+    ],
+    "pain_points": [
+      "Alert fatigue from siloed tools",
+      "Regulatory compliance overhead",
+      "Third-party risk management"
+    ]
+  },
+  "relevant_case_studies": [
+    {
+      "title": "Global Bank Consolidates Security with Vision One",
+      "summary": "Reduced mean time to detect from 48h to 30min by unifying XDR across 50,000 endpoints.",
+      "relevance": "Platform consolidation, SOC efficiency"
+    },
+    {
+      "title": "Insurance Leader Stops BEC Attacks with Email Security",
+      "summary": "Blocked 99.7% of phishing attempts and eliminated business email compromise losses.",
+      "relevance": "Email protection, fraud prevention"
+    }
+  ]
+}
