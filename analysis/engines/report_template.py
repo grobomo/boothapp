@@ -259,6 +259,91 @@ body {{
     margin-top: 40px;
 }}
 
+/* ---------- sentiment timeline ---------- */
+.sentiment-bar {{
+    display: flex;
+    height: 32px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}}
+.sentiment-bar .seg {{
+    position: relative;
+    min-width: 2px;
+    cursor: default;
+}}
+.sentiment-bar .seg:first-child {{ border-radius: 6px 0 0 6px; }}
+.sentiment-bar .seg:last-child {{ border-radius: 0 6px 6px 0; }}
+.sentiment-bar .seg[data-s="positive"]   {{ background: {_BRAND['green']}; }}
+.sentiment-bar .seg[data-s="neutral"]    {{ background: #B2BEC3; }}
+.sentiment-bar .seg[data-s="hesitation"] {{ background: {_BRAND['yellow']}; }}
+.sentiment-bar .seg[data-s="skepticism"] {{ background: {_BRAND['red_badge']}; }}
+.sentiment-bar .seg .seg-label {{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #FFF;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    overflow: hidden;
+    white-space: nowrap;
+}}
+.sentiment-bar .seg[data-s="neutral"] .seg-label,
+.sentiment-bar .seg[data-s="hesitation"] .seg-label {{
+    color: {_BRAND['dark']};
+    text-shadow: none;
+}}
+.sentiment-legend {{
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}}
+.sentiment-legend-item {{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: {_BRAND['text_muted']};
+}}
+.sentiment-legend-dot {{
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}}
+.sentiment-details {{
+    margin-top: 12px;
+}}
+.sentiment-row {{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid {_BRAND['border']};
+    font-size: 13px;
+}}
+.sentiment-row:last-child {{ border-bottom: none; }}
+.sentiment-row .sr-time {{
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: {_BRAND['text_muted']};
+    flex-shrink: 0;
+    min-width: 48px;
+}}
+.sentiment-row .sr-dot {{
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 4px;
+}}
+.sentiment-row .sr-text {{
+    flex: 1;
+    color: {_BRAND['text']};
+}}
+
 /* ---------- print ---------- */
 @media print {{
     body {{ background: #FFF; }}
@@ -289,6 +374,14 @@ def _badge(level: str) -> str:
         f'<span class="badge" style="background:{bg};color:{fg};">'
         f'{_esc(label)}</span>'
     )
+
+
+_SENTIMENT_COLORS = {
+    "positive":   _BRAND["green"],
+    "neutral":    "#B2BEC3",
+    "hesitation": _BRAND["yellow"],
+    "skepticism": _BRAND["red_badge"],
+}
 
 
 def _kv_row(label: str, value: str) -> str:
@@ -404,6 +497,65 @@ def _render_interests(data: dict) -> str:
     """
 
 
+def _render_sentiment_timeline(data: dict) -> str:
+    timeline = data.get("sentiment_timeline", [])
+    if not timeline:
+        return ""
+    total = len(timeline)
+
+    # Build the color-coded bar segments
+    segments = []
+    for seg in timeline:
+        s = seg.get("sentiment", "neutral")
+        ts = _esc(seg.get("timestamp", ""))
+        txt = _esc(seg.get("text", ""))
+        pct = 100.0 / total
+        segments.append(
+            f'<div class="seg" data-s="{_esc(s)}" style="flex:{pct:.2f}%" '
+            f'title="{ts} - {txt}">'
+            f'<span class="seg-label">{ts}</span></div>'
+        )
+
+    # Legend
+    legend_items = []
+    for label, key in [("Positive", "positive"), ("Neutral", "neutral"),
+                        ("Hesitation", "hesitation"), ("Skepticism", "skepticism")]:
+        color = _SENTIMENT_COLORS[key]
+        legend_items.append(
+            f'<div class="sentiment-legend-item">'
+            f'<span class="sentiment-legend-dot" style="background:{color}"></span>'
+            f'{label}</div>'
+        )
+
+    # Detail rows
+    detail_rows = []
+    for seg in timeline:
+        s = seg.get("sentiment", "neutral")
+        color = _SENTIMENT_COLORS.get(s, "#B2BEC3")
+        detail_rows.append(
+            f'<div class="sentiment-row">'
+            f'<span class="sr-time">{_esc(seg.get("timestamp", ""))}</span>'
+            f'<span class="sr-dot" style="background:{color}"></span>'
+            f'<span class="sr-text">{_esc(seg.get("text", ""))}</span>'
+            f'</div>'
+        )
+
+    return f"""
+    <div class="section-title">Visitor Sentiment Timeline</div>
+    <div class="card">
+        <div class="sentiment-legend">
+            {"".join(legend_items)}
+        </div>
+        <div class="sentiment-bar">
+            {"".join(segments)}
+        </div>
+        <div class="sentiment-details">
+            {"".join(detail_rows)}
+        </div>
+    </div>
+    """
+
+
 def _render_recommendations(data: dict) -> str:
     recs = data.get("recommendations", [])
     if not recs:
@@ -455,6 +607,7 @@ def generate_report(data: dict) -> str:
         '<div class="container">',
         _render_visitor_info(data),
         _render_products(data),
+        _render_sentiment_timeline(data),
         _render_interests(data),
         _render_recommendations(data),
         f"""
