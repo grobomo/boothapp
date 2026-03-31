@@ -35,6 +35,8 @@ class BadgeOcrProcessor {
         Regex("(?i)(scan|badge|qr|barcode|id:?)"),
         Regex("^\\d{5,}$"),  // Long numbers (badge IDs)
         Regex("^[A-Z0-9]{2,4}-\\d+$"),  // Badge codes like "BH-12345"
+        // Badge field labels printed above the actual values
+        Regex("(?i)^\\s*(first\\s*name|last\\s*name|full\\s*name|name|company|organization|org|title|role|email|e-?mail|phone|country|city|state|job\\s*title|department|dept|registration|reg\\.?\\s*#?)\\s*:?\\s*$"),
     )
 
     suspend fun process(bitmap: Bitmap): BadgeInfo = suspendCancellableCoroutine { cont ->

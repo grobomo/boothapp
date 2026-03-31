@@ -96,6 +96,17 @@
                 android:textSize="14sp"
                 android:visibility="gone"
                 tools:text="Jane Doe - Acme Corp" />
+
+            <TextView
+                android:id="@+id/tvDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/tm_amber"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"
+                android:visibility="gone"
+                tools:text="12:34" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -44,6 +47,17 @@ class MainActivity : AppCompatActivity() {
     private var capturedBitmap: Bitmap? = null
     private var activeSessionId: String? = null
     private var activeDemoPc: String? = null
+    private var sessionStartTime: Long = 0L
+    private val timerHandler = Handler(Looper.getMainLooper())
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            val elapsed = SystemClock.elapsedRealtime() - sessionStartTime
+            val minutes = (elapsed / 60000).toInt()
+            val seconds = ((elapsed % 60000) / 1000).toInt()
+            binding.tvDuration.text = String.format("%d:%02d", minutes, seconds)
+            timerHandler.postDelayed(this, 1000)
+        }
+    }
 
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -197,6 +211,12 @@ class MainActivity : AppCompatActivity() {
                 binding.tvVisitorInfo.text = displayInfo
                 binding.tvVisitorInfo.visibility = View.VISIBLE
 
+                // Start session timer
+                sessionStartTime = SystemClock.elapsedRealtime()
+                binding.tvDuration.visibility = View.VISIBLE
+                binding.tvDuration.text = "0:00"
+                timerHandler.post(timerRunnable)
+
                 // Swap buttons
                 binding.btnCapture.visibility = View.GONE
                 binding.btnStartSession.visibility = View.GONE
@@ -309,6 +329,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetToIdle() {
+        timerHandler.removeCallbacks(timerRunnable)
         activeSessionId = null
         activeDemoPc = null
         capturedBadgeFile = null
@@ -318,6 +339,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.tm_gray))
         binding.tvSessionId.visibility = View.GONE
         binding.tvVisitorInfo.visibility = View.GONE
+        binding.tvDuration.visibility = View.GONE
 
         binding.etVisitorName.text?.clear()
         binding.etVisitorCompany.text?.clear()
@@ -341,6 +363,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        timerHandler.removeCallbacks(timerRunnable)
         super.onDestroy()
         cameraManager.shutdown()
         ocrProcessor.close()
