@@ -1,0 +1,282 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BoothApp fleet node -- single EC2 instance for hierarchical analysis fleet
+
+Parameters:
+  Tier:
+    Type: String
+    AllowedValues: [t1, t2, t3, worker]
+    Description: Node tier in the hierarchy
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: EC2 instance type
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: AMI ID (defaults to latest Amazon Linux 2023)
+  KeyName:
+    Type: String
+    Default: ''
+    Description: EC2 key pair name (optional)
+  VpcId:
+    Type: String
+    Default: ''
+    Description: VPC ID (uses default VPC if empty)
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+  UseDefaultVpc: !Equals [!Ref VpcId, '']
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub 'BoothApp fleet node - ${Tier}'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 10.0.0.0/8
+          Description: Fleet API (internal)
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.0.0/8
+          Description: SSH (internal)
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg'
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: FleetNodePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - transcribe:StartTranscriptionJob
+                  - transcribe:GetTranscriptionJob
+                  - bedrock:InvokeModel
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+        - Key: boothapp:tier
+          Value: !Ref Tier
+        - Key: boothapp:fleet
+          Value: 'true'
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y
+          yum install -y nodejs npm
+
+          # Create app directory
+          mkdir -p /opt/boothapp
+          cd /opt/boothapp
+
+          # Write tier config
+          cat > config.json <<CONF
+          {
+            "tier": "${Tier}",
+            "port": 8080,
+            "stack_name": "${AWS::StackName}"
+          }
+          CONF
+
+          # Download and start the fleet agent
+          # (In production, this would pull from S3 or CodeDeploy)
+          cat > agent.js <<'AGENT'
+          const http = require('http');
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+          const children = [];
+          const tasks = {};
+
+          const server = http.createServer((req, res) => {
+            let body = '';
+            req.on('data', c => body += c);
+            req.on('end', () => {
+              const url = req.url;
+              res.setHeader('Content-Type', 'application/json');
+
+              // Health check
+              if (url === '/api/health' && req.method === 'GET') {
+                res.end(JSON.stringify({ status: 'ok', tier: config.tier, name: config.stack_name }));
+                return;
+              }
+
+              // Register child
+              if (url === '/api/register' && req.method === 'POST') {
+                try {
+                  const child = JSON.parse(body);
+                  children.push(child);
+                  res.end(JSON.stringify({ registered: true, child: child.name }));
+                } catch(e) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: e.message }));
+                }
+                return;
+              }
+
+              // Submit task
+              if (url === '/api/task' && req.method === 'POST') {
+                try {
+                  const task = JSON.parse(body);
+                  tasks[task.task_id] = { ...task, status: 'received', received_at: Date.now() };
+
+                  if (config.tier === 'worker') {
+                    // Workers execute tasks directly
+                    setTimeout(() => {
+                      tasks[task.task_id].status = 'complete';
+                      tasks[task.task_id].executed_by = config.stack_name;
+                      tasks[task.task_id].completed_at = Date.now();
+                    }, 1000);
+                    res.end(JSON.stringify({ accepted: true, task_id: task.task_id, executor: config.stack_name }));
+                  } else if (children.length > 0) {
+                    // Managers delegate to a child (round-robin)
+                    const idx = Object.keys(tasks).length % children.length;
+                    const child = children[idx];
+                    const postData = JSON.stringify(task);
+                    const childReq = http.request({
+                      hostname: child.ip, port: 8080, path: '/api/task',
+                      method: 'POST', headers: { 'Content-Type': 'application/json' }
+                    }, (childRes) => {
+                      let d = '';
+                      childRes.on('data', c => d += c);
+                      childRes.on('end', () => {
+                        try {
+                          const r = JSON.parse(d);
+                          tasks[task.task_id].status = 'delegated';
+                          tasks[task.task_id].delegated_to = child.name;
+                          res.end(JSON.stringify({ accepted: true, delegated_to: child.name }));
+                        } catch(e) {
+                          res.statusCode = 502;
+                          res.end(JSON.stringify({ error: 'child parse error' }));
+                        }
+                      });
+                    });
+                    childReq.on('error', (e) => {
+                      res.statusCode = 502;
+                      res.end(JSON.stringify({ error: e.message }));
+                    });
+                    childReq.end(postData);
+                  } else {
+                    res.statusCode = 503;
+                    res.end(JSON.stringify({ error: 'no children registered' }));
+                  }
+                } catch(e) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: e.message }));
+                }
+                return;
+              }
+
+              // Get task status
+              if (url.startsWith('/api/task/') && req.method === 'GET') {
+                const id = url.split('/api/task/')[1];
+                if (tasks[id]) {
+                  res.end(JSON.stringify(tasks[id]));
+                } else if (config.tier !== 'worker' && children.length > 0) {
+                  // Ask children for status
+                  let found = false;
+                  let pending = children.length;
+                  children.forEach(child => {
+                    http.get({ hostname: child.ip, port: 8080, path: '/api/task/' + id }, (cRes) => {
+                      let d = '';
+                      cRes.on('data', c => d += c);
+                      cRes.on('end', () => {
+                        pending--;
+                        if (!found) {
+                          try {
+                            const r = JSON.parse(d);
+                            if (r.status && r.status !== 'unknown') {
+                              found = true;
+                              res.end(d);
+                            } else if (pending === 0) {
+                              res.end(JSON.stringify({ task_id: id, status: 'unknown' }));
+                            }
+                          } catch(e) {
+                            if (pending === 0 && !found) {
+                              res.end(JSON.stringify({ task_id: id, status: 'unknown' }));
+                            }
+                          }
+                        }
+                      });
+                    }).on('error', () => {
+                      pending--;
+                      if (pending === 0 && !found) {
+                        res.end(JSON.stringify({ task_id: id, status: 'unknown' }));
+                      }
+                    });
+                  });
+                } else {
+                  res.end(JSON.stringify({ task_id: id, status: 'unknown' }));
+                }
+                return;
+              }
+
+              res.statusCode = 404;
+              res.end(JSON.stringify({ error: 'not found' }));
+            });
+          });
+
+          server.listen(config.port, () => {
+            console.log(`Fleet agent (${config.tier}) listening on port ${config.port}`);
+          });
+          AGENT
+
+          node agent.js &
+
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref Instance
+
+Outputs:
+  PublicIp:
+    Description: Public IP of the fleet node
+    Value: !Ref ElasticIp
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref Instance
+  Tier:
+    Description: Node tier
+    Value: !Ref Tier
