@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Compare - BoothApp</title>
+<style>
+/* ============================================================
+   RESET & VARIABLES
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --red:       #D71920;
+  --red-glow:  rgba(215, 25, 32, .35);
+  --red-dark:  #A8131A;
+  --red-light: #FF4D52;
+  --bg:        #06080C;
+  --surface:   #0E1118;
+  --surface2:  #151920;
+  --border:    #1E2330;
+  --text:      #F0F2F5;
+  --text-dim:  #6B7385;
+  --success:   #00E676;
+  --blue:      #448AFF;
+  --amber:     #FFAB00;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.header {
+  background: linear-gradient(135deg, #1A1A2E 0%, #12121F 100%);
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.header .brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.header .logo {
+  width: 40px; height: 40px;
+  background: var(--red);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px; color: #FFF;
+}
+.header h1 {
+  font-size: 20px; font-weight: 600; letter-spacing: -0.3px;
+}
+.header h1 span { color: var(--red); }
+.header .subtitle {
+  font-size: 13px; color: var(--text-dim); margin-top: 2px;
+}
+
+/* ============================================================
+   CONTAINER
+   ============================================================ */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ============================================================
+   INPUT SECTION
+   ============================================================ */
+.input-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .input-section { grid-template-columns: 1fr; }
+}
+
+.input-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.input-card h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+/* Drop zone */
+#drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+#drop-zone:hover, #drop-zone.drag-over {
+  border-color: var(--red);
+  background: rgba(215, 25, 32, .05);
+}
+#drop-zone .drop-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  color: var(--text-dim);
+}
+#drop-zone p {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+#drop-zone .hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  opacity: .6;
+  margin-top: 4px;
+}
+
+/* Paste area */
+#paste-input {
+  width: 100%;
+  height: 100px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  padding: 10px;
+  resize: vertical;
+}
+#paste-input:focus {
+  outline: none;
+  border-color: var(--red);
+}
+#paste-btn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .2s;
+}
+#paste-btn:hover { background: var(--border); }
+
+/* ============================================================
+   SESSION LIST & BUTTONS
+   ============================================================ */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+#session-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.session-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.chip-name { font-weight: 600; }
+.chip-company { color: var(--text-dim); font-size: 12px; }
+.chip-remove {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 16px; cursor: pointer; padding: 0 2px;
+  line-height: 1;
+}
+.chip-remove:hover { color: var(--red-light); }
+
+#compare-btn, #demo-btn {
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  border: none;
+}
+#compare-btn {
+  background: var(--surface2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+#compare-btn.ready {
+  background: var(--red);
+  color: #FFF;
+  border-color: var(--red);
+}
+#compare-btn.ready:hover {
+  background: var(--red-dark);
+}
+#compare-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+#demo-btn {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+#demo-btn:hover { background: var(--border); }
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+#empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+#empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: .4;
+}
+#empty-state p { font-size: 15px; }
+
+/* ============================================================
+   COMPARISON GRID
+   ============================================================ */
+.compare-grid {
+  width: 100%;
+}
+.compare-grid.cols-2 .compare-row { grid-template-columns: 1fr 1fr; }
+.compare-grid.cols-3 .compare-row { grid-template-columns: 1fr 1fr 1fr; }
+
+.compare-row {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 2px;
+}
+
+.section-label-row {
+  display: block !important;
+  margin-top: 28px;
+  margin-bottom: 12px;
+}
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* Header cells */
+.header-cell {
+  background: linear-gradient(135deg, #1A1A2E, #12121F);
+  border-color: var(--red);
+  border-width: 1px 1px 2px 1px;
+  text-align: center;
+  padding: 24px 16px;
+}
+.visitor-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.visitor-title {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.visitor-company {
+  font-size: 14px;
+  color: var(--red-light);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Score ring */
+.score-ring {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  background: conic-gradient(var(--score-color) var(--score-pct), var(--border) var(--score-pct));
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+.score-ring::before {
+  content: '';
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--surface);
+  position: absolute;
+}
+.score-value {
+  position: relative;
+  z-index: 1;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Metrics */
+.metric-big {
+  font-size: 36px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--blue);
+  margin-bottom: 12px;
+}
+
+/* Product tags */
+.product-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.product-tag {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* Interest items */
+.interest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.interest-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.interest-badge, .rec-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: center;
+}
+.badge-high { background: rgba(0, 230, 118, .15); color: var(--success); border: 1px solid rgba(0, 230, 118, .3); }
+.badge-med  { background: rgba(255, 171, 0, .15); color: var(--amber); border: 1px solid rgba(255, 171, 0, .3); }
+.badge-low  { background: rgba(107, 115, 133, .15); color: var(--text-dim); border: 1px solid rgba(107, 115, 133, .3); }
+
+.interest-topic, .rec-text {
+  font-size: 13px;
+}
+
+/* Recommendation items */
+.rec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.rec-text {
+  line-height: 1.4;
+}
+
+/* Detail grid */
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-item:last-child { border-bottom: none; }
+.detail-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+.detail-value {
+  text-align: right;
+  color: var(--text);
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity .3s, transform .3s;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+  .compare-grid.cols-3 .compare-row {
+    grid-template-columns: 1fr;
+  }
+  .compare-grid.cols-2 .compare-row {
+    grid-template-columns: 1fr;
+  }
+  .container { padding: 16px; }
+  .header { padding: 16px 20px; }
+}
+
+@media (max-width: 600px) {
+  .input-section { grid-template-columns: 1fr; }
+  .controls { flex-direction: column; align-items: stretch; }
+  #session-list { justify-content: center; }
+  .header h1 { font-size: 16px; }
+}
+
+/* Hidden file input */
+#file-input { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="brand">
+    <div class="logo">V1</div>
+    <div>
+      <h1>Trend Micro <span>Vision One</span></h1>
+      <div class="subtitle">Session Comparison</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Input section -->
+  <div class="input-section">
+    <div class="input-card">
+      <h3>Load summary.json files</h3>
+      <div id="drop-zone">
+        <div class="drop-icon">[ ^ ]</div>
+        <p>Drop summary.json files here or click to browse</p>
+        <div class="hint">Select up to 3 session files</div>
+      </div>
+      <input type="file" id="file-input" accept=".json" multiple>
+    </div>
+    <div class="input-card">
+      <h3>Or paste JSON directly</h3>
+      <textarea id="paste-input" placeholder='Paste summary.json content here...'></textarea>
+      <button id="paste-btn">Add Session</button>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div id="session-list"></div>
+    <button id="demo-btn">Load Demo Data</button>
+    <button id="compare-btn" disabled>Compare Sessions</button>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-state">
+    <div class="empty-icon">[ ? ]</div>
+    <p>Add 2-3 sessions to compare them side by side</p>
+  </div>
+
+  <!-- Comparison output -->
+  <div id="comparison-area"></div>
+
+</div>
+
+<script src="lib/compare.js"></script>
+</body>
+</html>
