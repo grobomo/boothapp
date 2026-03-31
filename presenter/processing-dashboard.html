@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — AI Processing Pipeline</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #58a6ff;
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #8b949e;
+    margin-bottom: 0.5rem;
+  }
+
+  .session-id {
+    font-size: 1.2rem;
+    color: #8b949e;
+    margin-bottom: 2rem;
+    font-family: monospace;
+  }
+
+  .pipeline-container {
+    width: 100%;
+    max-width: 720px;
+  }
+
+  /* -- Overall progress bar -- */
+  .overall-progress {
+    margin-bottom: 2rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+  }
+
+  .overall-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+
+  .overall-label {
+    font-size: 1rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .overall-pct {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #58a6ff;
+    font-family: monospace;
+  }
+
+  .overall-bar {
+    height: 8px;
+    background: #21262d;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .overall-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #238636, #3fb950);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    width: 0%;
+  }
+
+  .overall-elapsed {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #484f58;
+    text-align: right;
+    font-family: monospace;
+  }
+
+  /* -- Stage card -- */
+  .stage {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stage.active {
+    border-color: #58a6ff;
+    box-shadow: 0 0 20px rgba(88, 166, 255, 0.15);
+  }
+
+  .stage.complete {
+    border-color: #238636;
+  }
+
+  .stage.error {
+    border-color: #f85149;
+  }
+
+  /* Connector line between stages */
+  .stage-connector {
+    width: 2px;
+    height: 12px;
+    background: #30363d;
+    margin: 0 auto;
+    transition: background 0.3s;
+  }
+
+  .stage-connector.done {
+    background: #238636;
+  }
+
+  /* -- Stage icon -- */
+  .stage-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    background: #21262d;
+    color: #484f58;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .stage.pending .stage-icon {
+    background: #21262d;
+    color: #484f58;
+  }
+
+  .stage.active .stage-icon {
+    background: #0d419d;
+    color: #58a6ff;
+  }
+
+  .stage.complete .stage-icon {
+    background: #0f5323;
+    color: #3fb950;
+  }
+
+  .stage.error .stage-icon {
+    background: #6e1b1b;
+    color: #f85149;
+  }
+
+  /* Spinning ring on active stage */
+  .stage.active .stage-icon::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: #58a6ff;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* -- Stage text -- */
+  .stage-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .stage-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 0.15rem;
+  }
+
+  .stage.pending .stage-name {
+    color: #484f58;
+  }
+
+  .stage-detail {
+    font-size: 0.85rem;
+    color: #8b949e;
+  }
+
+  .stage.pending .stage-detail {
+    color: #30363d;
+  }
+
+  .stage-elapsed {
+    font-family: monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #8b949e;
+    flex-shrink: 0;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  .stage.active .stage-elapsed {
+    color: #58a6ff;
+  }
+
+  .stage.complete .stage-elapsed {
+    color: #3fb950;
+  }
+
+  .stage.error .stage-elapsed {
+    color: #f85149;
+  }
+
+  /* -- Pulse animation for active stage background -- */
+  .stage.active::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(88, 166, 255, 0.03), transparent);
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
+  /* -- Completion banner -- */
+  .completion-banner {
+    background: #0f5323;
+    border: 1px solid #238636;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    margin-top: 1rem;
+    display: none;
+  }
+
+  .completion-banner.show {
+    display: block;
+    animation: fadeIn 0.5s ease;
+  }
+
+  .completion-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #3fb950;
+    margin-bottom: 0.3rem;
+  }
+
+  .completion-detail {
+    font-size: 0.95rem;
+    color: #8b949e;
+  }
+
+  .completion-link {
+    display: inline-block;
+    margin-top: 0.8rem;
+    padding: 0.5rem 1.5rem;
+    background: #238636;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .completion-link:hover {
+    background: #2ea043;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* -- Error banner -- */
+  .error-banner {
+    background: #f8514922;
+    border: 1px solid #f85149;
+    color: #f85149;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    display: none;
+    width: 100%;
+    max-width: 720px;
+    text-align: center;
+  }
+
+  .refresh-indicator {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #484f58;
+    text-align: center;
+  }
+
+  /* -- Setup screen -- */
+  .setup {
+    text-align: center;
+    margin-top: 4rem;
+  }
+  .setup label {
+    display: block;
+    font-size: 1.3rem;
+    color: #8b949e;
+    margin-bottom: 1rem;
+  }
+  .setup input {
+    font-size: 2rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #e6edf3;
+    text-align: center;
+    font-family: monospace;
+    width: 320px;
+  }
+  .setup input:focus { outline: 2px solid #58a6ff; }
+  .setup button {
+    display: block;
+    margin: 1.5rem auto 0;
+    font-size: 1.4rem;
+    padding: 0.7rem 2.5rem;
+    border-radius: 8px;
+    border: none;
+    background: #238636;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .setup button:hover { background: #2ea043; }
+
+  .hidden { display: none !important; }
+
+  /* -- Responsive -- */
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    h1 { font-size: 1.6rem; }
+    .stage { padding: 1rem; gap: 0.75rem; }
+    .stage-icon { width: 38px; height: 38px; font-size: 1.1rem; }
+    .stage-name { font-size: 1rem; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0.75rem; }
+    h1 { font-size: 1.3rem; }
+    .session-id { font-size: 0.95rem; }
+    .stage { padding: 0.8rem; gap: 0.5rem; }
+    .stage-icon { width: 32px; height: 32px; font-size: 1rem; }
+    .stage-name { font-size: 0.9rem; }
+    .stage-elapsed { font-size: 0.85rem; min-width: 50px; }
+    .setup input { width: 100%; font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<script src="auth.js"></script>
+<script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
+else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
+
+<div style="max-width:720px;width:100%;margin:0 auto 1rem;display:flex;justify-content:flex-end;gap:1rem;font-size:0.85rem;">
+  <span id="auth-user" style="color:#8b949e;font-family:monospace;"></span>
+  <a href="sessions.html" style="color:#8b949e;text-decoration:none;">Sessions</a>
+  <a href="index.html" style="color:#8b949e;text-decoration:none;">Presenter</a>
+  <a href="#" id="logout-link" style="color:#8b949e;text-decoration:none;">Logout</a>
+</div>
+<script>
+  document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
+  document.getElementById("logout-link").addEventListener("click", function(e) { e.preventDefault(); BoothAuth.logout(); });
+</script>
+
+<!-- Setup: enter session ID if not in URL -->
+<div id="setup" class="setup">
+  <h1>AI Processing Pipeline</h1>
+  <label for="session-input">Enter Session ID</label>
+  <input id="session-input" type="text" placeholder="A726594" autofocus>
+  <button id="go-btn">Watch Pipeline</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="hidden">
+  <h1>AI Processing Pipeline</h1>
+  <div class="subtitle">Real-time analysis progress</div>
+  <div class="session-id" id="sid-display"></div>
+  <div class="error-banner" id="error-banner"></div>
+
+  <div class="pipeline-container" id="pipeline-container">
+    <!-- Overall progress -->
+    <div class="overall-progress">
+      <div class="overall-header">
+        <span class="overall-label">Pipeline Progress</span>
+        <span class="overall-pct" id="overall-pct">0%</span>
+      </div>
+      <div class="overall-bar">
+        <div class="overall-bar-fill" id="overall-bar-fill"></div>
+      </div>
+      <div class="overall-elapsed" id="overall-elapsed">--:--</div>
+    </div>
+
+    <!-- Stages rendered by JS -->
+    <div id="stages-list"></div>
+
+    <!-- Completion banner -->
+    <div class="completion-banner" id="completion-banner">
+      <div class="completion-title">[+] Analysis Complete</div>
+      <div class="completion-detail" id="completion-detail">Pipeline finished</div>
+      <a class="completion-link" id="completion-link" href="#">View Report</a>
+    </div>
+  </div>
+
+  <div class="refresh-indicator" id="refresh-indicator">Polling every 5s</div>
+</div>
+
+<script>
+(function () {
+  // ── Config ────────────────────────────────────────────────────────────────
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+  var REFRESH_MS = 5000;
+
+  // ── Pipeline stages definition ────────────────────────────────────────────
+  // Each stage has a key, label, detail text, icon, and S3 file(s) that
+  // indicate completion.
+  var STAGES = [
+    {
+      id: "session",
+      name: "Session Received",
+      detail: "Badge scanned, metadata uploaded",
+      icon: ">>",
+      checkFiles: ["metadata.json"]
+    },
+    {
+      id: "transcription",
+      name: "Audio Transcription",
+      detail: "Speech-to-text processing",
+      icon: "~~",
+      checkFiles: ["transcript/transcript.json"]
+    },
+    {
+      id: "correlation",
+      name: "Click Correlation",
+      detail: "Building unified event timeline",
+      icon: "<>",
+      checkFiles: ["output/timeline.json"]
+    },
+    {
+      id: "analysis",
+      name: "AI Analysis",
+      detail: "Claude analyzing demo patterns",
+      icon: "*",
+      checkFiles: ["output/summary.json"]
+    },
+    {
+      id: "report",
+      name: "Report Generation",
+      detail: "Rendering visual HTML report",
+      icon: "[]",
+      checkFiles: ["output/summary.html"]
+    },
+    {
+      id: "email",
+      name: "Email Report",
+      detail: "Generating follow-up email",
+      icon: "@",
+      checkFiles: ["output/email-ready.html"]
+    }
+  ];
+
+  // ── S3 client ─────────────────────────────────────────────────────────────
+  var s3 = null;
+  function getS3() {
+    if (s3) return s3;
+    var ak = localStorage.getItem("boothapp_aws_ak");
+    var sk = localStorage.getItem("boothapp_aws_sk");
+    if (!ak || !sk) return null;
+    AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
+    s3 = new AWS.S3({ params: { Bucket: BUCKET } });
+    return s3;
+  }
+
+  // ── URL params ────────────────────────────────────────────────────────────
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get("session") || "";
+
+  var setupEl     = document.getElementById("setup");
+  var dashboardEl = document.getElementById("dashboard");
+  var sidDisplay  = document.getElementById("sid-display");
+  var errorBanner = document.getElementById("error-banner");
+  var stagesList  = document.getElementById("stages-list");
+  var overallPct  = document.getElementById("overall-pct");
+  var overallBar  = document.getElementById("overall-bar-fill");
+  var overallElapsed = document.getElementById("overall-elapsed");
+  var completionBanner = document.getElementById("completion-banner");
+  var completionDetail = document.getElementById("completion-detail");
+  var completionLink   = document.getElementById("completion-link");
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = "block";
+  }
+  function clearError() {
+    errorBanner.style.display = "none";
+  }
+
+  // ── Setup screen ──────────────────────────────────────────────────────────
+  function activate(sid) {
+    sessionId = sid.trim();
+    if (!sessionId) return;
+    params.set("session", sessionId);
+    window.history.replaceState({}, "", "?" + params.toString());
+    setupEl.classList.add("hidden");
+    dashboardEl.classList.remove("hidden");
+    sidDisplay.textContent = "Session: " + sessionId;
+    buildStageDOM();
+    poll();
+    setInterval(poll, REFRESH_MS);
+    setInterval(tickTimers, 1000);
+  }
+
+  if (sessionId) {
+    activate(sessionId);
+  } else {
+    document.getElementById("go-btn").addEventListener("click", function () {
+      activate(document.getElementById("session-input").value);
+    });
+    document.getElementById("session-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") activate(document.getElementById("session-input").value);
+    });
+  }
+
+  // ── State tracking ────────────────────────────────────────────────────────
+  // stageState[i] = "pending" | "active" | "complete" | "error"
+  var stageState = [];
+  var stageCompletedAt = [];   // timestamp when stage was detected as complete
+  var stageStartedAt = [];     // timestamp when stage became active
+  var pipelineStartedAt = null;
+  var pipelineCompletedAt = null;
+  var errorInfo = null;
+
+  for (var i = 0; i < STAGES.length; i++) {
+    stageState.push("pending");
+    stageCompletedAt.push(null);
+    stageStartedAt.push(null);
+  }
+
+  // ── Build DOM ─────────────────────────────────────────────────────────────
+  function buildStageDOM() {
+    stagesList.innerHTML = "";
+    for (var i = 0; i < STAGES.length; i++) {
+      if (i > 0) {
+        var connector = document.createElement("div");
+        connector.className = "stage-connector";
+        connector.id = "connector-" + i;
+        stagesList.appendChild(connector);
+      }
+
+      var stage = document.createElement("div");
+      stage.className = "stage pending";
+      stage.id = "stage-" + i;
+
+      stage.innerHTML =
+        '<div class="stage-icon" id="icon-' + i + '">' + escHtml(STAGES[i].icon) + '</div>' +
+        '<div class="stage-body">' +
+          '<div class="stage-name">' + escHtml(STAGES[i].name) + '</div>' +
+          '<div class="stage-detail" id="detail-' + i + '">' + escHtml(STAGES[i].detail) + '</div>' +
+        '</div>' +
+        '<div class="stage-elapsed" id="elapsed-' + i + '">--</div>';
+
+      stagesList.appendChild(stage);
+    }
+  }
+
+  function escHtml(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── Check S3 for file existence ───────────────────────────────────────────
+  function checkFileExists(key, cb) {
+    var client = getS3();
+    if (!client) { cb(false); return; }
+    client.headObject({ Key: key }, function (err) {
+      cb(!err);
+    });
+  }
+
+  function checkStageComplete(stageIndex, cb) {
+    var files = STAGES[stageIndex].checkFiles;
+    var prefix = "sessions/" + sessionId + "/";
+    var remaining = files.length;
+    var allExist = true;
+
+    for (var f = 0; f < files.length; f++) {
+      checkFileExists(prefix + files[f], function (exists) {
+        if (!exists) allExist = false;
+        remaining--;
+        if (remaining === 0) cb(allExist);
+      });
+    }
+  }
+
+  // Check for pipeline errors
+  function checkErrors(cb) {
+    var key = "sessions/" + sessionId + "/output/errors.json";
+    var client = getS3();
+    if (!client) { cb(null); return; }
+    client.getObject({ Key: key }, function (err, data) {
+      if (err) { cb(null); return; }
+      try {
+        cb(JSON.parse(data.Body.toString()));
+      } catch (e) {
+        cb(null);
+      }
+    });
+  }
+
+  // ── Poll ──────────────────────────────────────────────────────────────────
+  var polling = false;
+
+  function poll() {
+    if (polling) return;
+    polling = true;
+
+    var checksRemaining = STAGES.length + 1; // +1 for error check
+    var results = [];
+
+    function onChecksDone() {
+      // Determine stage states based on completion results
+      var firstIncomplete = -1;
+      for (var i = 0; i < STAGES.length; i++) {
+        if (results[i]) {
+          if (stageState[i] !== "complete") {
+            stageState[i] = "complete";
+            stageCompletedAt[i] = stageCompletedAt[i] || Date.now();
+            if (!pipelineStartedAt && i === 0) {
+              pipelineStartedAt = Date.now();
+            }
+          }
+        } else if (firstIncomplete === -1) {
+          firstIncomplete = i;
+        }
+      }
+
+      // Mark the first incomplete stage as active (if previous stages are complete)
+      for (var j = 0; j < STAGES.length; j++) {
+        if (stageState[j] === "complete") continue;
+        if (j === firstIncomplete) {
+          // Only mark active if all prior stages are complete
+          var allPriorComplete = true;
+          for (var k = 0; k < j; k++) {
+            if (stageState[k] !== "complete") { allPriorComplete = false; break; }
+          }
+          if (allPriorComplete) {
+            if (stageState[j] !== "active") {
+              stageState[j] = "active";
+              stageStartedAt[j] = stageStartedAt[j] || Date.now();
+              if (!pipelineStartedAt) pipelineStartedAt = Date.now();
+            }
+          }
+        } else {
+          stageState[j] = "pending";
+        }
+      }
+
+      // Check for errors in specific stages
+      if (errorInfo && errorInfo.errors) {
+        for (var e = 0; e < errorInfo.errors.length; e++) {
+          var errStep = errorInfo.errors[e].step;
+          // Map pipeline step names to our stage IDs
+          var stageMap = {
+            "fetch": 0,
+            "correlate": 2,
+            "write-timeline": 2,
+            "analyze": 3,
+            "render": 4,
+            "fallback-summary": 3,
+            "notify": 5
+          };
+          var idx = stageMap[errStep];
+          if (idx !== undefined && stageState[idx] !== "complete") {
+            stageState[idx] = "error";
+          }
+        }
+      }
+
+      // Check if pipeline is fully complete
+      var allComplete = true;
+      for (var m = 0; m < STAGES.length; m++) {
+        if (stageState[m] !== "complete") { allComplete = false; break; }
+      }
+      if (allComplete && !pipelineCompletedAt) {
+        pipelineCompletedAt = Date.now();
+      }
+
+      renderStages();
+      polling = false;
+    }
+
+    // Check each stage
+    for (var i = 0; i < STAGES.length; i++) {
+      (function (idx) {
+        checkStageComplete(idx, function (complete) {
+          results[idx] = complete;
+          checksRemaining--;
+          if (checksRemaining === 0) onChecksDone();
+        });
+      })(i);
+    }
+
+    // Check errors
+    checkErrors(function (errs) {
+      errorInfo = errs;
+      checksRemaining--;
+      if (checksRemaining === 0) onChecksDone();
+    });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function renderStages() {
+    var completedCount = 0;
+
+    for (var i = 0; i < STAGES.length; i++) {
+      var el = document.getElementById("stage-" + i);
+      var iconEl = document.getElementById("icon-" + i);
+      var detailEl = document.getElementById("detail-" + i);
+      var elapsedEl = document.getElementById("elapsed-" + i);
+
+      el.className = "stage " + stageState[i];
+
+      if (stageState[i] === "complete") {
+        completedCount++;
+        iconEl.textContent = "[ok]";
+        detailEl.textContent = STAGES[i].detail;
+      } else if (stageState[i] === "active") {
+        iconEl.textContent = STAGES[i].icon;
+        detailEl.textContent = "Processing...";
+      } else if (stageState[i] === "error") {
+        iconEl.textContent = "[!]";
+        var errMsg = "Error";
+        if (errorInfo && errorInfo.errors) {
+          for (var e = 0; e < errorInfo.errors.length; e++) {
+            var errStep = errorInfo.errors[e].step;
+            var stageMap = { "fetch": 0, "correlate": 2, "write-timeline": 2, "analyze": 3, "render": 4, "fallback-summary": 3, "notify": 5 };
+            if (stageMap[errStep] === i) {
+              errMsg = errorInfo.errors[e].error;
+              break;
+            }
+          }
+        }
+        detailEl.textContent = errMsg.length > 60 ? errMsg.substring(0, 57) + "..." : errMsg;
+      } else {
+        iconEl.textContent = STAGES[i].icon;
+        detailEl.textContent = STAGES[i].detail;
+      }
+
+      // Update connector
+      if (i > 0) {
+        var conn = document.getElementById("connector-" + i);
+        conn.className = "stage-connector" + (stageState[i - 1] === "complete" ? " done" : "");
+      }
+    }
+
+    // Overall progress
+    var pct = Math.round((completedCount / STAGES.length) * 100);
+    overallPct.textContent = pct + "%";
+    overallBar.style.width = pct + "%";
+
+    // Completion banner
+    if (completedCount === STAGES.length) {
+      completionBanner.classList.add("show");
+      completionLink.href = "timeline.html?session=" + encodeURIComponent(sessionId);
+      if (pipelineStartedAt && pipelineCompletedAt) {
+        var totalSec = Math.round((pipelineCompletedAt - pipelineStartedAt) / 1000);
+        completionDetail.textContent = "All stages finished in " + formatTime(totalSec);
+      }
+    }
+
+    clearError();
+  }
+
+  // ── Timer tick (every 1s, updates elapsed times) ──────────────────────────
+  function tickTimers() {
+    var now = Date.now();
+
+    for (var i = 0; i < STAGES.length; i++) {
+      var elapsedEl = document.getElementById("elapsed-" + i);
+      if (!elapsedEl) continue;
+
+      if (stageState[i] === "complete") {
+        // Show how long this stage took
+        var startT = stageStartedAt[i] || (i > 0 ? stageCompletedAt[i - 1] : pipelineStartedAt);
+        var endT = stageCompletedAt[i];
+        if (startT && endT) {
+          elapsedEl.textContent = formatTime(Math.round((endT - startT) / 1000));
+        } else {
+          elapsedEl.textContent = "--";
+        }
+      } else if (stageState[i] === "active") {
+        // Show running elapsed
+        var start = stageStartedAt[i];
+        if (start) {
+          elapsedEl.textContent = formatTime(Math.round((now - start) / 1000));
+        }
+      } else if (stageState[i] === "error") {
+        elapsedEl.textContent = "ERR";
+      } else {
+        elapsedEl.textContent = "--";
+      }
+    }
+
+    // Overall elapsed
+    if (pipelineStartedAt) {
+      var end = pipelineCompletedAt || now;
+      var totalSec = Math.round((end - pipelineStartedAt) / 1000);
+      overallElapsed.textContent = "Total: " + formatTime(totalSec);
+    }
+  }
+
+  function formatTime(sec) {
+    if (sec < 0) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+})();
+</script>
+</body>
+</html>
