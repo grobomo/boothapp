@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Session Manager</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-dark:  #A8131A;
+            --red-glow:  rgba(215, 25, 32, 0.25);
+            --bg:        #0B0E14;
+            --surface:   #141820;
+            --surface2:  #1C2028;
+            --border:    #252A34;
+            --text:      #F0F2F5;
+            --text-dim:  #8A92A0;
+            --text-muted:#5A6170;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+        .header {
+            background: var(--surface);
+            border-bottom: 3px solid var(--red);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--red-glow);
+        }
+
+        .header-logo svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-title span {
+            color: var(--red);
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header-nav a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .header-nav a:hover {
+            color: var(--text);
+        }
+
+        .header-nav a.active {
+            color: var(--red);
+        }
+
+        /* ============================================================
+           MAIN CONTENT
+           ============================================================ */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* ============================================================
+           STATS ROW
+           ============================================================ */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .stat-icon--total    { background: rgba(215, 25, 32, 0.12); }
+        .stat-icon--total svg { fill: var(--red); }
+        .stat-icon--active   { background: rgba(68, 138, 255, 0.12); }
+        .stat-icon--active svg { fill: var(--blue); }
+        .stat-icon--complete { background: rgba(0, 230, 118, 0.12); }
+        .stat-icon--complete svg { fill: var(--success); }
+        .stat-icon--analysis { background: rgba(255, 171, 0, 0.12); }
+        .stat-icon--analysis svg { fill: var(--amber); }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* ============================================================
+           TOOLBAR
+           ============================================================ */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .toolbar h2 {
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .search-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            color: var(--text);
+            font-size: 0.875rem;
+            font-family: inherit;
+            width: 220px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box::placeholder { color: var(--text-muted); }
+        .search-box:focus { border-color: var(--red); }
+
+        .refresh-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* ============================================================
+           SESSION CARDS
+           ============================================================ */
+        .session-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1rem;
+        }
+
+        .session-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            cursor: default;
+        }
+
+        .session-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .session-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .session-visitor {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .session-visitor--empty {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ============================================================
+           STATUS BADGES
+           ============================================================ */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0.2rem 0.65rem;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .badge-complete {
+            background: rgba(0, 230, 118, 0.12);
+            color: var(--success);
+        }
+        .badge-complete .badge-dot { background: var(--success); }
+
+        .badge-active {
+            background: rgba(68, 138, 255, 0.12);
+            color: var(--blue);
+        }
+        .badge-active .badge-dot {
+            background: var(--blue);
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        .badge-pending {
+            background: rgba(255, 171, 0, 0.12);
+            color: var(--amber);
+        }
+        .badge-pending .badge-dot { background: var(--amber); }
+
+        .badge-unknown {
+            background: rgba(138, 146, 160, 0.12);
+            color: var(--text-dim);
+        }
+        .badge-unknown .badge-dot { background: var(--text-dim); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ============================================================
+           SESSION CARD DETAILS
+           ============================================================ */
+        .session-id {
+            font-family: 'SF Mono', 'Consolas', 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .session-meta {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .session-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .session-meta-item svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+            flex-shrink: 0;
+        }
+
+        .session-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .analysis-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .analysis-tag--yes {
+            color: var(--success);
+        }
+
+        .analysis-tag--no {
+            color: var(--text-muted);
+        }
+
+        .summary-link {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--red);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .summary-link:hover {
+            color: #FF6B6B;
+            text-decoration: underline;
+        }
+
+        /* ============================================================
+           EMPTY / LOADING / ERROR
+           ============================================================ */
+        .state-msg {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-dim);
+        }
+
+        .state-msg-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.4;
+        }
+
+        .state-msg p {
+            font-size: 0.95rem;
+        }
+
+        .error-banner {
+            display: none;
+            background: rgba(215, 25, 32, 0.1);
+            border: 1px solid rgba(215, 25, 32, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            color: #FF6B6B;
+            font-size: 0.875rem;
+        }
+
+        /* ============================================================
+           RESPONSIVE -- TABLET
+           ============================================================ */
+        @media (max-width: 900px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .session-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main {
+                padding: 1.5rem;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .toolbar-right {
+                width: 100%;
+            }
+
+            .search-box {
+                flex: 1;
+            }
+        }
+
+        /* ============================================================
+           RESPONSIVE -- PHONE
+           ============================================================ */
+        @media (max-width: 600px) {
+            .header {
+                padding: 0 1rem;
+                height: 56px;
+            }
+
+            .header-title {
+                font-size: 1.05rem;
+            }
+
+            .header-nav a {
+                font-size: 0.8rem;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+                gap: 0.75rem;
+            }
+
+            .stat-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+            }
+
+            .stat-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .stat-value {
+                font-size: 1.4rem;
+            }
+
+            .main {
+                padding: 1rem;
+            }
+
+            .session-card {
+                padding: 1rem 1.25rem;
+            }
+
+            .session-meta {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-logo">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
+            <div class="header-title"><span>Booth</span>App</div>
+        </div>
+        <nav class="header-nav">
+            <a href="/index.html" class="active">Sessions</a>
+            <a href="/demo.html">Live Dashboard</a>
+        </nav>
+    </header>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+
+        <!-- Stats row -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--total">
+                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value" id="stat-total">--</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--active">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value" id="stat-active">--</div>
+                    <div class="stat-label">Active</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--complete">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value" id="stat-complete">--</div>
+                    <div class="stat-label">Complete</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-icon--analysis">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                </div>
+                <div>
+                    <div class="stat-value" id="stat-analysis">--</div>
+                    <div class="stat-label">With Analysis</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <h2>Sessions</h2>
+            <div class="toolbar-right">
+                <input type="text" class="search-box" id="search" placeholder="Filter by name or ID...">
+                <span class="refresh-label" id="refresh-label">Auto-refresh: 30s</span>
+            </div>
+        </div>
+
+        <!-- Error banner -->
+        <div class="error-banner" id="error-banner"></div>
+
+        <!-- Session cards -->
+        <div class="session-grid" id="session-grid">
+            <div class="state-msg">
+                <div class="state-msg-icon">...</div>
+                <p>Loading sessions</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        var grid = document.getElementById('session-grid');
+        var searchInput = document.getElementById('search');
+        var errorBanner = document.getElementById('error-banner');
+        var allSessions = [];
+
+        function escHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '--';
+            var d = new Date(iso);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function badgeClass(status) {
+            if (status === 'complete') return 'badge-complete';
+            if (status === 'active') return 'badge-active';
+            if (status === 'pending') return 'badge-pending';
+            return 'badge-unknown';
+        }
+
+        function renderCard(s) {
+            var name = s.visitor_name
+                ? '<span class="session-visitor">' + escHtml(s.visitor_name) + '</span>'
+                : '<span class="session-visitor session-visitor--empty">No visitor name</span>';
+
+            var status = s.status || 'unknown';
+            var badge = '<span class="badge ' + badgeClass(status) + '">' +
+                '<span class="badge-dot"></span>' +
+                escHtml(status) +
+                '</span>';
+
+            var analysisTag = s.has_analysis
+                ? '<span class="analysis-tag analysis-tag--yes">Analysis ready</span>'
+                : '<span class="analysis-tag analysis-tag--no">No analysis</span>';
+
+            var summaryLink = s.summary_link
+                ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View Report &rarr;</a>'
+                : '';
+
+            return '<div class="session-card">' +
+                '<div class="session-card-top">' + name + badge + '</div>' +
+                '<div class="session-id">' + escHtml(s.session_id) + '</div>' +
+                '<div class="session-meta">' +
+                    '<span class="session-meta-item">' +
+                        '<svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>' +
+                        formatDate(s.created_at) +
+                    '</span>' +
+                '</div>' +
+                '<div class="session-footer">' + analysisTag + summaryLink + '</div>' +
+                '</div>';
+        }
+
+        function renderSessions(sessions) {
+            if (sessions.length === 0) {
+                grid.innerHTML = '<div class="state-msg"><div class="state-msg-icon">--</div><p>No sessions found</p></div>';
+                return;
+            }
+            grid.innerHTML = sessions.map(renderCard).join('');
+        }
+
+        function updateStats(sessions) {
+            document.getElementById('stat-total').textContent = sessions.length;
+            document.getElementById('stat-active').textContent = sessions.filter(function (s) { return s.status === 'active'; }).length;
+            document.getElementById('stat-complete').textContent = sessions.filter(function (s) { return s.status === 'complete'; }).length;
+            document.getElementById('stat-analysis').textContent = sessions.filter(function (s) { return s.has_analysis; }).length;
+        }
+
+        function applyFilter() {
+            var q = searchInput.value.toLowerCase().trim();
+            if (!q) {
+                renderSessions(allSessions);
+                return;
+            }
+            var filtered = allSessions.filter(function (s) {
+                return (s.session_id && s.session_id.toLowerCase().indexOf(q) !== -1) ||
+                       (s.visitor_name && s.visitor_name.toLowerCase().indexOf(q) !== -1);
+            });
+            renderSessions(filtered);
+        }
+
+        async function loadSessions() {
+            try {
+                var resp = await fetch('/api/sessions');
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var data = await resp.json();
+                allSessions = data.sessions || [];
+
+                errorBanner.style.display = 'none';
+                updateStats(allSessions);
+                applyFilter();
+            } catch (err) {
+                errorBanner.style.display = 'block';
+                errorBanner.textContent = 'Failed to load sessions: ' + err.message;
+                grid.innerHTML = '<div class="state-msg"><p>Could not load sessions</p></div>';
+            }
+        }
+
+        searchInput.addEventListener('input', applyFilter);
+
+        loadSessions();
+        setInterval(loadSessions, 30000);
+    })();
+    </script>
+</body>
+</html>
