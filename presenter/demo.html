@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - AI-Powered Trade Show Demo Capture</title>
+    <style>
+        /* ============================================================
+           RESET & BASE
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --bg:        #0B0E14;
+            --surface:   #141820;
+            --surface2:  #1C2028;
+            --border:    #252A34;
+            --text:      #F0F2F5;
+            --text-dim:  #8A92A0;
+            --success:   #2ECC71;
+            --blue:      #3498DB;
+            --amber:     #F39C12;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============================================================
+           ANIMATED BACKGROUND
+           ============================================================ */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(rgba(215,25,32,.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(215,25,32,.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: gridPulse 8s ease-in-out infinite;
+        }
+        @keyframes gridPulse {
+            0%, 100% { opacity: .4; }
+            50%      { opacity: .8; }
+        }
+
+        .bg-glow {
+            position: fixed; z-index: 0;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: .15;
+            animation: drift 20s ease-in-out infinite;
+        }
+        .bg-glow--1 { top: -200px; left: -100px; background: var(--red); }
+        .bg-glow--2 { bottom: -200px; right: -100px; background: var(--red); animation-delay: -10s; }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0); }
+            50%      { transform: translate(40px, 30px); }
+        }
+
+        /* ============================================================
+           LAYOUT
+           ============================================================ */
+        .container {
+            position: relative; z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 48px;
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+        .header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .logo-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 40px var(--red-glow), 0 8px 32px rgba(0,0,0,.4);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 40px var(--red-glow), 0 8px 32px rgba(0,0,0,.4); }
+            50%      { box-shadow: 0 0 60px var(--red-glow), 0 8px 40px rgba(0,0,0,.5); }
+        }
+
+        .logo-icon svg { width: 40px; height: 40px; fill: #fff; }
+
+        .logo-text {
+            font-size: 52px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff 40%, var(--red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 22px;
+            color: var(--text-dim);
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 18px;
+            padding: 6px 20px;
+            background: rgba(215,25,32,.12);
+            border: 1px solid rgba(215,25,32,.3);
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--red);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .live-dot {
+            width: 8px; height: 8px;
+            background: var(--red);
+            border-radius: 50%;
+            animation: blink 1.4s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .3; }
+        }
+
+        /* ============================================================
+           STATUS CARDS
+           ============================================================ */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+            margin-bottom: 48px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px 32px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform .25s, box-shadow .25s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,.3);
+        }
+        .card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+        .card--sessions::before  { background: linear-gradient(90deg, var(--red), #FF6B6B); }
+        .card--demos::before     { background: linear-gradient(90deg, var(--blue), #74B9FF); }
+        .card--reports::before   { background: linear-gradient(90deg, var(--success), #7BED9F); }
+
+        .card-icon {
+            width: 56px; height: 56px;
+            border-radius: 14px;
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 16px;
+        }
+        .card--sessions .card-icon  { background: rgba(215,25,32,.12); }
+        .card--demos .card-icon     { background: rgba(52,152,219,.12); }
+        .card--reports .card-icon   { background: rgba(46,204,113,.12); }
+        .card-icon svg { width: 28px; height: 28px; }
+
+        .card-value {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        .card--sessions .card-value  { color: var(--red); }
+        .card--demos .card-value     { color: var(--blue); }
+        .card--reports .card-value   { color: var(--success); }
+
+        .card-label {
+            font-size: 15px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        /* value count-up animation */
+        .card-value[data-animate] {
+            animation: countPop .4s cubic-bezier(.34,1.56,.64,1);
+        }
+        @keyframes countPop {
+            0%   { transform: scale(.7); opacity: .3; }
+            100% { transform: scale(1);  opacity: 1;  }
+        }
+
+        /* ============================================================
+           ACTIVITY FEED
+           ============================================================ */
+        .feed-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .feed-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border);
+        }
+        .feed-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .feed-title svg { width: 20px; height: 20px; fill: var(--red); }
+
+        .feed-refresh {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .feed-list {
+            list-style: none;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+        .feed-list::-webkit-scrollbar { width: 6px; }
+        .feed-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .feed-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 18px 32px;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            animation: slideIn .4s ease-out;
+        }
+        .feed-item:last-child { border-bottom: none; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .feed-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .feed-dot--session  { background: var(--red); box-shadow: 0 0 8px var(--red-glow); }
+        .feed-dot--analysis { background: var(--blue); box-shadow: 0 0 8px rgba(52,152,219,.4); }
+        .feed-dot--report   { background: var(--success); box-shadow: 0 0 8px rgba(46,204,113,.4); }
+        .feed-dot--email    { background: var(--amber); box-shadow: 0 0 8px rgba(243,156,18,.4); }
+
+        .feed-text {
+            font-size: 15px;
+            line-height: 1.5;
+            flex: 1;
+        }
+        .feed-text strong { color: #fff; font-weight: 600; }
+
+        .feed-time {
+            font-size: 12px;
+            color: var(--text-dim);
+            white-space: nowrap;
+            margin-top: 4px;
+        }
+
+        /* ============================================================
+           FOOTER
+           ============================================================ */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .footer-tm {
+            height: 22px;
+            opacity: .5;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 900px) {
+            .cards { grid-template-columns: 1fr; }
+            .container { padding: 24px 20px; }
+            .logo-text { font-size: 36px; }
+            .tagline { font-size: 16px; letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Animated background -->
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow--1"></div>
+<div class="bg-glow bg-glow--2"></div>
+
+<div class="container">
+
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+        <div class="logo-mark">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
+            <span class="logo-text">BoothApp</span>
+        </div>
+        <p class="tagline">AI-Powered Trade Show Demo Capture</p>
+        <div class="live-badge">
+            <span class="live-dot"></span>
+            Live
+        </div>
+    </header>
+
+    <!-- ============ STATUS CARDS ============ -->
+    <div class="cards">
+        <div class="card card--sessions">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="#D71920"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            </div>
+            <div class="card-value" id="activeSessions">0</div>
+            <div class="card-label">Active Sessions</div>
+        </div>
+        <div class="card card--demos">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="#3498DB"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+            </div>
+            <div class="card-value" id="totalDemos">0</div>
+            <div class="card-label">Total Demos</div>
+        </div>
+        <div class="card card--reports">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="#2ECC71"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            </div>
+            <div class="card-value" id="reportsGenerated">0</div>
+            <div class="card-label">Reports Generated</div>
+        </div>
+    </div>
+
+    <!-- ============ ACTIVITY FEED ============ -->
+    <section class="feed-section">
+        <div class="feed-header">
+            <div class="feed-title">
+                <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                Live Activity Feed
+            </div>
+            <div class="feed-refresh" id="refreshTimer">Refreshing in 5s</div>
+        </div>
+        <ul class="feed-list" id="feedList">
+            <!-- populated by JS -->
+        </ul>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <div class="footer">
+        <span>Powered by Trend Micro Vision One</span>
+        <span>|</span>
+        <span id="clock"></span>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    // ------------------------------------------------------------------
+    // CONFIG
+    // ------------------------------------------------------------------
+    var API_URL = '';  // Set to Lambda endpoint URL when available
+    var REFRESH_INTERVAL = 5000;
+
+    // ------------------------------------------------------------------
+    // MOCK DATA
+    // ------------------------------------------------------------------
+    var NAMES = [
+        'Sarah Mitchell', 'James Chen', 'Maria Rodriguez', 'David Kim',
+        'Emily Nakamura', 'Alex Thompson', 'Priya Sharma', 'Michael Brown',
+        'Lisa Wang', 'Robert Garcia', 'Jennifer Lee', 'Thomas Anderson'
+    ];
+
+    var COMPANIES = [
+        'Acme Corp', 'TechVault', 'CloudNine Solutions', 'DataForge Inc',
+        'SecureStack', 'NexGen Systems', 'CyberShield', 'Quantum Networks'
+    ];
+
+    var PRODUCTS = [
+        'Vision One XDR', 'Cloud One', 'Apex One', 'Deep Security',
+        'Email Security', 'Network Defense', 'Zero Trust'
+    ];
+
+    var EVENT_TEMPLATES = [
+        { type: 'session',  tpl: 'Session started for <strong>{name}</strong> from {company}' },
+        { type: 'session',  tpl: '<strong>{name}</strong> began a {product} demo' },
+        { type: 'analysis', tpl: 'AI analysis complete for <strong>{name}</strong> - report ready' },
+        { type: 'analysis', tpl: 'Threat landscape assessment generated for <strong>{company}</strong>' },
+        { type: 'report',   tpl: 'Executive report delivered to <strong>{name}</strong>' },
+        { type: 'report',   tpl: 'ROI analysis report generated for <strong>{company}</strong>' },
+        { type: 'email',    tpl: 'Follow-up email generated for <strong>{name}</strong>' },
+        { type: 'email',    tpl: 'Personalized demo summary sent to <strong>{name}</strong> at {company}' }
+    ];
+
+    // ------------------------------------------------------------------
+    // STATE
+    // ------------------------------------------------------------------
+    var state = {
+        activeSessions: 0,
+        totalDemos: 0,
+        reportsGenerated: 0,
+        events: []
+    };
+    var countdown = 5;
+    var timerHandle = null;
+
+    // ------------------------------------------------------------------
+    // HELPERS
+    // ------------------------------------------------------------------
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function timeAgo(ts) {
+        var diff = Math.floor((Date.now() - ts) / 1000);
+        if (diff < 5)  return 'just now';
+        if (diff < 60) return diff + 's ago';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        return Math.floor(diff / 3600) + 'h ago';
+    }
+
+    function generateMockEvent() {
+        var t = pick(EVENT_TEMPLATES);
+        var text = t.tpl
+            .replace('{name}', pick(NAMES))
+            .replace('{company}', pick(COMPANIES))
+            .replace('{product}', pick(PRODUCTS));
+        return { type: t.type, text: text, ts: Date.now() };
+    }
+
+    function generateMockState() {
+        // Simulate realistic growth
+        state.activeSessions = Math.max(1, state.activeSessions + Math.floor(Math.random() * 3) - 1);
+        state.totalDemos += Math.floor(Math.random() * 2);
+        state.reportsGenerated += Math.floor(Math.random() * 2);
+
+        // Ensure totals are at least plausible
+        if (state.totalDemos < state.activeSessions) state.totalDemos = state.activeSessions;
+        if (state.reportsGenerated > state.totalDemos) state.reportsGenerated = state.totalDemos;
+
+        // Add 1-2 new events
+        var n = 1 + Math.floor(Math.random() * 2);
+        for (var i = 0; i < n; i++) {
+            state.events.unshift(generateMockEvent());
+        }
+        // Keep feed at 20 items max
+        if (state.events.length > 20) state.events.length = 20;
+    }
+
+    // ------------------------------------------------------------------
+    // RENDERING
+    // ------------------------------------------------------------------
+    function animateValue(el, newVal) {
+        var old = parseInt(el.textContent, 10) || 0;
+        if (old === newVal) return;
+        el.textContent = newVal;
+        el.setAttribute('data-animate', '');
+        setTimeout(function () { el.removeAttribute('data-animate'); }, 400);
+    }
+
+    function renderCards() {
+        animateValue(document.getElementById('activeSessions'),   state.activeSessions);
+        animateValue(document.getElementById('totalDemos'),       state.totalDemos);
+        animateValue(document.getElementById('reportsGenerated'), state.reportsGenerated);
+    }
+
+    function renderFeed() {
+        var list = document.getElementById('feedList');
+        list.innerHTML = '';
+        state.events.forEach(function (ev) {
+            var li = document.createElement('li');
+            li.className = 'feed-item';
+            li.innerHTML =
+                '<span class="feed-dot feed-dot--' + ev.type + '"></span>' +
+                '<div class="feed-text">' + ev.text + '</div>' +
+                '<div class="feed-time">' + timeAgo(ev.ts) + '</div>';
+            list.appendChild(li);
+        });
+    }
+
+    function renderClock() {
+        var now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    // ------------------------------------------------------------------
+    // DATA FETCH (with mock fallback)
+    // ------------------------------------------------------------------
+    function fetchData() {
+        if (!API_URL) {
+            generateMockState();
+            renderCards();
+            renderFeed();
+            return;
+        }
+
+        fetch(API_URL + '/status')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.activeSessions  !== undefined) state.activeSessions  = data.activeSessions;
+                if (data.totalDemos      !== undefined) state.totalDemos      = data.totalDemos;
+                if (data.reportsGenerated !== undefined) state.reportsGenerated = data.reportsGenerated;
+                if (data.events && data.events.length) {
+                    state.events = data.events.map(function (e) {
+                        return { type: e.type || 'session', text: e.text || e.message, ts: e.ts || Date.now() };
+                    });
+                }
+                renderCards();
+                renderFeed();
+            })
+            .catch(function () {
+                // API unreachable -- fall back to mock
+                generateMockState();
+                renderCards();
+                renderFeed();
+            });
+    }
+
+    // ------------------------------------------------------------------
+    // REFRESH COUNTDOWN
+    // ------------------------------------------------------------------
+    function tickCountdown() {
+        countdown--;
+        if (countdown <= 0) {
+            fetchData();
+            countdown = 5;
+        }
+        document.getElementById('refreshTimer').textContent = 'Refreshing in ' + countdown + 's';
+    }
+
+    // ------------------------------------------------------------------
+    // BOOT
+    // ------------------------------------------------------------------
+    // Seed some initial events so the page isn't empty on first load
+    for (var i = 0; i < 8; i++) {
+        var ev = generateMockEvent();
+        ev.ts = Date.now() - (i * 12000); // stagger timestamps
+        state.events.push(ev);
+    }
+    state.activeSessions  = 3;
+    state.totalDemos      = 12;
+    state.reportsGenerated = 7;
+
+    renderCards();
+    renderFeed();
+    renderClock();
+    setInterval(renderClock, 1000);
+    setInterval(tickCountdown, 1000);
+
+})();
+</script>
+
+</body>
+</html>
