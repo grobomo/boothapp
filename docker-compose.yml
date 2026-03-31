@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  boothapp:
+    build: .
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      - S3_BUCKET=${S3_BUCKET:-boothapp-sessions}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - USE_BEDROCK=${USE_BEDROCK:-true}
+      - ANALYSIS_MODEL=${ANALYSIS_MODEL:-anthropic.claude-3-sonnet-20240229-v1:0}
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

@@ -102,6 +102,11 @@ app.get('/api/sessions/:id/summary', async (req, res) => {
     }
 });
 
+// GET /api/health - health check for container orchestration
+app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime() });
+});
+
 app.listen(PORT, () => {
     console.log(`Presenter server running on http://localhost:${PORT}`);
 });
