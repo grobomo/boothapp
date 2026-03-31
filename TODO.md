@@ -4,4 +4,4 @@
 Read .specs/in-altarrboothapp-git-clone/ for full specification. GSD is enforced.
 
 ## Tasks
-- [ ] Implement spec
+- [x] Implement spec -- CHANGELOG.md created, PR #119 merged to main

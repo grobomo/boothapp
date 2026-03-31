@@ -1,0 +1,19 @@
+{
+  "name": "boothapp",
+  "version": "1.0.0",
+  "description": "AI-powered demo capture and follow-up for trade show booths",
+  "private": true,
+  "scripts": {
+    "start:watcher": "node analysis/watcher.js",
+    "test": "node analysis/test/correlator-test.js && node analysis/test/render-report-test.js && node analysis/test/email-report-test.js && bash scripts/test/verify-integration.sh",
+    "demo": "bash scripts/demo-session.sh",
+    "preflight": "bash scripts/preflight.sh",
+    "analyze": "python3 analysis/analyze.py",
+    "transcribe": "node audio/transcriber/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": ["win32", "linux", "darwin"],
+  "keywords": ["booth", "demo", "trade-show", "ai", "analysis", "aws"]
+}
