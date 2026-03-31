@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booth Session Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title">Booth Tracker</div>
+      <div class="header-subtitle">Session Monitor</div>
+    </header>
+
+    <!-- Status Section -->
+    <section class="status-section">
+      <div class="status-row">
+        <span class="status-label">Status</span>
+        <span class="status-badge" id="statusBadge" data-state="idle">
+          <span class="status-dot"></span>
+          <span class="status-text" id="statusText">Idle</span>
+        </span>
+      </div>
+
+      <!-- Session Info (visible during active session) -->
+      <div class="session-info" id="sessionInfo" style="display: none;">
+        <div class="info-row">
+          <span class="info-label">Visitor</span>
+          <span class="info-value" id="visitorName">--</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Session ID</span>
+          <span class="info-value mono" id="sessionId">--</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Duration</span>
+          <span class="info-value" id="sessionDuration">--</span>
+        </div>
+      </div>
+
+      <!-- Completion Panel (visible when session completes) -->
+      <div class="completion-panel" id="completionPanel" style="display: none;">
+        <div class="score-display">
+          <div class="score-label">Engagement Score</div>
+          <div class="score-value" id="engagementScore">--</div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" id="scoreBarFill" style="width: 0%;"></div>
+          </div>
+        </div>
+        <button class="btn-report" id="btnViewReport">View Report</button>
+      </div>
+    </section>
+
+    <!-- Divider -->
+    <hr class="divider">
+
+    <!-- Session History -->
+    <section class="history-section">
+      <div class="history-header">Recent Sessions</div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty" id="historyEmpty">No sessions yet</div>
+      </div>
+    </section>
+
+    <!-- Settings row -->
+    <footer class="footer">
+      <div class="footer-row">
+        <span class="footer-label">S3 Bucket</span>
+        <input type="text" class="footer-input" id="s3Bucket" placeholder="my-booth-bucket">
+      </div>
+      <div class="footer-row">
+        <span class="footer-label">Region</span>
+        <input type="text" class="footer-input" id="s3Region" placeholder="us-east-1" value="us-east-1">
+      </div>
+      <button class="btn-save-settings" id="btnSaveSettings">Save</button>
+    </footer>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
