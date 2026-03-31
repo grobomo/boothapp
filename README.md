@@ -1,368 +1,172 @@
 # BoothApp
 
-AI-powered demo capture system for trade show booths. Records everything during
-a live product demo -- clicks, screenshots, audio -- then generates a
-personalized follow-up summary for each visitor using Claude.
+### AI-Powered Trade Show Demo Capture
 
-Built for Black Hat, Reinvent, and similar conferences where SEs give live
-Vision One demos at the booth.
+> Record everything. Analyze instantly. Follow up personally.
+
+BoothApp captures live trade show demos -- clicks, screenshots, audio -- and uses
+Claude to generate personalized follow-up summaries for every booth visitor.
+Built for Black Hat, Reinvent, and any conference with live product demos.
+
+---
 
 ## How It Works
 
-```
-  Visitor walks up          SE runs demo             Session ends
-  +-----------------+      +-----------------+      +-------------------+
-  | Badge photo     |      | Chrome ext:     |      | All data uploads  |
-  | (Android app)   |----->|  click tracking |----->| to S3             |
-  | -> OCR -> name  |      |  screenshots    |      |                   |
-  | -> session ID   |      | Audio recorder: |      | Claude analyzes:  |
-  +-----------------+      |  mic capture    |      |  transcript       |
-                           +-----------------+      |  clicks           |
-                                                    |  screenshots      |
-                                                    +--------+----------+
-                                                             |
-                                                             v
-                                                    +-------------------+
-                                                    | Output:           |
-                                                    |  HTML summary     |
-                                                    |  interest signals |
-                                                    |  follow-up recs   |
-                                                    |  V1 tenant link   |
-                                                    +-------------------+
-```
+A visitor walks up to the booth. The SE scans their badge, gives a live product
+demo, and walks away. Minutes later, the visitor receives a personalized summary
+of exactly what they saw, what they asked about, and what to explore next -- with
+a link to their own product tenant.
 
 ## Architecture
 
 ```
-+------------------+     +---------------------------+     +------------------+
-|  Android App /   |     |        AWS S3             |     |    Demo PC       |
-|  Web Form        |     |  (session data store)     |     |                  |
-|                  |     |                           |     | Chrome Extension |
-| - Badge photo    |---->| sessions/<id>/            |<----| - Click tracking |
-| - Start session  |     |   metadata.json           |     | - Screenshots    |
-| - End session    |     |   clicks/clicks.json      |     |                  |
-+------------------+     |   screenshots/*.jpg       |     | Audio Recorder   |
-                         |   audio/recording.wav     |<----| - USB mic capture|
-                         |   transcript/             |     | - WAV output     |
-                         |   output/summary.html     |     +------------------+
-                         |   output/summary.json     |
-                         |   v1-tenant/tenant.json   |
-                         +------------+--------------+
-                                      |
-                         +------------v--------------+
-                         |  Analysis Pipeline        |
-                         |                           |
-                         | 1. Watcher polls S3       |
-                         | 2. Correlator merges      |
-                         |    clicks + transcript    |
-                         | 3. Claude analyzes        |
-                         |    (Bedrock or direct)    |
-                         | 4. HTML report generated  |
-                         +---------------------------+
-                                      |
-                         +------------v--------------+
-                         |  Session Orchestrator     |
-                         |  (Lambda / Express)       |
-                         |                           |
-                         | - Create/end sessions     |
-                         | - Demo PC command queue   |
-                         | - V1 tenant pool mgmt    |
-                         +---------------------------+
+  CAPTURE                      PROCESS                     OUTPUT
+  =======                      =======                     ======
+
+  Chrome Extension              S3 Session Store
+  +-------------------+         +------------------+
+  | click tracking    |-------->| clicks.json      |
+  | page screenshots  |-------->| screenshots/     |
+  +-------------------+         |                  |
+                                |                  |        Watcher
+  Audio Recorder                |                  |        +------------------+
+  +-------------------+         |                  |------->| polls S3 for     |
+  | USB mic capture   |-------->| recording.wav    |        | completed        |
+  | speaker detection |         | transcript.json  |        | sessions         |
+  +-------------------+         |                  |        +--------+---------+
+                                |                  |                 |
+  Badge Scanner                 |                  |                 v
+  +-------------------+         |                  |        Analysis Pipeline
+  | photo -> OCR      |-------->| metadata.json    |        +------------------+
+  | extract name      |         +------------------+        | correlate clicks |
+  | create session ID |                                     | + transcript     |
+  +-------------------+                                     | into timeline    |
+                                                            +--------+---------+
+                                                                     |
+                                                                     v
+                                                            Claude AI (two-pass)
+                                                            +------------------+
+                                                            | extract interests|
+                                                            | score engagement |
+                                                            | gen follow-up    |
+                                                            +--------+---------+
+                                                                     |
+                                                                     v
+                                                            HTML Report
+                                                            +------------------+
+                                                            | demo summary     |
+                                                            | interest signals |
+                                                            | SDR action items |
+                                                            | V1 tenant link   |
+                                                            +------------------+
 ```
 
-All components communicate exclusively through S3 -- no direct
-service-to-service calls during capture. This keeps everything decoupled.
+**Data flow:** Chrome extension + audio recorder + badge scanner all write to S3.
+The watcher detects completed sessions and triggers the analysis pipeline.
+Claude correlates clicks with the transcript, extracts visitor interests, and
+renders a self-contained HTML report with follow-up recommendations.
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- AWS CLI configured (profile `hackathon`, region `us-east-1`)
-- Chrome browser with Developer Mode enabled
-- ffmpeg on PATH (for audio recording)
-- Python 3.10+ (for analysis engine)
-
-### 5 Steps to Run a Demo
+**Prerequisites:** Node.js 18+ | AWS CLI | Chrome | ffmpeg | Python 3.10+
 
 ```bash
-# 1. Install all components
-cd extension   # Load unpacked in chrome://extensions
-cd audio       && npm install
-cd analysis    && npm install && pip install anthropic anthropic[bedrock]
-cd infra/session-orchestrator && npm install
+# Clone and install
+git clone https://github.com/altarr/boothapp.git && cd boothapp
+npm install
 
-# 2. Set environment variables (see full reference below)
-export S3_BUCKET=boothapp-sessions-<account-id>
-export AWS_REGION=us-east-1
-export AWS_PROFILE=hackathon
-export USE_BEDROCK=true
-export ANALYSIS_MODEL=anthropic.claude-sonnet-4-6-20250514-v1:0
+# Load the Chrome extension
+#   chrome://extensions -> Developer Mode -> Load Unpacked -> select extension/
 
-# 3. Start the session orchestrator
-cd infra/session-orchestrator && node index.js
-# Listening on port 3000
+# Install analysis deps
+cd analysis && npm install && pip install -r requirements.txt && cd ..
 
-# 4. Start the analysis watcher
-cd analysis && node watcher.js
-# Polling S3 every 30s for completed sessions
+# Configure (copy .env.example and edit)
+cp .env.example .env
 
-# 5. Start the audio recorder on the demo PC
-cd audio && node recorder.js
-# Waiting for active session...
+# Launch (three terminals)
+node infra/session-orchestrator/orchestrator.js    # Session API on :3000
+node analysis/watcher.js                           # Polls S3 for sessions
+node audio/recorder.js                             # Mic capture
+
+# Or run everything with synthetic data -- no hardware needed
+bash scripts/run-demo-simulation.sh
 ```
 
-Then: open Chrome with the V1-Helper extension loaded, create a session via
-the orchestrator API (`POST /session`), and run your demo. When you end the
-session, all data uploads to S3 and the watcher triggers analysis
-automatically.
-
-## Component Inventory
-
-| Component | Directory | Language | Purpose |
-|-----------|-----------|----------|---------|
-| Chrome Extension | `extension/` | JS | Click tracking + screenshots during demo |
-| Audio Recorder | `audio/` | JS | USB mic capture, session-triggered start/stop |
-| Audio Transcriber | `audio/transcriber/` | JS | WAV -> transcript via AWS Transcribe |
-| Session Orchestrator | `infra/session-orchestrator/` | JS | Session lifecycle, demo PC commands, tenant pool |
-| Analysis Watcher | `analysis/watcher.js` | JS | Polls S3 for completed sessions |
-| Correlator | `analysis/lib/correlator.js` | JS | Merges clicks + transcript into unified timeline |
-| Claude Analyzer | `analysis/engines/` | Python | Two-pass AI analysis of demo sessions |
-| Report Renderer | `analysis/render-report.js` | JS | Generates self-contained HTML summary |
-| Pipeline Runner | `analysis/pipeline-run.js` | JS | Orchestrates correlate -> analyze -> render |
-| S3 Storage Config | `infra/s3-session-storage.yaml` | YAML | CloudFormation for session bucket |
-| Helper Scripts | `scripts/` | Bash | demo-session, health-check, integration test |
-| Demo UI | `demo/` | HTML | Landing page + session review interface |
-
-## S3 Data Contract
-
-All session data lives under `sessions/<session-id>/` in the shared bucket.
-Components only write to their own files; any component can read any file.
-
-```
-sessions/<session-id>/
-  metadata.json              # Session orchestrator -- visitor info, status, timestamps
-  badge.jpg                  # Android app -- visitor badge photo
-  audio/
-    recording.wav            # Audio recorder -- 44100Hz stereo WAV
-  transcript/
-    transcript.json          # Transcriber -- timestamped speaker segments
-  clicks/
-    clicks.json              # Chrome extension -- click events with DOM paths
-  screenshots/
-    click-001.jpg            # Chrome extension -- JPEG q60, max 1920x1080
-    periodic-001.jpg         # Chrome extension -- timed interval captures
-  commands/
-    start.json               # Orchestrator -- start signal for demo PC
-    end.json                 # Orchestrator -- stop signal for demo PC
-  output/
-    summary.json             # Analysis pipeline -- structured results
-    summary.html             # Report renderer -- self-contained HTML report
-    follow-up.json           # Analysis pipeline -- SDR action items
-  v1-tenant/
-    tenant.json              # Orchestrator -- V1 tenant URL + credentials
-```
-
-Session status flow: `active` -> `ended` -> `analyzing` -> `complete`
-
-See `DATA-CONTRACT.md` for full field-level schemas and
-`infra/SESSION-DATA-CONTRACT.md` for IAM writer roles.
-
-## Environment Variables
-
-### Required (all components)
-
-| Variable | Used By | Description |
-|----------|---------|-------------|
-| `S3_BUCKET` | all | S3 bucket name for session data |
-| `AWS_REGION` | all | AWS region (default: `us-east-1`) |
-
-### Authentication (one of these)
-
-| Variable | Used By | Description |
-|----------|---------|-------------|
-| `AWS_PROFILE` | all | AWS credentials profile (default: `hackathon`) |
-| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | all | Explicit AWS credentials |
-
-### Audio Recorder (`audio/`)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `SESSION_ID` | Yes | -- | Session ID to record for |
-| `AUDIO_DEVICE` | No | auto-detect | dshow device name (overrides auto-detect) |
-| `POLL_INTERVAL_MS` | No | `2000` | S3 poll frequency in ms |
-| `OUTPUT_DIR` | No | `./output/<SESSION_ID>` | Local WAV output directory |
-| `SE_SPEAKER_LABEL` | No | `spk_0` | Speaker label for SE in transcription |
-
-### Analysis Pipeline (`analysis/`)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `USE_BEDROCK` | Yes | -- | `true` to use Amazon Bedrock for Claude calls |
-| `ANALYSIS_MODEL` | Yes | `claude-sonnet-4-6` | Bedrock model ID or model name |
-| `POLL_INTERVAL_SECONDS` | No | `30` | Watcher poll frequency |
-| `HEALTH_PORT` | No | `8090` | Watcher health-check HTTP port |
-| `WEBHOOK_URL` | No | -- | Webhook URL for session completion notifications |
-
-### Claude API (when not using Bedrock)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `RONE_AI_BASE_URL` | No | `https://api.anthropic.com` | Custom API base URL |
-| `RONE_AI_API_KEY` | No | -- | API key (falls back to `ANTHROPIC_API_KEY`) |
-| `ANTHROPIC_API_KEY` | No | -- | Anthropic API key |
-
-### Session Orchestrator (`infra/session-orchestrator/`)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PORT` | No | `3000` | HTTP server port |
-
-## Project Structure
+## Components
 
 ```
 boothapp/
-  CLAUDE.md                          # Project context and worker rules
-  DATA-CONTRACT.md                   # S3 schema reference (field-level)
-  PROJECT-PLAN.md                    # Integration map and source projects
-  extension/                         # Chrome extension
-    manifest.json                    #   Extension manifest (Manifest V3)
-    background.js                    #   Service worker: S3 polling, screenshots
-    content.js                       #   Content script: click interception
-    popup.js                         #   Popup UI: config + session status
-  audio/                             # Audio capture
-    recorder.js                      #   Main entry: session-triggered recording
-    lib/
-      device-detect.js               #   USB mic auto-detection via ffmpeg
-      ffmpeg-recorder.js             #   ffmpeg wrapper with graceful stop
-      session-poller.js              #   S3 polling for session events
-    transcriber/                     #   Post-session transcription
-      index.js                       #     Entry point
-      transcribe.js                  #     AWS Transcribe integration
-      convert.js                     #     Audio format conversion
-      upload.js                      #     Upload transcript to S3
-  analysis/                          # Post-demo analysis
-    watcher.js                       #   Polls S3 for completed sessions
-    pipeline-run.js                  #   Single-session orchestration
-    render-report.js                 #   HTML report generator
-    analyze.py                       #   Claude analysis entry point
-    engines/
-      analyzer.py                    #   Two-pass Claude analysis
-      claude_client.py               #   Bedrock/direct API client
-      prompts.py                     #   Analysis prompt templates
-    lib/
-      correlator.js                  #   Merge clicks + transcript
-      pipeline.js                    #   Pipeline utilities
-      s3.js                          #   S3 read/write helpers
-      notify.js                      #   Webhook notifications
-    test/                            #   Unit and integration tests
-    sample_data/                     #   Test fixtures
-  infra/                             # AWS infrastructure
-    session-orchestrator/
-      index.js                       #   Express server entry point
-      orchestrator.js                #   Session create/end logic
-      s3.js                          #   S3 operations
-      tenant-pool.js                 #   V1 tenant pool management
-      deploy.sh                      #   Lambda deployment script
-    s3-session-storage.yaml          #   CloudFormation template
-    config.js / config.py            #   Shared config constants
-  scripts/                           # Helper scripts
-    demo-session.sh                  #   Create a test session end-to-end
-    health-check.sh                  #   Check all services are running
-    test-integration.sh              #   Integration test runner
-  demo/                              # Demo UI
-    index.html                       #   Landing page
-    review.html                      #   Session review interface
-  docs/                              # Documentation
-    architecture.md                  #   Component overview
-    DEMO-QUICK-START.md              #   Demo walkthrough
-  .claude-tasks/                     #   CCC worker task files
+  extension/     Chrome extension -- click tracking + screenshots (Manifest V3)
+  audio/         Audio capture -- USB mic recording + transcription
+  analysis/      AI pipeline -- correlator, Claude analyzer, report renderer
+  infra/         Session orchestrator + S3 CloudFormation
+  presenter/     Presenter dashboard -- session timeline + review UI
+  demo/          Demo landing page + session review interface
+  scripts/       Simulation, health check, integration tests
+  docs/          Architecture docs + demo walkthrough
 ```
 
-## Troubleshooting
+| Component | What It Does |
+|-----------|-------------|
+| **Chrome Extension** | Intercepts clicks, captures screenshots, tracks DOM paths |
+| **Audio Recorder** | Records USB mic via ffmpeg, uploads WAV to S3 |
+| **Correlator** | Merges click events + transcript into time-aligned timeline |
+| **Claude Analyzer** | Two-pass AI: extract interests, score engagement, gen recs |
+| **Report Renderer** | Self-contained HTML summary with screenshots + follow-up |
+| **Session Orchestrator** | REST API for session lifecycle and demo PC commands |
+| **Watcher** | Polls S3 for completed sessions, triggers analysis pipeline |
 
-### Chrome extension not capturing clicks
-
-- Verify the extension is loaded: `chrome://extensions` -> V1-Helper should
-  show "Enabled"
-- Check that S3 credentials are configured in the extension popup
-- Confirm `active-session.json` exists in the S3 bucket root (the extension
-  polls for this file to know when a session is active)
-- Open DevTools -> Console for the extension's service worker to see errors
-
-### Audio recorder can't find microphone
-
-```bash
-# List available audio devices
-cd audio && npm run list-devices
-```
-
-If auto-detect picks the wrong device, set `AUDIO_DEVICE` explicitly:
-```bash
-export AUDIO_DEVICE="Microphone (Yeti Stereo)"
-```
-
-If no devices are found, check that ffmpeg is installed and the USB mic is
-plugged in before starting the recorder.
-
-### Watcher not picking up completed sessions
-
-1. Check watcher health: `curl http://localhost:8090/health`
-2. Verify `S3_BUCKET` and `AWS_REGION` are set
-3. Confirm the session's `metadata.json` has `"status": "ended"` and
-   `"upload_complete": true`
-4. Check that both `clicks/clicks.json` and `transcript/transcript.json`
-   exist in the session folder -- the watcher waits for all required files
-5. Look for a `.analysis-claimed` marker -- another watcher instance may
-   have already claimed the session
-
-### Analysis fails or produces empty summary
-
-- Check Claude API connectivity:
-  - Bedrock: verify `USE_BEDROCK=true`, `ANALYSIS_MODEL` is a valid model ID,
-    and AWS credentials have `bedrock:InvokeModel` permission
-  - Direct: verify `ANTHROPIC_API_KEY` or `RONE_AI_API_KEY` is set
-- Review `analyze.py` stderr output for API error messages
-- Ensure the session has substantive click and transcript data (empty demos
-  produce empty summaries)
-
-### Session orchestrator returns 500
-
-- Confirm `S3_BUCKET` is set and the bucket exists
-- Check IAM permissions: the orchestrator needs `s3:PutObject`, `s3:GetObject`,
-  `s3:ListBucket` on the session bucket
-- Review the Express server logs for stack traces
-
-### Demo PC not receiving start/stop commands
-
-- Commands live at `commands/<demo_pc>/start.json` and `end.json` in S3,
-  NOT inside `sessions/<id>/`
-- The demo PC identifier must match exactly between the orchestrator request
-  and what the PC polls for
-- Check S3 bucket policy allows the demo PC's IAM role to read from
-  `commands/` prefix
-
-### Common S3 permission errors
+## Session Lifecycle
 
 ```
-AccessDenied: User: arn:aws:iam::...
+  badge scan        demo running        session ends       AI analysis
+  ==========        ============        ============       ===========
+
+  [1] OCR       --> [2] Audio +      --> [3] Upload   --> [4] Correlate
+      badge          clicks +             all to S3        timeline
+      -> name        screenshots                      --> [5] Claude
+      -> session ID                                        two-pass
+                                                      --> [6] Render
+                                                           HTML report
 ```
 
-Each component has its own IAM role (see `infra/s3-session-storage.yaml`):
+**Status:** `active` -> `ended` -> `analyzing` -> `complete`
 
-| Role | Write Access |
-|------|-------------|
-| `boothapp-app-role` | `metadata.json`, `badge.jpg`, `commands/` |
-| `boothapp-extension-role` | `clicks/`, `screenshots/` |
-| `boothapp-audio-role` | `audio/`, `transcript/` |
-| `boothapp-analysis-role` | `output/`, metadata status updates |
+## S3 Session Layout
 
-All roles have read access to the entire session folder.
+```
+sessions/<session-id>/
+  metadata.json            visitor info, status, timestamps
+  audio/recording.wav      mic capture
+  transcript/*.json        timestamped speaker segments
+  clicks/clicks.json       click events with DOM paths
+  screenshots/*.jpg        click-triggered + periodic captures
+  output/summary.html      self-contained HTML report
+  output/summary.json      structured analysis results
+```
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `run-demo-simulation.sh` | End-to-end pipeline test with synthetic data |
+| `health-check.sh` | Verify all services are running |
+| `test-integration.sh` | Integration test suite |
+| `validate-session.sh` | Validate session S3 data completeness |
 
 ## Team
 
-Built by "Smells Like Machine Learning" for the 2026 hackathon.
+**Smells Like Machine Learning** -- Hackathon 2026
 
-## License
+| Name | Role | Focus |
+|------|------|-------|
+| Casey Mondoux | MKT-NA | App, web UI, presentation |
+| Joel Ginsberg | TS-NA | Chrome ext, audio, AWS infra, AI analysis |
+| Tom Gamull | SE-NA | App development |
+| Kush Mangat | SE-NA | Presentation, demo flow |
+| Chris LaFleur | BD-NA | V1 tenant provisioning, presentation |
 
-Internal use only.
+---
+
+*Built for trade show booths everywhere. Every demo remembered. Every visitor followed up.*
