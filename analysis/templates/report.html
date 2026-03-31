@@ -1,236 +1,138 @@
 <!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Demo Report — {{visitor_name}}</title>
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
+  <title>Vision One Demo Report — {{visitor_name}}</title>
   <style>
-    /* ── Reset ────────────────────────────────────────────────── */
+    /* ── Reset & Base ─────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --tm-red: #D32F2F;
+      --tm-red-dark: #B71C1C;
+      --tm-red-light: #FFCDD2;
+      --tm-red-bg: #FFF5F5;
+      --tm-black: #1A1A1A;
+      --tm-dark: #2D2D2D;
+      --tm-gray-900: #212121;
+      --tm-gray-700: #616161;
+      --tm-gray-500: #9E9E9E;
+      --tm-gray-300: #E0E0E0;
+      --tm-gray-100: #F5F5F5;
+      --tm-white: #FFFFFF;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+    }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #121212;
-      color: #e0e0e0;
+      background: var(--tm-gray-100);
+      color: var(--tm-gray-900);
       line-height: 1.6;
-      min-height: 100vh;
       -webkit-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
     }
 
-    /* ── Layout: sidebar + main ───────────────────────────────── */
-    .report-wrapper {
-      display: flex;
+    /* ── Container ────────────────────────────────────────────── */
+    .report-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--tm-white);
       min-height: 100vh;
+      box-shadow: var(--shadow-lg);
     }
 
-    .sidebar {
-      width: 260px;
-      background: #1a1a1a;
-      border-right: 1px solid #2a2a2a;
-      padding: 32px 24px;
-      flex-shrink: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-    }
-
-    .sidebar-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 36px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #2a2a2a;
-    }
-
-    .sidebar-logo-icon {
-      width: 40px;
-      height: 40px;
-      background: #D32F2F;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .sidebar-logo-icon svg {
-      width: 22px;
-      height: 22px;
-      fill: #fff;
-    }
-
-    .sidebar-logo-text {
-      font-size: 14px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: 0.02em;
-    }
-
-    .sidebar-logo-sub {
-      font-size: 11px;
-      color: #888;
-      margin-top: 2px;
-      letter-spacing: 0.04em;
-    }
-
-    .sidebar-nav a {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      margin-bottom: 4px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #999;
-      font-size: 13px;
-      font-weight: 500;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .sidebar-nav a:hover {
-      background: #252525;
-      color: #e0e0e0;
-    }
-
-    .sidebar-nav a svg {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-      flex-shrink: 0;
-    }
-
-    .sidebar-visitor {
-      margin-top: 32px;
-      padding-top: 24px;
-      border-top: 1px solid #2a2a2a;
-    }
-
-    .sidebar-visitor-photo {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: #252525;
-      border: 2px solid #D32F2F;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 12px;
-      overflow: hidden;
-    }
-
-    .sidebar-visitor-photo svg {
-      width: 32px;
-      height: 32px;
-      fill: #666;
-    }
-
-    .sidebar-visitor-photo img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .sidebar-visitor-name {
-      text-align: center;
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .sidebar-visitor-company {
-      text-align: center;
-      font-size: 12px;
-      color: #888;
-      margin-top: 2px;
-    }
-
-    .sidebar-meta {
-      margin-top: 20px;
-    }
-
-    .sidebar-meta-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #222;
-      font-size: 12px;
-    }
-
-    .sidebar-meta-label { color: #666; }
-    .sidebar-meta-value { color: #ccc; font-weight: 500; }
-
-    /* ── Main content ─────────────────────────────────────────── */
-    .main-content {
-      flex: 1;
-      min-width: 0;
-      padding: 0;
-    }
-
-    /* ── Header banner ────────────────────────────────────────── */
+    /* ── Header ───────────────────────────────────────────────── */
     .report-header {
-      background: linear-gradient(135deg, #1a1a1a 0%, #2a1515 50%, #1a1a1a 100%);
-      border-bottom: 3px solid #D32F2F;
-      padding: 40px 40px 32px;
+      background: linear-gradient(135deg, var(--tm-black) 0%, #2a1215 60%, var(--tm-red-dark) 100%);
+      padding: 48px 48px 40px;
       position: relative;
+      overflow: hidden;
     }
 
     .report-header::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       height: 4px;
-      background: linear-gradient(90deg, #D32F2F, #FF5252, #D32F2F);
+      background: var(--tm-red);
     }
 
-    .header-row {
+    .report-header::after {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(211,47,47,0.12) 0%, transparent 70%);
+    }
+
+    .header-logo {
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 24px;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
     }
 
-    .header-title h1 {
-      font-size: 28px;
+    .header-logo svg {
+      height: 32px;
+      width: auto;
+    }
+
+    .header-logo-divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .header-logo-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 0.04em;
+    }
+
+    .header-title {
+      font-size: 32px;
       font-weight: 800;
-      color: #fff;
+      color: var(--tm-white);
       letter-spacing: -0.02em;
       line-height: 1.2;
-    }
-
-    .header-title h1 span {
-      color: #D32F2F;
+      margin-bottom: 8px;
     }
 
     .header-subtitle {
-      font-size: 14px;
-      color: #999;
-      margin-top: 6px;
+      font-size: 15px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 20px;
     }
 
-    .header-date-badge {
-      background: rgba(211, 47, 47, 0.12);
-      border: 1px solid rgba(211, 47, 47, 0.3);
-      border-radius: 8px;
-      padding: 8px 16px;
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .header-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-size: 13px;
-      color: #FF8A80;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .header-meta-item svg {
+      width: 14px; height: 14px;
+      fill: rgba(255,255,255,0.4);
+    }
+
+    .header-meta-value {
+      color: rgba(255,255,255,0.85);
       font-weight: 600;
-      white-space: nowrap;
     }
 
     .header-chips {
@@ -242,172 +144,253 @@
 
     .chip {
       display: inline-block;
-      background: rgba(211, 47, 47, 0.1);
-      border: 1px solid rgba(211, 47, 47, 0.25);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: 20px;
       padding: 4px 14px;
       font-size: 11px;
       font-weight: 600;
-      color: #FF8A80;
+      color: rgba(255,255,255,0.7);
       letter-spacing: 0.02em;
     }
 
-    .chip-priority {
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+    .chip-priority { text-transform: uppercase; letter-spacing: 0.06em; }
+    .chip-priority-high   { background: rgba(211,47,47,0.25); border-color: rgba(211,47,47,0.4); color: var(--tm-red-light); }
+    .chip-priority-medium { background: rgba(255,152,0,0.2); border-color: rgba(255,152,0,0.35); color: #FFE0B2; }
+    .chip-priority-low    { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.5); }
+
+    /* ── Insight Cards ────────────────────────────────────────── */
+    .insight-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 0 48px;
+      margin-top: -28px;
+      position: relative;
+      z-index: 2;
     }
 
-    .chip-priority-high { background: rgba(211, 47, 47, 0.2); border-color: rgba(211, 47, 47, 0.4); color: #FF8A80; }
-    .chip-priority-medium { background: rgba(255, 152, 0, 0.15); border-color: rgba(255, 152, 0, 0.3); color: #FFB74D; }
-    .chip-priority-low { background: rgba(100, 100, 100, 0.2); border-color: rgba(150, 150, 150, 0.3); color: #bbb; }
+    .insight-card {
+      background: var(--tm-white);
+      border: 1px solid var(--tm-gray-300);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      text-align: center;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
 
-    /* ── Score bar ────────────────────────────────────────────── */
-    .score-bar {
+    .insight-card:hover {
+      box-shadow: var(--shadow-lg);
+      border-color: var(--tm-red);
+    }
+
+    .insight-card-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
-      gap: 20px;
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 12px;
-      padding: 20px 24px;
-      margin: 24px 40px 0;
+      justify-content: center;
+      margin: 0 auto 12px;
     }
 
-    .score-ring {
-      position: relative;
-      width: 72px;
-      height: 72px;
-      flex-shrink: 0;
+    .insight-card-icon svg {
+      width: 20px; height: 20px;
     }
 
-    .score-ring svg {
-      width: 72px;
-      height: 72px;
-      transform: rotate(-90deg);
-    }
+    .ic-red    { background: var(--tm-red-bg); }
+    .ic-red svg { fill: var(--tm-red); }
+    .ic-green  { background: #E8F5E9; }
+    .ic-green svg { fill: #2E7D32; }
+    .ic-blue   { background: #E3F2FD; }
+    .ic-blue svg { fill: #1565C0; }
+    .ic-amber  { background: #FFF8E1; }
+    .ic-amber svg { fill: #E65100; }
 
-    .score-ring .ring-bg {
-      fill: none;
-      stroke: #2a2a2a;
-      stroke-width: 6;
-    }
-
-    .score-ring .ring-fill {
-      fill: none;
-      stroke: {{score_color}};
-      stroke-width: 6;
-      stroke-linecap: round;
-      stroke-dasharray: {{score_dasharray}};
-    }
-
-    .score-ring .score-num {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 22px;
+    .insight-card-value {
+      font-size: 28px;
       font-weight: 800;
-      color: #fff;
-    }
-
-    .score-info { flex: 1; }
-
-    .score-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: {{score_color}};
+      color: var(--tm-gray-900);
+      line-height: 1;
       margin-bottom: 4px;
     }
 
-    .score-desc {
-      font-size: 13px;
-      color: #bbb;
-      line-height: 1.5;
+    .insight-card-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--tm-gray-500);
     }
 
-    .score-track {
-      margin-top: 10px;
-      height: 5px;
-      background: #2a2a2a;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .score-track-fill {
-      height: 100%;
-      width: {{session_score}}%;
-      background: linear-gradient(90deg, {{score_color}}, {{score_color_light}});
-      border-radius: 3px;
-    }
-
-    /* ── Sections ─────────────────────────────────────────────── */
-    .sections { padding: 32px 40px 48px; }
+    /* ── Content Sections ─────────────────────────────────────── */
+    .content { padding: 40px 48px 48px; }
 
     .section {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 12px;
-      margin-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .section-card {
+      background: var(--tm-white);
+      border: 1px solid var(--tm-gray-300);
+      border-radius: var(--radius);
       overflow: hidden;
+      box-shadow: var(--shadow-sm);
     }
 
     .section-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid #2a2a2a;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--tm-gray-300);
       display: flex;
       align-items: center;
       gap: 12px;
+      background: var(--tm-gray-100);
     }
 
     .section-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
 
-    .section-icon svg {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-    }
+    .section-icon svg { width: 16px; height: 16px; fill: currentColor; }
 
-    .si-red    { background: rgba(211, 47, 47, 0.15); color: #FF5252; }
-    .si-green  { background: rgba(76, 175, 80, 0.15); color: #81C784; }
-    .si-amber  { background: rgba(255, 152, 0, 0.15); color: #FFB74D; }
-    .si-blue   { background: rgba(66, 165, 245, 0.15); color: #64B5F6; }
-    .si-purple { background: rgba(171, 71, 188, 0.15); color: #CE93D8; }
-    .si-cyan   { background: rgba(38, 198, 218, 0.15); color: #4DD0E1; }
+    .si-red    { background: var(--tm-red-bg); color: var(--tm-red); }
+    .si-green  { background: #E8F5E9; color: #2E7D32; }
+    .si-amber  { background: #FFF8E1; color: #E65100; }
+    .si-blue   { background: #E3F2FD; color: #1565C0; }
+    .si-purple { background: #F3E5F5; color: #7B1FA2; }
+    .si-cyan   { background: #E0F7FA; color: #00838F; }
 
     .section-title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
-      color: #fff;
+      color: var(--tm-gray-900);
     }
 
-    .section-body { padding: 20px; }
+    .section-body { padding: 24px; }
 
     /* ── Executive Summary ────────────────────────────────────── */
     .exec-box {
-      background: rgba(211, 47, 47, 0.05);
-      border: 1px solid rgba(211, 47, 47, 0.15);
-      border-left: 4px solid #D32F2F;
-      border-radius: 8px;
+      background: var(--tm-red-bg);
+      border-left: 4px solid var(--tm-red);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
       padding: 20px 24px;
     }
 
     .exec-box p {
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.8;
-      color: #e0e0e0;
+      color: var(--tm-gray-900);
     }
 
-    /* ── Product badges ───────────────────────────────────────── */
+    /* ── Visitor Card ─────────────────────────────────────────── */
+    .visitor-card {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: var(--tm-gray-100);
+      border: 1px solid var(--tm-gray-300);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .visitor-photo {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--tm-gray-300);
+      border: 2px solid var(--tm-red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .visitor-photo svg { width: 28px; height: 28px; fill: var(--tm-gray-500); }
+    .visitor-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+    .visitor-info { flex: 1; }
+
+    .visitor-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--tm-gray-900);
+    }
+
+    .visitor-company {
+      font-size: 13px;
+      color: var(--tm-gray-700);
+    }
+
+    .visitor-email-link {
+      font-size: 12px;
+      color: var(--tm-red);
+      text-decoration: none;
+    }
+
+    .visitor-email-link:hover { text-decoration: underline; }
+
+    /* ── Engagement Score (inline in visitor card) ────────────── */
+    .score-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 64px; height: 64px;
+    }
+
+    .score-ring svg {
+      width: 64px; height: 64px;
+      transform: rotate(-90deg);
+    }
+
+    .score-ring .ring-bg {
+      fill: none;
+      stroke: var(--tm-gray-300);
+      stroke-width: 5;
+    }
+
+    .score-ring .ring-fill {
+      fill: none;
+      stroke: {{score_color}};
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-dasharray: {{score_dasharray}};
+    }
+
+    .score-ring .score-num {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--tm-gray-900);
+    }
+
+    .score-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: {{score_color}};
+    }
+
+    .score-desc {
+      font-size: 12px;
+      color: var(--tm-gray-700);
+      max-width: 180px;
+    }
+
+    /* ── Product Badges ───────────────────────────────────────── */
     .product-grid {
       display: flex;
       flex-wrap: wrap;
@@ -418,33 +401,29 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      background: linear-gradient(135deg, #2a1515, #1f1212);
-      border: 1px solid rgba(211, 47, 47, 0.2);
+      background: var(--tm-red-bg);
+      border: 1px solid var(--tm-red-light);
       padding: 10px 16px;
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       font-size: 13px;
       font-weight: 600;
-      color: #FF8A80;
-      transition: border-color 0.15s;
+      color: var(--tm-red-dark);
     }
 
-    .product-badge:hover { border-color: rgba(211, 47, 47, 0.5); }
-
     .p-icon {
-      width: 26px;
-      height: 26px;
+      width: 26px; height: 26px;
       border-radius: 6px;
-      background: #D32F2F;
+      background: var(--tm-red);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 11px;
       font-weight: 800;
-      color: #fff;
+      color: var(--tm-white);
       flex-shrink: 0;
     }
 
-    /* ── Interest table ───────────────────────────────────────── */
+    /* ── Interest Table ───────────────────────────────────────── */
     table { width: 100%; border-collapse: collapse; }
 
     th {
@@ -454,64 +433,69 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: #666;
-      border-bottom: 2px solid #2a2a2a;
+      color: var(--tm-gray-500);
+      border-bottom: 2px solid var(--tm-gray-300);
+      background: var(--tm-gray-100);
     }
 
     td {
       padding: 12px 16px;
-      border-bottom: 1px solid #222;
+      border-bottom: 1px solid var(--tm-gray-300);
       font-size: 13px;
-      color: #ccc;
+      color: var(--tm-gray-900);
     }
 
     tr:last-child td { border-bottom: none; }
 
-    .conf-high   { color: #81C784; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
-    .conf-medium { color: #FFB74D; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
-    .conf-low    { color: #999; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+    .conf-high   { color: #2E7D32; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+    .conf-medium { color: #E65100; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+    .conf-low    { color: var(--tm-gray-500); font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+
+    /* ── Pain Points ──────────────────────────────────────────── */
+    .pain-points-table td {
+      color: var(--tm-gray-700);
+    }
 
     /* ── Timeline ─────────────────────────────────────────────── */
-    .timeline { position: relative; padding-left: 28px; }
+    .timeline { position: relative; padding-left: 32px; }
 
     .timeline::before {
       content: '';
       position: absolute;
       left: 11px;
-      top: 6px;
-      bottom: 6px;
+      top: 8px;
+      bottom: 8px;
       width: 2px;
-      background: linear-gradient(to bottom, #D32F2F, #2a2a2a);
+      background: linear-gradient(to bottom, var(--tm-red), var(--tm-gray-300));
     }
 
     .tl-event {
       position: relative;
-      margin-bottom: 18px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid #222;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--tm-gray-300);
     }
 
     .tl-event:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
     .tl-dot {
       position: absolute;
-      left: -22px;
+      left: -26px;
       top: 4px;
-      width: 12px;
-      height: 12px;
+      width: 12px; height: 12px;
       border-radius: 50%;
-      border: 2px solid #444;
-      background: #121212;
+      border: 2px solid var(--tm-gray-300);
+      background: var(--tm-white);
     }
 
-    .tl-dot.tl-click { border-color: #D32F2F; background: #4a1515; box-shadow: 0 0 6px rgba(211, 47, 47, 0.3); }
-    .tl-dot.tl-speech { border-color: #4CAF50; background: #1b3a1b; box-shadow: 0 0 6px rgba(76, 175, 80, 0.3); }
+    .tl-dot.tl-click  { border-color: var(--tm-red); background: var(--tm-red-bg); box-shadow: 0 0 0 3px rgba(211,47,47,0.1); }
+    .tl-dot.tl-speech { border-color: #4CAF50; background: #E8F5E9; box-shadow: 0 0 0 3px rgba(76,175,80,0.1); }
 
     .tl-time {
       font-size: 11px;
       font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
-      color: #666;
-      margin-bottom: 3px;
+      color: var(--tm-gray-500);
+      margin-bottom: 4px;
     }
 
     .tl-speaker {
@@ -519,16 +503,16 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: #999;
+      color: var(--tm-gray-500);
       margin-right: 8px;
     }
 
-    .tl-text { font-size: 13px; color: #ccc; line-height: 1.5; }
+    .tl-text { font-size: 13px; color: var(--tm-gray-900); line-height: 1.6; }
 
     .tl-click-label {
       display: inline-block;
-      background: rgba(211, 47, 47, 0.2);
-      color: #FF8A80;
+      background: var(--tm-red-bg);
+      color: var(--tm-red);
       font-size: 10px;
       font-weight: 700;
       padding: 2px 8px;
@@ -538,55 +522,54 @@
     }
 
     .tl-screenshot {
-      margin-top: 8px;
-      max-width: 280px;
-      border-radius: 6px;
-      border: 1px solid #2a2a2a;
+      margin-top: 10px;
+      max-width: 320px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--tm-gray-300);
       overflow: hidden;
+      box-shadow: var(--shadow-sm);
     }
 
-    .tl-screenshot img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
+    .tl-screenshot img { width: 100%; height: auto; display: block; }
 
-    /* ── Follow-up cards ──────────────────────────────────────── */
+    /* ── Follow-Up Cards ──────────────────────────────────────── */
     .action-cards { display: grid; gap: 12px; }
 
     .action-card {
       display: flex;
-      gap: 14px;
+      gap: 16px;
       align-items: flex-start;
-      background: #1f1f1f;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 16px 18px;
-      transition: border-color 0.15s;
+      background: var(--tm-gray-100);
+      border: 1px solid var(--tm-gray-300);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .action-card:hover { border-color: #D32F2F; }
+    .action-card:hover {
+      border-color: var(--tm-red);
+      box-shadow: var(--shadow-sm);
+    }
 
     .followup-num {
-      width: 28px;
-      height: 28px;
+      width: 28px; height: 28px;
       border-radius: 50%;
-      background: #D32F2F;
+      background: var(--tm-red);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 12px;
       font-weight: 800;
-      color: #fff;
+      color: var(--tm-white);
       flex-shrink: 0;
     }
 
     .followup-content { flex: 1; }
 
     .followup-text {
-      font-size: 13px;
-      color: #e0e0e0;
-      line-height: 1.5;
+      font-size: 14px;
+      color: var(--tm-gray-900);
+      line-height: 1.6;
       font-weight: 500;
     }
 
@@ -601,30 +584,30 @@
       margin-top: 6px;
     }
 
-    .priority-high   { background: rgba(211, 47, 47, 0.2); color: #FF8A80; border: 1px solid rgba(211, 47, 47, 0.3); }
-    .priority-medium { background: rgba(255, 152, 0, 0.15); color: #FFB74D; border: 1px solid rgba(255, 152, 0, 0.2); }
-    .priority-low    { background: rgba(100, 100, 100, 0.15); color: #bbb; border: 1px solid rgba(150, 150, 150, 0.2); }
+    .priority-high   { background: var(--tm-red-bg); color: var(--tm-red); border: 1px solid var(--tm-red-light); }
+    .priority-medium { background: #FFF8E1; color: #E65100; border: 1px solid #FFE0B2; }
+    .priority-low    { background: var(--tm-gray-100); color: var(--tm-gray-500); border: 1px solid var(--tm-gray-300); }
 
     /* ── SDR Notes ────────────────────────────────────────────── */
     .sdr-notes {
-      background: #151515;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 16px 20px;
-      font-size: 13px;
+      background: var(--tm-gray-100);
+      border: 1px solid var(--tm-gray-300);
+      border-radius: var(--radius-sm);
+      padding: 18px 22px;
+      font-size: 14px;
       line-height: 1.8;
-      color: #ccc;
+      color: var(--tm-gray-700);
     }
 
     /* ── Footer ───────────────────────────────────────────────── */
     .report-footer {
-      border-top: 1px solid #2a2a2a;
-      padding: 24px 40px;
+      border-top: 1px solid var(--tm-gray-300);
+      padding: 24px 48px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 11px;
-      color: #555;
+      color: var(--tm-gray-500);
     }
 
     .footer-brand {
@@ -634,189 +617,221 @@
     }
 
     .footer-brand svg {
-      width: 14px;
-      height: 14px;
-      fill: #D32F2F;
+      height: 16px;
+      width: auto;
     }
 
     .footer-brand span {
       font-weight: 600;
-      color: #777;
+      color: var(--tm-gray-700);
     }
 
-    /* ── Empty state ──────────────────────────────────────────── */
-    .empty { color: #555; font-style: italic; font-size: 12px; padding: 8px 0; }
+    .footer-links {
+      display: flex;
+      gap: 16px;
+    }
 
-    /* ── Responsive: collapse sidebar on narrow screens ────────── */
+    .footer-links a {
+      color: var(--tm-red);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer-links a:hover { text-decoration: underline; }
+
+    /* ── Empty State ──────────────────────────────────────────── */
+    .empty { color: var(--tm-gray-500); font-style: italic; font-size: 12px; padding: 8px 0; }
+
+    /* ── Responsive ───────────────────────────────────────────── */
     @media (max-width: 768px) {
-      .report-wrapper { flex-direction: column; }
-      .sidebar {
-        width: 100%;
-        height: auto;
-        position: static;
-        padding: 20px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        align-items: center;
+      .report-header { padding: 32px 24px 28px; }
+      .header-title { font-size: 24px; }
+      .insight-cards {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0 24px;
+        margin-top: -20px;
       }
-      .sidebar-logo { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-      .sidebar-nav { display: none; }
-      .sidebar-visitor { margin-top: 0; padding-top: 0; border-top: none; display: flex; align-items: center; gap: 12px; }
-      .sidebar-visitor-photo { width: 40px; height: 40px; margin: 0; }
-      .sidebar-visitor-name { text-align: left; font-size: 14px; }
-      .sidebar-visitor-company { text-align: left; }
-      .sidebar-meta { display: none; }
-      .report-header { padding: 24px 20px 20px; }
-      .header-title h1 { font-size: 22px; }
-      .header-row { flex-direction: column; gap: 12px; }
-      .score-bar { margin: 16px 20px 0; padding: 16px; }
-      .sections { padding: 20px; }
-      .report-footer { padding: 20px; flex-direction: column; gap: 8px; }
+      .content { padding: 28px 24px 36px; }
+      .section-body { padding: 16px; }
+      .report-footer { padding: 20px 24px; flex-direction: column; gap: 8px; }
+      .visitor-card { flex-direction: column; text-align: center; }
+      .score-badge { flex-direction: column; }
     }
 
-    /* ── Email fallback: inline-block for clients without flex ── */
-    @media screen and (max-width: 600px) {
-      .product-grid { display: block; }
-      .product-badge { display: block; margin-bottom: 8px; }
-      .header-chips { display: block; }
-      .chip { margin-bottom: 6px; }
+    @media (max-width: 480px) {
+      .insight-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .header-meta { flex-direction: column; gap: 8px; }
+      .report-header { padding: 24px 16px 20px; }
+      .insight-cards { padding: 0 16px; }
+      .content { padding: 20px 16px 28px; }
     }
 
     /* ── Print ────────────────────────────────────────────────── */
     @media print {
-      body { background: #fff; color: #222; }
-      .sidebar { display: none; }
-      .report-wrapper { display: block; }
-      .report-header { background: #fff; border-bottom: 3px solid #D32F2F; }
-      .report-header::before { background: #D32F2F; }
-      .header-title h1 { color: #111; }
-      .header-title h1 span { color: #D32F2F; }
-      .header-subtitle { color: #666; }
-      .header-date-badge { background: #fef2f2; border-color: #fecaca; color: #D32F2F; }
-      .score-bar { background: #f9f9f9; border-color: #ddd; }
+      body { background: #fff; }
+      .report-container { box-shadow: none; max-width: none; }
+      .report-header {
+        background: #fff !important;
+        color: #000;
+        border-bottom: 3px solid var(--tm-red);
+        padding: 24px 32px;
+      }
+      .report-header::before { background: var(--tm-red); }
+      .report-header::after { display: none; }
+      .header-title { color: var(--tm-gray-900); }
+      .header-subtitle { color: var(--tm-gray-700); }
+      .header-meta-item { color: var(--tm-gray-700); }
+      .header-meta-item svg { fill: var(--tm-gray-500); }
+      .header-meta-value { color: var(--tm-gray-900); }
+      .header-logo svg .tm-logo-text { fill: var(--tm-gray-900); }
+      .chip { background: var(--tm-gray-100); border-color: var(--tm-gray-300); color: var(--tm-gray-700); }
+      .chip-priority-high { background: var(--tm-red-bg); color: var(--tm-red); border-color: var(--tm-red-light); }
+      .insight-cards { padding: 0 32px; }
+      .insight-card { box-shadow: none; border: 1px solid var(--tm-gray-300); }
+      .content { padding: 28px 32px; }
+      .section-card { box-shadow: none; break-inside: avoid; }
+      .action-card { break-inside: avoid; }
+      .tl-event { break-inside: avoid; }
       .score-ring .ring-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .score-ring .score-num { color: #111; }
-      .section { background: #fff; border-color: #ddd; break-inside: avoid; }
-      .section-header { border-color: #ddd; }
-      .section-title { color: #111; }
+      .followup-num { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .p-icon { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
       .section-icon { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .exec-box { background: #fef2f2; border-color: #fecaca; border-left-color: #D32F2F; }
-      .exec-box p { color: #333; }
-      .product-badge { background: #fef2f2; color: #D32F2F; border-color: #fecaca; }
-      .p-icon { background: #D32F2F; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      th { color: #666; border-color: #ddd; }
-      td { color: #333; border-color: #eee; }
-      .conf-high   { color: #2e7d32; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .conf-medium { color: #e65100; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .timeline::before { background: #D32F2F; }
-      .tl-dot { background: #fff; border-color: #ccc; }
-      .tl-dot.tl-click { border-color: #D32F2F; background: #fef2f2; }
-      .tl-dot.tl-speech { border-color: #4CAF50; background: #f1f8e9; }
-      .tl-text { color: #333; }
-      .action-card { background: #f9f9f9; border-color: #ddd; }
-      .followup-num { background: #D32F2F; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .followup-text { color: #333; }
-      .sdr-notes { background: #f9f9f9; border-color: #ddd; color: #333; }
-      .report-footer { border-color: #ddd; color: #999; }
-      a { color: #D32F2F; }
+      .report-footer { border-color: var(--tm-gray-300); }
+      a { color: var(--tm-red); }
     }
 
-    @page { margin: 1.5cm; size: A4; }
+    @page {
+      margin: 1.5cm;
+      size: A4;
+    }
   </style>
 </head>
 <body>
 
-  <div class="report-wrapper">
+  <div class="report-container">
 
-    <!-- ════════════════════════════════════════════════════════════
-         SIDEBAR
-         ════════════════════════════════════════════════════════════ -->
-    <div class="sidebar">
-      <div class="sidebar-logo">
-        <div class="sidebar-logo-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+    <!-- ═══════════════════════════════════════════════════════════
+         HEADER
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="report-header">
+      <div class="header-logo">
+        <!-- Trend Micro Logo (inline SVG) -->
+        <svg viewBox="0 0 200 40" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none">
+            <!-- T-ball icon -->
+            <circle cx="20" cy="20" r="18" fill="#D32F2F"/>
+            <path d="M11 14h18v3.5H23v11h-5.5v-11H11V14z" fill="#fff"/>
+            <!-- Wordmark -->
+            <g class="tm-logo-text" fill="#fff">
+              <path d="M50 14h14v2.8h-5.4v11.7h-3.2V16.8H50V14z"/>
+              <path d="M65 18.2h2.8v1.4c.6-.9 1.5-1.6 2.8-1.6.3 0 .5 0 .7.1v2.7c-.3-.1-.6-.1-.9-.1-1.5 0-2.6.9-2.6 2.8v5h-2.8v-10.3z"/>
+              <path d="M73 23.3c0-3.1 2.2-5.3 5.2-5.3 3.1 0 5.1 2.1 5.1 5.5v.6h-7.5c.2 1.6 1.3 2.6 2.8 2.6 1.1 0 2-.5 2.5-1.3l2.1 1.2c-.9 1.5-2.5 2.4-4.6 2.4-3.2 0-5.6-2.1-5.6-5.7zm2.9-1.1h4.5c-.2-1.4-1.1-2.2-2.3-2.2-1.2 0-2 .8-2.2 2.2z"/>
+              <path d="M85 18.2h2.8v1.3c.7-1 1.8-1.5 3.1-1.5 1.5 0 2.7.7 3.2 1.9.8-1.2 2.1-1.9 3.5-1.9 2.3 0 3.7 1.5 3.7 3.9v6.6h-2.8v-6c0-1.3-.7-2.1-1.9-2.1-1.3 0-2.2 1-2.2 2.5v5.6h-2.8v-6c0-1.3-.7-2.1-1.9-2.1-1.3 0-2.2 1-2.2 2.5v5.6H85v-10.3z"/>
+              <path d="M108 18.2h2.8v1.3c.7-1 1.8-1.5 3.2-1.5 2.4 0 3.8 1.5 3.8 3.9v6.6h-2.8v-6c0-1.4-.8-2.2-2.1-2.2-1.4 0-2.3 1-2.3 2.6v5.6H108v-10.3z"/>
+              <path d="M120 14h2.8v3.2h-2.8V14zm0 4.2h2.8v10.3H120V18.2z"/>
+              <path d="M125 23.3c0-3.2 2.4-5.3 5.4-5.3 1.7 0 3 .6 3.9 1.7l-1.8 1.7c-.5-.6-1.2-1-2.1-1-1.5 0-2.7 1.1-2.7 2.9 0 1.8 1.1 2.9 2.7 2.9.9 0 1.6-.4 2.1-1l1.8 1.7c-.9 1-2.2 1.7-3.9 1.7-3 0-5.4-2.2-5.4-5.3z"/>
+              <path d="M136 18.2h2.8v1.4c.6-.9 1.5-1.6 2.8-1.6.3 0 .5 0 .7.1v2.7c-.3-.1-.6-.1-.9-.1-1.5 0-2.6.9-2.6 2.8v5h-2.8v-10.3z"/>
+              <path d="M143 23.3c0-3.2 2.4-5.3 5.4-5.3s5.4 2.1 5.4 5.3-2.4 5.3-5.4 5.3-5.4-2.1-5.4-5.3zm8 0c0-1.8-1.1-2.9-2.6-2.9s-2.6 1.1-2.6 2.9 1.1 2.9 2.6 2.9 2.6-1.1 2.6-2.9z"/>
+            </g>
+          </g>
+        </svg>
+        <div class="header-logo-divider"></div>
+        <div class="header-logo-text">Demo Intelligence Report</div>
+      </div>
+
+      <h1 class="header-title">{{visitor_name}}</h1>
+      <div class="header-subtitle">Personalized summary from your Trend Vision One demo experience</div>
+
+      <div class="header-meta">
+        <div class="header-meta-item">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+          <span class="header-meta-value">{{demo_duration_minutes}} min</span>
         </div>
-        <div>
-          <div class="sidebar-logo-text">Trend Micro</div>
-          <div class="sidebar-logo-sub">Vision One</div>
+        <div class="header-meta-item">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          SE: <span class="header-meta-value">{{se_name}}</span>
+        </div>
+        <div class="header-meta-item">
+          <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+          <span class="header-meta-value">{{session_date}}</span>
         </div>
       </div>
 
-      <nav class="sidebar-nav">
-        <a href="#products"><svg viewBox="0 0 24 24"><path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z"/></svg> Products</a>
-        <a href="#interests"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> Interests</a>
-        <a href="#followup"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Follow-Up</a>
-        <a href="#timeline"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> Timeline</a>
-      </nav>
-
-      <div class="sidebar-visitor">
-        <div class="sidebar-visitor-photo">
-          {{visitor_photo}}
-        </div>
-        <div class="sidebar-visitor-name">{{visitor_name}}</div>
-        <div class="sidebar-visitor-company">{{visitor_company}}</div>
-        <div class="sidebar-meta">
-          <div class="sidebar-meta-item">
-            <span class="sidebar-meta-label">Duration</span>
-            <span class="sidebar-meta-value">{{demo_duration_minutes}} min</span>
-          </div>
-          <div class="sidebar-meta-item">
-            <span class="sidebar-meta-label">SE</span>
-            <span class="sidebar-meta-value">{{se_name}}</span>
-          </div>
-          <div class="sidebar-meta-item">
-            <span class="sidebar-meta-label">Date</span>
-            <span class="sidebar-meta-value">{{session_date}}</span>
-          </div>
-        </div>
+      <div class="header-chips">
+        {{priority_chip}}
+        {{tag_chips}}
       </div>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════════
-         MAIN CONTENT
-         ════════════════════════════════════════════════════════════ -->
-    <div class="main-content">
-
-      <!-- Header Banner -->
-      <div class="report-header">
-        <div class="header-row">
-          <div class="header-title">
-            <h1>Demo Report <span>|</span> {{visitor_name}}</h1>
-            <div class="header-subtitle">Personalized summary from your Vision One demo experience</div>
-          </div>
-          <div class="header-date-badge">{{session_date}}</div>
+    <!-- ═══════════════════════════════════════════════════════════
+         INSIGHT CARDS
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="insight-cards">
+      <div class="insight-card">
+        <div class="insight-card-icon ic-blue">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
         </div>
-        <div class="header-chips">
-          {{priority_chip}}
-          {{tag_chips}}
+        <div class="insight-card-value">{{demo_duration_minutes}}</div>
+        <div class="insight-card-label">Minutes</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-card-icon ic-red">
+          <svg viewBox="0 0 24 24"><path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z"/></svg>
+        </div>
+        <div class="insight-card-value">{{products_count}}</div>
+        <div class="insight-card-label">Products</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-card-icon ic-green">
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        </div>
+        <div class="insight-card-value">{{session_score}}</div>
+        <div class="insight-card-label">Engagement</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-card-icon ic-amber">
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        </div>
+        <div class="insight-card-value">{{interests_count}}</div>
+        <div class="insight-card-label">Interests</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         CONTENT
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="content">
+
+      <!-- Visitor Card -->
+      <div class="visitor-card">
+        <div class="visitor-photo">
+          {{visitor_photo}}
+        </div>
+        <div class="visitor-info">
+          <div class="visitor-name">{{visitor_name}}</div>
+          <div class="visitor-company">{{visitor_company}}</div>
+          {{visitor_email_link}}
+        </div>
+        <div class="score-badge">
+          <div class="score-ring">
+            <svg viewBox="0 0 72 72">
+              <circle class="ring-bg" cx="36" cy="36" r="30"/>
+              <circle class="ring-fill" cx="36" cy="36" r="30"/>
+            </svg>
+            <span class="score-num">{{session_score}}</span>
+          </div>
+          <div>
+            <div class="score-label">Engagement Score</div>
+            <div class="score-desc">{{score_summary}}</div>
+          </div>
         </div>
       </div>
 
-      <!-- Engagement Score -->
-      <div class="score-bar">
-        <div class="score-ring">
-          <svg viewBox="0 0 72 72">
-            <circle class="ring-bg" cx="36" cy="36" r="30"/>
-            <circle class="ring-fill" cx="36" cy="36" r="30"/>
-          </svg>
-          <span class="score-num">{{session_score}}</span>
-        </div>
-        <div class="score-info">
-          <div class="score-label">Engagement Score</div>
-          <div class="score-desc">{{score_summary}}</div>
-          <div class="score-track">
-            <div class="score-track-fill"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sections">
-
-        <!-- ══════════════════════════════════════════════════════
-             EXECUTIVE SUMMARY
-             ══════════════════════════════════════════════════════ -->
-        <div class="section">
+      <!-- ═════════════════════════════════════════════════════════
+           EXECUTIVE SUMMARY
+           ═════════════════════════════════════════════════════════ -->
+      <div class="section">
+        <div class="section-card">
           <div class="section-header">
             <div class="section-icon si-red">
               <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
@@ -829,11 +844,13 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- ══════════════════════════════════════════════════════
-             PRODUCTS DEMONSTRATED
-             ══════════════════════════════════════════════════════ -->
-        <div class="section" id="products">
+      <!-- ═════════════════════════════════════════════════════════
+           PRODUCTS DEMONSTRATED
+           ═════════════════════════════════════════════════════════ -->
+      <div class="section" id="products">
+        <div class="section-card">
           <div class="section-header">
             <div class="section-icon si-purple">
               <svg viewBox="0 0 24 24"><path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z"/></svg>
@@ -846,11 +863,13 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- ══════════════════════════════════════════════════════
-             KEY INTERESTS & DISCUSSION TOPICS
-             ══════════════════════════════════════════════════════ -->
-        <div class="section" id="interests">
+      <!-- ═════════════════════════════════════════════════════════
+           KEY INTERESTS & DISCUSSION TOPICS
+           ═════════════════════════════════════════════════════════ -->
+      <div class="section" id="interests">
+        <div class="section-card">
           <div class="section-header">
             <div class="section-icon si-amber">
               <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
@@ -870,28 +889,13 @@
             </tbody>
           </table>
         </div>
+      </div>
 
-        <!-- ══════════════════════════════════════════════════════
-             RECOMMENDED FOLLOW-UP ACTIONS
-             ══════════════════════════════════════════════════════ -->
-        <div class="section" id="followup">
-          <div class="section-header">
-            <div class="section-icon si-green">
-              <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-            </div>
-            <div class="section-title">Recommended Follow-Up Actions</div>
-          </div>
-          <div class="section-body">
-            <div class="action-cards">
-              {{follow_up_cards}}
-            </div>
-          </div>
-        </div>
-
-        <!-- ══════════════════════════════════════════════════════
-             DEMO TIMELINE
-             ══════════════════════════════════════════════════════ -->
-        <div class="section" id="timeline">
+      <!-- ═════════════════════════════════════════════════════════
+           DEMO TIMELINE
+           ═════════════════════════════════════════════════════════ -->
+      <div class="section" id="timeline">
+        <div class="section-card">
           <div class="section-header">
             <div class="section-icon si-blue">
               <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
@@ -904,11 +908,32 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- ══════════════════════════════════════════════════════
-             SDR NOTES
-             ══════════════════════════════════════════════════════ -->
-        <div class="section">
+      <!-- ═════════════════════════════════════════════════════════
+           RECOMMENDED NEXT STEPS
+           ═════════════════════════════════════════════════════════ -->
+      <div class="section" id="followup">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-icon si-green">
+              <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            </div>
+            <div class="section-title">Recommended Next Steps</div>
+          </div>
+          <div class="section-body">
+            <div class="action-cards">
+              {{follow_up_cards}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═════════════════════════════════════════════════════════
+           SDR NOTES
+           ═════════════════════════════════════════════════════════ -->
+      <div class="section">
+        <div class="section-card">
           <div class="section-header">
             <div class="section-icon si-cyan">
               <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
@@ -919,19 +944,24 @@
             <div class="sdr-notes">{{sdr_notes}}</div>
           </div>
         </div>
-
-      </div>
-
-      <!-- Footer -->
-      <div class="report-footer">
-        <div class="footer-brand">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
-          <span>Trend Micro Vision One</span>
-        </div>
-        <div>Generated {{generated_at}}</div>
       </div>
 
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FOOTER
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="report-footer">
+      <div class="footer-brand">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="11" fill="#D32F2F"/>
+          <path d="M7 8h10v2.1H14.2v6.8h-3.4V10.1H7V8z" fill="#fff"/>
+        </svg>
+        <span>Trend Vision One</span>
+      </div>
+      <div>Generated {{generated_at}}</div>
+    </div>
+
   </div>
 
 </body>

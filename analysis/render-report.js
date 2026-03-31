@@ -273,6 +273,11 @@ function formatDate(isoString) {
 
 // ── Template rendering ──────────────────────────────────────────
 
+function buildVisitorEmailLink(email) {
+  if (!email) return '';
+  return `<a class="visitor-email-link" href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`;
+}
+
 function renderTemplate(template, summary, followUp, timeline) {
   const score = computeScore(summary, followUp);
 
@@ -280,6 +285,7 @@ function renderTemplate(template, summary, followUp, timeline) {
     visitor_name:         escapeHtml(summary.visitor_name || 'Unknown Visitor'),
     visitor_company:      escapeHtml(followUp.visitor_company || summary.visitor_company || '—'),
     visitor_email:        escapeHtml(followUp.visitor_email || ''),
+    visitor_email_link:   buildVisitorEmailLink(followUp.visitor_email),
     se_name:              escapeHtml(summary.se_name || '—'),
     demo_duration_minutes: escapeHtml(String(Math.round((summary.demo_duration_seconds || 0) / 60) || 0)),
     session_date:         formatDate(summary.generated_at),
@@ -292,9 +298,11 @@ function renderTemplate(template, summary, followUp, timeline) {
     visitor_photo:        buildVisitorPhoto(summary),
     priority_chip:        buildPriorityChip(followUp.priority),
     tag_chips:            buildTagChips(followUp.tags),
-    executive_summary:    escapeHtml(followUp.sdr_notes || 'No executive summary available.'),
+    executive_summary:    escapeHtml(summary.executive_summary || followUp.sdr_notes || 'No executive summary available.'),
     sdr_notes:            escapeHtml(followUp.sdr_notes || 'No SDR notes recorded.'),
     products_shown:       buildProductBadges(summary.products_demonstrated),
+    products_count:       String((summary.products_demonstrated || []).length),
+    interests_count:      String((summary.key_interests || []).length),
     visitor_interests:    buildInterestsRows(summary.key_interests),
     pain_points:          buildPainPointRows(summary.key_interests),
     timeline_events:      buildTimelineEvents(timeline, summary.key_moments),
