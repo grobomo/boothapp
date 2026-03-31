@@ -5,6 +5,7 @@ const path = require('path');
 const { runPipeline } = require('./lib/pipeline');
 const { classifyError } = require('./lib/errors');
 const { writeErrorJson } = require('./lib/error-writer');
+const { retryWithExponentialBackoff } = require('./lib/retry');
 
 // ---------------------------------------------------------------------------
 // Watcher — monitors sessions directory for new recordings and kicks off
@@ -50,20 +51,67 @@ function getPendingSessions() {
 }
 
 /**
- * Process a single session.  All errors are caught, classified, and persisted.
+ * Upload error.json to S3 so the dashboard can display failures.
+ */
+async function uploadErrorToS3(s3Client, bucket, sessionId, stage, err) {
+  try {
+    const { PutObjectCommand } = require('@aws-sdk/client-s3');
+    const classified = classifyError(err);
+    const payload = {
+      error: true,
+      timestamp: new Date().toISOString(),
+      sessionId,
+      stage,
+      type: classified.type,
+      retryable: classified.retryable,
+      message: classified.message,
+      code: classified.code,
+      detail: classified.detail,
+    };
+    await s3Client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `sessions/${sessionId}/output/error.json`,
+      Body: JSON.stringify(payload, null, 2),
+      ContentType: 'application/json',
+    }));
+    log(`session=${sessionId} error.json uploaded to S3`);
+  } catch (uploadErr) {
+    log(`session=${sessionId} failed to upload error.json to S3: ${uploadErr.message}`);
+  }
+}
+
+/**
+ * Process a single session with retry (up to 2 retries).
+ * All errors are caught, classified, persisted locally, and uploaded to S3.
  */
 async function processSession(sessionId, clients, config) {
   log(`processing session=${sessionId}`);
 
+  const maxSessionRetries = config.maxSessionRetries ?? 2;
+
   try {
-    const result = await runPipeline({
-      sessionId,
-      sessionsDir: SESSIONS_DIR,
-      s3: clients.s3,
-      bedrock: clients.bedrock,
-      config,
-      log,
-    });
+    const result = await retryWithExponentialBackoff(
+      async () => {
+        return await runPipeline({
+          sessionId,
+          sessionsDir: SESSIONS_DIR,
+          s3: clients.s3,
+          bedrock: clients.bedrock,
+          config,
+          log,
+        });
+      },
+      {
+        maxRetries: maxSessionRetries,
+        baseDelayMs: config.baseDelayMs || 1000,
+        maxDelayMs: config.maxDelayMs || 30000,
+        shouldRetry: (err) => classifyError(err).retryable,
+        onRetry: (err, attempt, delayMs) => {
+          const classified = classifyError(err);
+          log(`session=${sessionId} retry ${attempt}/${maxSessionRetries} type=${classified.type} delay=${delayMs}ms`);
+        },
+      },
+    );
 
     // Write successful result
     const outputDir = path.join(SESSIONS_DIR, sessionId, 'output');
@@ -77,15 +125,20 @@ async function processSession(sessionId, clients, config) {
   } catch (err) {
     const classified = classifyError(err);
 
-    // Error already written by pipeline, but log a summary here
     log(`session=${sessionId} FAILED type=${classified.type} retryable=${classified.retryable}`);
+
+    // Write error locally
+    writeErrorJson(SESSIONS_DIR, sessionId, 'pipeline', err);
+
+    // Upload error.json to S3
+    await uploadErrorToS3(clients.s3, config.bucket, sessionId, 'pipeline', err);
 
     if (classified.type === 's3_access_denied') {
       log(`  -> S3 access denied. Check IAM role/policy for bucket "${config.bucket}".`);
     } else if (classified.type === 'missing_file') {
       log(`  -> Recording file not found. Was it uploaded? Detail: ${classified.detail}`);
     } else if (classified.type === 'throttling') {
-      log(`  -> Service throttled. Pipeline retried ${config.maxRetries || 3} times before giving up.`);
+      log(`  -> Service throttled. Retried ${maxSessionRetries} times before giving up.`);
     } else if (classified.type === 'bedrock_validation') {
       log(`  -> Bedrock rejected the request. Check model ID and payload format.`);
     } else {
