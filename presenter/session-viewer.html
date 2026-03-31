@@ -510,6 +510,202 @@
     .visitor-avatar { width: 56px; height: 56px; font-size: 22px; }
     .visitor-details h2 { font-size: 18px; }
   }
+
+  /* ── Event Feed Sidebar ────────────────────────────────── */
+  .event-feed-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .event-feed-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .event-feed-toggle.active { border-color: var(--accent); color: var(--accent); background: #1f6feb22; }
+  .event-feed-toggle .feed-count {
+    background: var(--accent-dim);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .event-feed {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 360px;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+  .event-feed.open { transform: translateX(0); }
+  body.feed-open .layout { margin-right: 360px; }
+  body.feed-open .topbar { margin-right: 360px; }
+
+  .feed-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .feed-header-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+  }
+  .feed-close {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .feed-close:hover { color: var(--text); background: var(--surface2); }
+
+  .feed-filters {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .feed-filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text3);
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .feed-filter-btn:hover { color: var(--text2); border-color: var(--text3); }
+  .feed-filter-btn.active { color: var(--accent); border-color: var(--accent-dim); background: #1f6feb22; }
+
+  .feed-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .feed-scroll::-webkit-scrollbar { width: 5px; }
+  .feed-scroll::-webkit-scrollbar-track { background: transparent; }
+  .feed-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .feed-item {
+    padding: 8px 16px;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .feed-item:hover { background: var(--surface2); }
+  .feed-item.new-item { animation: feedFlash 1s ease; }
+  @keyframes feedFlash {
+    0% { background: #1f6feb33; }
+    100% { background: transparent; }
+  }
+
+  .feed-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .feed-icon.click { background: #58a6ff22; color: var(--accent); }
+  .feed-icon.transcript { background: #3fb95022; color: var(--green); }
+  .feed-icon.screenshot { background: #bc8cff22; color: var(--purple); }
+  .feed-icon.analysis { background: #d2992222; color: var(--yellow); }
+  .feed-icon.session { background: #f8514922; color: var(--red); }
+
+  .feed-content { flex: 1; min-width: 0; }
+  .feed-text {
+    color: var(--text);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .feed-meta {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .feed-ts {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text3);
+    min-width: 50px;
+    flex-shrink: 0;
+    text-align: right;
+    padding-top: 2px;
+  }
+
+  .feed-status {
+    padding: 6px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .feed-status .pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .feed-status .pulse.inactive { background: var(--text3); animation: none; }
+
+  @media (max-width: 900px) {
+    .event-feed { width: 300px; }
+    body.feed-open .layout { margin-right: 300px; }
+    body.feed-open .topbar { margin-right: 300px; }
+  }
+  @media (max-width: 600px) {
+    .event-feed { width: 100vw; }
+    body.feed-open .layout { margin-right: 0; }
+    body.feed-open .topbar { margin-right: 0; }
+  }
 </style>
 </head>
 <body>
@@ -547,6 +743,7 @@ if (!BoothAuth.requireAwsCreds()) {
       <a href="session.html" id="link-live">Live View</a>
       <a href="email-generator.html" id="link-email">Email</a>
       <a href="#" id="link-print" style="cursor:pointer">Print Report</a>
+      <button class="event-feed-toggle" id="feed-toggle">[&gt;] Feed <span class="feed-count" id="feed-count">0</span></button>
       <span id="auth-user" style="font-family:monospace"></span>
       <a href="#" id="logout-link">logout</a>
     </div>
@@ -601,6 +798,27 @@ if (!BoothAuth.requireAwsCreds()) {
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Event Feed Sidebar -->
+<div class="event-feed" id="event-feed">
+  <div class="feed-header">
+    <span class="feed-header-title">Event Feed</span>
+    <button class="feed-close" id="feed-close">x</button>
+  </div>
+  <div class="feed-filters" id="feed-filters">
+    <button class="feed-filter-btn active" data-type="all">All</button>
+    <button class="feed-filter-btn" data-type="click">Clicks</button>
+    <button class="feed-filter-btn" data-type="transcript">Transcript</button>
+    <button class="feed-filter-btn" data-type="screenshot">Screenshots</button>
+    <button class="feed-filter-btn" data-type="analysis">Analysis</button>
+    <button class="feed-filter-btn" data-type="session">Session</button>
+  </div>
+  <div class="feed-scroll" id="feed-scroll"></div>
+  <div class="feed-status" id="feed-status">
+    <span class="pulse" id="feed-pulse"></span>
+    <span id="feed-status-text">Loading...</span>
   </div>
 </div>
 
@@ -762,6 +980,7 @@ if (!BoothAuth.requireAwsCreds()) {
       renderTimeline(clicks, metadata);
       renderTranscript(transcript);
       renderAnalysis(summary, followUp);
+      renderEventFeed(clicks, transcript, metadata, summary);
     })
     .catch(function (err) {
       showError("Error loading session data: " + (err.message || err));
@@ -1231,6 +1450,181 @@ if (!BoothAuth.requireAwsCreds()) {
     if (w) {
       w.document.write(html);
       w.document.close();
+    }
+  }
+
+  // ── Event Feed Sidebar ──────────────────────────────────────────
+  function renderEventFeed(clicks, transcript, meta, summary) {
+    var feedToggle = document.getElementById("feed-toggle");
+    var feedPanel = document.getElementById("event-feed");
+    var feedClose = document.getElementById("feed-close");
+    var feedScroll = document.getElementById("feed-scroll");
+    var feedCountEl = document.getElementById("feed-count");
+    var feedPulse = document.getElementById("feed-pulse");
+    var feedStatusText = document.getElementById("feed-status-text");
+    var filtersEl = document.getElementById("feed-filters");
+
+    var startIso = (meta && meta.started_at) || "";
+    var isEnded = meta && (meta.status === "completed" || meta.status === "ended" || meta.status === "analyzed");
+
+    // Build unified event list
+    var events = [];
+
+    // Session start event
+    if (meta && meta.started_at) {
+      events.push({
+        type: "session",
+        ts: meta.started_at,
+        text: "Session started",
+        meta: meta.se_name ? "SE: " + meta.se_name : ""
+      });
+    }
+
+    // Click events
+    if (clicks && clicks.events) {
+      for (var i = 0; i < clicks.events.length; i++) {
+        var ev = clicks.events[i];
+        var desc = ev.element ? (ev.element.text || ev.dom_path || "Click") : "Click";
+        events.push({
+          type: ev.screenshot_file ? "screenshot" : "click",
+          ts: ev.timestamp,
+          text: desc,
+          meta: ev.page_title || ev.page_url || ""
+        });
+      }
+    }
+
+    // Transcript segments
+    // Transcript timestamps are relative (HH:MM:SS.mmm), convert to ISO using session start
+    function relTsToIso(relTs, baseIso) {
+      if (!relTs || !baseIso) return baseIso || new Date().toISOString();
+      // If already ISO, return as-is
+      if (relTs.indexOf("T") !== -1) return relTs;
+      var parts = relTs.replace(/\..*$/, "").split(":");
+      var secs = 0;
+      for (var p = 0; p < parts.length; p++) {
+        secs = secs * 60 + Number(parts[p]);
+      }
+      return new Date(new Date(baseIso).getTime() + secs * 1000).toISOString();
+    }
+
+    if (transcript && transcript.entries) {
+      for (var j = 0; j < transcript.entries.length; j++) {
+        var entry = transcript.entries[j];
+        var speaker = entry.speaker || "?";
+        var textSnippet = entry.text || "";
+        if (textSnippet.length > 80) textSnippet = textSnippet.substring(0, 80) + "...";
+        events.push({
+          type: "transcript",
+          ts: relTsToIso(entry.timestamp, startIso),
+          text: speaker + ": " + textSnippet,
+          meta: ""
+        });
+      }
+    }
+
+    // Analysis events
+    if (summary) {
+      var analysisTs = meta.ended_at || meta.started_at || new Date().toISOString();
+      events.push({
+        type: "analysis",
+        ts: analysisTs,
+        text: "Analysis complete",
+        meta: summary.executive_summary ? summary.executive_summary.substring(0, 60) + "..." : ""
+      });
+      if (summary.products_demonstrated && summary.products_demonstrated.length) {
+        events.push({
+          type: "analysis",
+          ts: analysisTs,
+          text: "Products identified: " + summary.products_demonstrated.join(", "),
+          meta: ""
+        });
+      }
+    }
+
+    // Session end event
+    if (meta && meta.ended_at) {
+      events.push({
+        type: "session",
+        ts: meta.ended_at,
+        text: "Session ended",
+        meta: formatDuration(meta.started_at, meta.ended_at)
+      });
+    }
+
+    // Sort chronologically
+    events.sort(function (a, b) {
+      return new Date(a.ts).getTime() - new Date(b.ts).getTime();
+    });
+
+    // Update count
+    feedCountEl.textContent = events.length;
+
+    // Status
+    if (isEnded) {
+      feedPulse.className = "pulse inactive";
+      feedStatusText.textContent = events.length + " events -- session ended";
+    } else {
+      feedPulse.className = "pulse";
+      feedStatusText.textContent = events.length + " events -- live";
+    }
+
+    // Icon labels per type
+    var iconLabels = { click: "C", transcript: "T", screenshot: "S", analysis: "A", session: "!" };
+
+    // Render events
+    var activeFilter = "all";
+
+    function renderFeedItems() {
+      var html = "";
+      var count = 0;
+      for (var k = 0; k < events.length; k++) {
+        var e = events[k];
+        if (activeFilter !== "all" && e.type !== activeFilter) continue;
+        count++;
+        var relTime = startIso ? formatRelTime(e.ts, startIso) : "--:--";
+        html += '<div class="feed-item" data-type="' + esc(e.type) + '">' +
+          '<div class="feed-icon ' + esc(e.type) + '">' + (iconLabels[e.type] || "?") + '</div>' +
+          '<div class="feed-content">' +
+            '<div class="feed-text">' + esc(e.text) + '</div>' +
+            (e.meta ? '<div class="feed-meta">' + esc(e.meta) + '</div>' : '') +
+          '</div>' +
+          '<div class="feed-ts">' + esc(relTime) + '</div>' +
+          '</div>';
+      }
+      if (count === 0) {
+        html = '<div style="padding:24px 16px;color:var(--text3);text-align:center;font-size:13px">No events match filter</div>';
+      }
+      feedScroll.innerHTML = html;
+      // Auto-scroll to bottom
+      feedScroll.scrollTop = feedScroll.scrollHeight;
+    }
+
+    renderFeedItems();
+
+    // Toggle sidebar
+    feedToggle.addEventListener("click", function () {
+      var isOpen = feedPanel.classList.toggle("open");
+      feedToggle.classList.toggle("active", isOpen);
+      document.body.classList.toggle("feed-open", isOpen);
+    });
+
+    feedClose.addEventListener("click", function () {
+      feedPanel.classList.remove("open");
+      feedToggle.classList.remove("active");
+      document.body.classList.remove("feed-open");
+    });
+
+    // Filter buttons
+    var filterBtns = filtersEl.querySelectorAll(".feed-filter-btn");
+    for (var f = 0; f < filterBtns.length; f++) {
+      filterBtns[f].addEventListener("click", function () {
+        activeFilter = this.getAttribute("data-type");
+        for (var b = 0; b < filterBtns.length; b++) {
+          filterBtns[b].classList.toggle("active", filterBtns[b].getAttribute("data-type") === activeFilter);
+        }
+        renderFeedItems();
+      });
     }
   }
 
