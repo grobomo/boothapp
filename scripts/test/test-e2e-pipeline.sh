@@ -16,6 +16,7 @@
 # Usage:
 #   bash scripts/test/test-e2e-pipeline.sh
 #   bash scripts/test/test-e2e-pipeline.sh --no-cleanup   # keep test data for debugging
+#   bash scripts/test/test-e2e-pipeline.sh --dry-run      # generate + validate locally, skip S3
 set -euo pipefail
 
 ###############################################################################
@@ -35,10 +36,14 @@ STARTED=$(date -u -d '2 minutes ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u 
 POLL_TIMEOUT=120
 POLL_INTERVAL=5
 CLEANUP=true
+DRY_RUN=false
 
-if [[ "${1:-}" == "--no-cleanup" ]]; then
-  CLEANUP=false
-fi
+for arg in "$@"; do
+  case "$arg" in
+    --no-cleanup) CLEANUP=false ;;
+    --dry-run)    DRY_RUN=true ;;
+  esac
+done
 
 ###############################################################################
 # Helpers
@@ -57,8 +62,15 @@ die() {
   exit 1
 }
 
+epoch_now() { date +%s; }
+
 TMP=$(mktemp -d)
 cleanup() {
+  if $DRY_RUN; then
+    echo ""
+    echo "--- Dry run complete. Generated files at ${TMP} ---"
+    return
+  fi
   if $CLEANUP; then
     echo ""
     echo "--- Cleaning up test session ${SESSION_ID} ---"
@@ -73,27 +85,37 @@ cleanup() {
 trap cleanup EXIT
 
 ###############################################################################
-# Preflight: verify AWS access
+# Header
 ###############################################################################
 echo "=============================================="
 echo " BoothApp E2E Pipeline Test"
 echo " Session: ${SESSION_ID}"
 echo " Bucket:  ${S3_BUCKET}"
 echo " Region:  ${AWS_REGION}"
+$DRY_RUN && echo " Mode:    DRY RUN (local only)"
 echo "=============================================="
 echo ""
 
-echo "--- Preflight: verifying AWS access ---"
-if ! ${AWS} s3 ls "s3://${S3_BUCKET}/" --max-items 1 >/dev/null 2>&1; then
-  die "Cannot access S3 bucket ${S3_BUCKET}. Check AWS_PROFILE=${AWS_PROFILE} and AWS_REGION=${AWS_REGION}."
+###############################################################################
+# Preflight: verify AWS access (skip in dry-run)
+###############################################################################
+if ! $DRY_RUN; then
+  echo "--- Preflight: verifying AWS access ---"
+  if ! ${AWS} s3 ls "s3://${S3_BUCKET}/" --max-items 1 >/dev/null 2>&1; then
+    die "Cannot access S3 bucket ${S3_BUCKET}. Check AWS_PROFILE=${AWS_PROFILE} and AWS_REGION=${AWS_REGION}."
+  fi
+  pass "AWS credentials and bucket access OK"
+else
+  echo "--- Preflight: skipped (dry-run) ---"
 fi
-pass "AWS credentials and bucket access OK"
 
 ###############################################################################
 # Step 1: Generate and upload realistic sample session
 ###############################################################################
 echo ""
-echo "--- Step 1: Generating and uploading sample session ---"
+echo "--- Step 1: Generating sample session ---"
+
+T_UPLOAD_START=$(epoch_now)
 
 # -- metadata.json (status: ended triggers watcher) --
 cat > "${TMP}/metadata.json" <<ENDJSON
@@ -112,8 +134,10 @@ cat > "${TMP}/metadata.json" <<ENDJSON
 }
 ENDJSON
 
-${AWS} s3 cp "${TMP}/metadata.json" "${S3_URI}/${PREFIX}/metadata.json" --quiet
-pass "metadata.json uploaded"
+if ! $DRY_RUN; then
+  ${AWS} s3 cp "${TMP}/metadata.json" "${S3_URI}/${PREFIX}/metadata.json" --quiet
+fi
+pass "metadata.json generated"
 
 # -- clicks/clicks.json --
 cat > "${TMP}/clicks.json" <<ENDJSON
@@ -175,8 +199,10 @@ cat > "${TMP}/clicks.json" <<ENDJSON
 }
 ENDJSON
 
-${AWS} s3 cp "${TMP}/clicks.json" "${S3_URI}/${PREFIX}/clicks/clicks.json" --quiet
-pass "clicks/clicks.json uploaded (3 click events)"
+if ! $DRY_RUN; then
+  ${AWS} s3 cp "${TMP}/clicks.json" "${S3_URI}/${PREFIX}/clicks/clicks.json" --quiet
+fi
+pass "clicks/clicks.json generated (3 click events)"
 
 # -- screenshots (1x1 JPEG placeholders) --
 # Generate minimal valid JPEG: FF D8 FF E0 header + minimal data
@@ -185,10 +211,12 @@ printf '\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff
 for i in 001 002 003; do
   cp "${TMP}/placeholder.jpg" "${TMP}/click-${i}.jpg"
 done
-${AWS} s3 cp "${TMP}/click-001.jpg" "${S3_URI}/${PREFIX}/screenshots/click-001.jpg" --quiet
-${AWS} s3 cp "${TMP}/click-002.jpg" "${S3_URI}/${PREFIX}/screenshots/click-002.jpg" --quiet
-${AWS} s3 cp "${TMP}/click-003.jpg" "${S3_URI}/${PREFIX}/screenshots/click-003.jpg" --quiet
-pass "screenshots uploaded (3 placeholder JPEGs)"
+if ! $DRY_RUN; then
+  ${AWS} s3 cp "${TMP}/click-001.jpg" "${S3_URI}/${PREFIX}/screenshots/click-001.jpg" --quiet
+  ${AWS} s3 cp "${TMP}/click-002.jpg" "${S3_URI}/${PREFIX}/screenshots/click-002.jpg" --quiet
+  ${AWS} s3 cp "${TMP}/click-003.jpg" "${S3_URI}/${PREFIX}/screenshots/click-003.jpg" --quiet
+fi
+pass "screenshots generated (3 placeholder JPEGs)"
 
 # -- transcript/transcript.json --
 cat > "${TMP}/transcript.json" <<ENDJSON
@@ -241,15 +269,92 @@ cat > "${TMP}/transcript.json" <<ENDJSON
 }
 ENDJSON
 
-${AWS} s3 cp "${TMP}/transcript.json" "${S3_URI}/${PREFIX}/transcript/transcript.json" --quiet
-pass "transcript/transcript.json uploaded (8 entries, 180s)"
+if ! $DRY_RUN; then
+  ${AWS} s3 cp "${TMP}/transcript.json" "${S3_URI}/${PREFIX}/transcript/transcript.json" --quiet
+fi
+pass "transcript/transcript.json generated (8 entries, 180s)"
 
-# Verify all uploads landed
-UPLOAD_COUNT=$(${AWS} s3 ls "${S3_URI}/${PREFIX}/" --recursive | wc -l | tr -d ' ')
-if [ "$UPLOAD_COUNT" -ge 7 ]; then
-  pass "All files visible in S3 (${UPLOAD_COUNT} objects)"
-else
-  fail "Expected >= 7 objects in S3, found ${UPLOAD_COUNT}"
+T_UPLOAD_END=$(epoch_now)
+T_UPLOAD_SECS=$((T_UPLOAD_END - T_UPLOAD_START))
+
+if ! $DRY_RUN; then
+  # Verify all uploads landed
+  UPLOAD_COUNT=$(${AWS} s3 ls "${S3_URI}/${PREFIX}/" --recursive | wc -l | tr -d ' ')
+  if [ "$UPLOAD_COUNT" -ge 7 ]; then
+    pass "All files visible in S3 (${UPLOAD_COUNT} objects, upload ${T_UPLOAD_SECS}s)"
+  else
+    fail "Expected >= 7 objects in S3, found ${UPLOAD_COUNT}"
+  fi
+fi
+
+###############################################################################
+# Dry-run: validate generated data locally and exit early
+###############################################################################
+if $DRY_RUN; then
+  echo ""
+  echo "--- Dry-run: validating generated JSON ---"
+
+  for jf in metadata.json clicks.json transcript.json; do
+    if python3 -m json.tool "${TMP}/${jf}" >/dev/null 2>&1; then
+      pass "${jf} is valid JSON"
+    else
+      fail "${jf} is invalid JSON"
+    fi
+  done
+
+  # Validate metadata required fields
+  for field in session_id visitor_name started_at ended_at status upload_complete; do
+    HAS=$(python3 -c "
+import json, sys
+d = json.load(open('${TMP}/metadata.json'))
+v = d.get('${field}')
+print('yes' if v is not None and v != '' else 'no')
+" 2>/dev/null || echo "error")
+    if [ "$HAS" = "yes" ]; then
+      pass "metadata.json field '${field}' present"
+    else
+      fail "metadata.json field '${field}' missing"
+    fi
+  done
+
+  # Validate clicks structure
+  CLICK_COUNT=$(python3 -c "import json; print(len(json.load(open('${TMP}/clicks.json')).get('events',[])))" 2>/dev/null || echo "0")
+  if [ "$CLICK_COUNT" -ge 1 ]; then
+    pass "clicks.json has ${CLICK_COUNT} events"
+  else
+    fail "clicks.json has no events"
+  fi
+
+  # Validate transcript structure
+  ENTRY_COUNT=$(python3 -c "import json; print(len(json.load(open('${TMP}/transcript.json')).get('entries',[])))" 2>/dev/null || echo "0")
+  if [ "$ENTRY_COUNT" -ge 1 ]; then
+    pass "transcript.json has ${ENTRY_COUNT} entries"
+  else
+    fail "transcript.json has no entries"
+  fi
+
+  # Check screenshots are valid JPEG (FF D8 magic bytes)
+  for jpg in "${TMP}"/click-*.jpg; do
+    MAGIC=$(xxd -l 2 -p "$jpg" 2>/dev/null || od -A n -t x1 -N 2 "$jpg" 2>/dev/null | tr -d ' ')
+    if [ "$MAGIC" = "ffd8" ]; then
+      pass "$(basename "$jpg") has valid JPEG header"
+    else
+      fail "$(basename "$jpg") is not a valid JPEG (got: ${MAGIC})"
+    fi
+  done
+
+  echo ""
+  echo "=============================================="
+  echo " Dry Run Results"
+  echo "   PASS: ${PASS}"
+  echo "   FAIL: ${FAIL}"
+  echo "=============================================="
+  if [ "$FAIL" -gt 0 ]; then
+    echo "   *** ${FAIL} check(s) FAILED ***"
+    exit 1
+  fi
+  echo "   All generated data is valid. Ready for live run."
+  exit 0
 fi
 
 ###############################################################################
@@ -259,6 +364,7 @@ echo ""
 echo "--- Step 2: Waiting for pipeline output (timeout: ${POLL_TIMEOUT}s) ---"
 echo "  Polling for ${S3_URI}/${PREFIX}/output/summary.json ..."
 
+T_POLL_START=$(epoch_now)
 ELAPSED=0
 FOUND=false
 
@@ -272,6 +378,9 @@ while [ "$ELAPSED" -lt "$POLL_TIMEOUT" ]; do
   ELAPSED=$((ELAPSED + POLL_INTERVAL))
 done
 echo ""
+
+T_POLL_END=$(epoch_now)
+T_PIPELINE_SECS=$((T_POLL_END - T_POLL_START))
 
 if $FOUND; then
   pass "output/summary.json appeared after ~${ELAPSED}s"
@@ -299,11 +408,11 @@ if python3 -c "import json; json.load(open('${TMP}/summary.json'))" 2>/dev/null;
   pass "summary.json is valid JSON"
 else
   fail "summary.json is not valid JSON"
-  cat "${TMP}/summary.json" | head -20
+  head -20 "${TMP}/summary.json"
   die "Cannot validate fields on invalid JSON"
 fi
 
-# Required fields (mapped from spec: visitor_name, key_insights->key_interests, recommendations->follow_up_actions)
+# Required fields (per DATA-CONTRACT.md: key_interests, follow_up_actions)
 REQUIRED_FIELDS="session_id visitor_name key_interests follow_up_actions executive_summary"
 for field in $REQUIRED_FIELDS; do
   HAS=$(python3 -c "
@@ -337,6 +446,73 @@ if [ "$VNAME" = "Alex Rivera" ]; then
   pass "visitor_name matches input ('Alex Rivera')"
 else
   fail "visitor_name: expected 'Alex Rivera', got '${VNAME}'"
+fi
+
+# Deep validation: key_interests is a non-empty array of objects with topic + confidence
+KI_DEEP=$(python3 -c "
+import json
+d = json.load(open('${TMP}/summary.json'))
+ki = d.get('key_interests', [])
+if not isinstance(ki, list) or len(ki) == 0:
+    print('empty')
+else:
+    ok = all(isinstance(i, dict) and i.get('topic') and i.get('confidence') for i in ki)
+    print('ok:' + str(len(ki)) if ok else 'bad_structure')
+" 2>/dev/null || echo "error")
+
+case "$KI_DEEP" in
+  ok:*)
+    pass "key_interests has ${KI_DEEP#ok:} entries, each with topic + confidence"
+    ;;
+  empty)
+    fail "key_interests is empty or not an array"
+    ;;
+  bad_structure)
+    fail "key_interests entries missing required topic/confidence fields"
+    ;;
+  *)
+    fail "key_interests deep validation error: ${KI_DEEP}"
+    ;;
+esac
+
+# Deep validation: follow_up_actions is a non-empty array of actionable strings
+FA_DEEP=$(python3 -c "
+import json
+d = json.load(open('${TMP}/summary.json'))
+fa = d.get('follow_up_actions', [])
+if not isinstance(fa, list) or len(fa) == 0:
+    print('empty')
+elif all(isinstance(a, str) and len(a) > 5 for a in fa):
+    print('ok:' + str(len(fa)))
+else:
+    print('bad_items')
+" 2>/dev/null || echo "error")
+
+case "$FA_DEEP" in
+  ok:*)
+    pass "follow_up_actions has ${FA_DEEP#ok:} actionable strings"
+    ;;
+  empty)
+    fail "follow_up_actions is empty or not an array"
+    ;;
+  bad_items)
+    fail "follow_up_actions contains non-string or trivially short items"
+    ;;
+  *)
+    fail "follow_up_actions deep validation error: ${FA_DEEP}"
+    ;;
+esac
+
+# Deep validation: executive_summary is substantive (>20 chars)
+ES_LEN=$(python3 -c "
+import json
+print(len(json.load(open('${TMP}/summary.json')).get('executive_summary', '')))
+" 2>/dev/null || echo "0")
+
+if [ "$ES_LEN" -gt 20 ]; then
+  pass "executive_summary is substantive (${ES_LEN} chars)"
+else
+  fail "executive_summary too short (${ES_LEN} chars, need >20)"
 fi
 
 ###############################################################################
@@ -374,14 +550,22 @@ for file in "output/timeline.json" "output/follow-up.json" "output/.analysis-cla
 done
 
 ###############################################################################
-# Results
+# Results with timing breakdown
 ###############################################################################
+T_TOTAL_END=$(epoch_now)
+T_TOTAL_SECS=$((T_TOTAL_END - T_UPLOAD_START))
+
 echo ""
 echo "=============================================="
 echo " E2E Pipeline Test Results"
 echo "   PASS: ${PASS}"
 echo "   FAIL: ${FAIL}"
 echo "   Session: ${SESSION_ID}"
+echo "----------------------------------------------"
+echo " Timing"
+echo "   Upload:           ${T_UPLOAD_SECS}s"
+echo "   Pipeline (poll):  ${T_PIPELINE_SECS}s"
+echo "   Total:            ${T_TOTAL_SECS}s"
 echo "=============================================="
 
 if [ "$FAIL" -gt 0 ]; then
