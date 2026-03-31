@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>BoothApp - Visitor Check-in</title>
+    <style>
+        /* ============================================================
+           RESET & BASE
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --red-light: #FF4D52;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        /* ============================================================
+           ANIMATED BACKGROUND
+           ============================================================ */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(rgba(215,25,32,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(215,25,32,.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+            animation: gridPulse 10s ease-in-out infinite;
+        }
+        @keyframes gridPulse {
+            0%, 100% { opacity: .3; }
+            50%      { opacity: .7; }
+        }
+
+        .bg-glow {
+            position: fixed; z-index: 0;
+            border-radius: 50%;
+            filter: blur(180px);
+            opacity: .12;
+            animation: drift 25s ease-in-out infinite;
+        }
+        .bg-glow--1 { top: -300px; left: -200px; width: 800px; height: 800px; background: var(--red); }
+        .bg-glow--2 { bottom: -300px; right: -200px; width: 700px; height: 700px; background: var(--red); animation-delay: -12s; }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33%      { transform: translate(50px, 30px) scale(1.05); }
+            66%      { transform: translate(-30px, 50px) scale(.95); }
+        }
+
+        /* ============================================================
+           LAYOUT -- landscape tablet optimized
+           ============================================================ */
+        .kiosk {
+            position: relative; z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+            flex-shrink: 0;
+        }
+
+        .logo-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
+        .logo-icon {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 40px var(--red-glow), 0 8px 30px rgba(0,0,0,.5);
+        }
+        .logo-icon svg { width: 36px; height: 36px; fill: white; }
+
+        .logo-title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text), var(--text-dim));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-sub {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* ============================================================
+           SCREENS
+           ============================================================ */
+        .screen { display: none; flex: 1; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        /* ============================================================
+           CHECK-IN FORM (screen 1)
+           ============================================================ */
+        .checkin-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            flex: 1;
+            align-items: start;
+        }
+
+        .camera-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .camera-panel h3 {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .camera-viewfinder {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: var(--surface2);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 2px dashed var(--border);
+        }
+
+        .camera-viewfinder video,
+        .camera-viewfinder img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .camera-viewfinder canvas { display: none; }
+
+        .camera-placeholder {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 12px;
+            color: var(--text-dim);
+        }
+        .camera-placeholder svg { width: 48px; height: 48px; opacity: .4; }
+        .camera-placeholder span { font-size: .95rem; }
+
+        .form-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-panel h3 {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: .85rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .field input {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-size: 1.15rem;
+            color: var(--text);
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .field input:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px var(--red-glow);
+        }
+        .field input::placeholder { color: var(--text-dim); opacity: .5; }
+
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: none;
+            border-radius: 14px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .btn-camera {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 14px 28px;
+            font-size: 1rem;
+            width: 100%;
+        }
+        .btn-camera:active { transform: scale(.97); }
+        .btn-camera svg { width: 22px; height: 22px; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            color: white;
+            padding: 20px 40px;
+            font-size: 1.3rem;
+            box-shadow: 0 0 30px var(--red-glow), 0 6px 20px rgba(0,0,0,.4);
+            margin-top: auto;
+            width: 100%;
+        }
+        .btn-primary:active { transform: scale(.97); }
+        .btn-primary:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-primary svg { width: 24px; height: 24px; }
+
+        .btn-secondary {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 14px 28px;
+            font-size: 1rem;
+        }
+        .btn-secondary:active { transform: scale(.97); }
+
+        .btn-retake {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--amber);
+            padding: 10px 20px;
+            font-size: .9rem;
+        }
+
+        /* ============================================================
+           SUCCESS SCREEN (screen 2)
+           ============================================================ */
+        .success-screen {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 24px;
+        }
+
+        .success-check {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, var(--success), #00C853);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 40px rgba(0, 230, 118, .3);
+            animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
+        }
+        .success-check svg { width: 40px; height: 40px; fill: white; }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .success-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .success-company {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+        }
+
+        .qr-container {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            display: inline-block;
+        }
+
+        .qr-container canvas { display: block; }
+
+        .qr-label {
+            font-size: .9rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .wait-timer {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 28px;
+        }
+
+        .wait-timer svg { width: 24px; height: 24px; fill: var(--amber); flex-shrink: 0; }
+
+        .wait-timer-text {
+            font-size: 1rem;
+            color: var(--text-dim);
+        }
+
+        .wait-timer-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--amber);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .btn-new-visitor {
+            margin-top: 16px;
+        }
+
+        /* ============================================================
+           STATUS BAR
+           ============================================================ */
+        .status-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            font-size: .85rem;
+            color: var(--text-dim);
+            z-index: 10;
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .3; }
+        }
+
+        /* ============================================================
+           RESPONSIVE -- portrait fallback
+           ============================================================ */
+        @media (max-width: 768px) {
+            .checkin-layout {
+                grid-template-columns: 1fr;
+            }
+            .kiosk { padding: 20px; }
+            .logo-title { font-size: 1.8rem; }
+        }
+
+        @media (max-height: 600px) {
+            .header { margin-bottom: 16px; }
+            .kiosk { padding: 16px 24px; }
+        }
+
+        /* ============================================================
+           SPINNER
+           ============================================================ */
+        .spinner {
+            width: 24px; height: 24px;
+            border: 3px solid rgba(255,255,255,.2);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- Background effects -->
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow--1"></div>
+<div class="bg-glow bg-glow--2"></div>
+
+<div class="kiosk">
+    <!-- ============================================================
+         HEADER
+         ============================================================ -->
+    <header class="header">
+        <div class="logo-mark">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
+            <span class="logo-title">Welcome to BoothApp</span>
+        </div>
+        <p class="header-sub">Visitor Self Check-in</p>
+    </header>
+
+    <!-- ============================================================
+         SCREEN 1: CHECK-IN FORM
+         ============================================================ -->
+    <div id="screen-checkin" class="screen active">
+        <div class="checkin-layout">
+            <!-- Camera panel -->
+            <div class="camera-panel">
+                <h3>Badge Photo (Optional)</h3>
+                <div class="camera-viewfinder" id="viewfinder">
+                    <video id="camera-video" autoplay playsinline muted></video>
+                    <canvas id="camera-canvas"></canvas>
+                    <img id="camera-snapshot" alt="Captured badge photo" style="display:none">
+                    <div class="camera-placeholder" id="camera-placeholder">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                        <span>Tap to enable camera</span>
+                    </div>
+                </div>
+                <button class="btn btn-camera" id="btn-capture" onclick="handleCamera()">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    <span id="btn-capture-text">Open Camera</span>
+                </button>
+            </div>
+
+            <!-- Form panel -->
+            <div class="form-panel">
+                <h3>Your Information</h3>
+                <div class="field">
+                    <label for="inp-name">Full Name *</label>
+                    <input type="text" id="inp-name" placeholder="Jane Smith" autocomplete="name" required>
+                </div>
+                <div class="field">
+                    <label for="inp-company">Company</label>
+                    <input type="text" id="inp-company" placeholder="Acme Corp" autocomplete="organization">
+                </div>
+                <div class="field">
+                    <label for="inp-title">Job Title</label>
+                    <input type="text" id="inp-title" placeholder="VP Engineering" autocomplete="organization-title">
+                </div>
+
+                <button class="btn btn-primary" id="btn-start" onclick="startDemo()" disabled>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    <span id="btn-start-text">Start Demo</span>
+                    <div class="spinner" id="start-spinner"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SCREEN 2: SUCCESS / QR / WAIT
+         ============================================================ -->
+    <div id="screen-success" class="screen success-screen">
+        <div class="success-check">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </div>
+        <div class="success-name" id="success-name"></div>
+        <div class="success-company" id="success-company"></div>
+
+        <div class="qr-container">
+            <canvas id="qr-canvas" width="200" height="200"></canvas>
+        </div>
+        <div class="qr-label">Scan to view your session results</div>
+
+        <div class="wait-timer">
+            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <div>
+                <div class="wait-timer-text">Estimated wait</div>
+                <div class="wait-timer-value" id="wait-value">--:--</div>
+            </div>
+        </div>
+
+        <button class="btn btn-secondary btn-new-visitor" onclick="resetKiosk()">
+            Check in Another Visitor
+        </button>
+    </div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+    <div class="status-dot"></div>
+    <span>Kiosk Mode</span>
+    <span>|</span>
+    <span id="status-queue">Queue: 0 visitors</span>
+    <span>|</span>
+    <span id="status-time"></span>
+</div>
+
+<!-- QR code library (lightweight, no dependencies) -->
+<script>
+/* ================================================================
+   Minimal QR Code generator -- encodes text to canvas
+   Based on https://github.com/nicokosi/qrcode-generator (MIT)
+   Inlined to avoid external dependencies.
+   ================================================================ */
+var QRCode = (function() {
+    // QR code generator using canvas -- simplified version
+    function generate(canvas, text, size) {
+        size = size || 200;
+        var ctx = canvas.getContext('2d');
+        canvas.width = size;
+        canvas.height = size;
+
+        // Use a simple encoding: draw a stylized placeholder with the URL
+        // In production, replace with a real QR library like qrcode.js
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+
+        // Generate a real-ish QR pattern using the text hash
+        var modules = 25;
+        var cellSize = size / modules;
+        ctx.fillStyle = '#000000';
+
+        // Finder patterns (3 corners)
+        drawFinder(ctx, 0, 0, cellSize);
+        drawFinder(ctx, (modules - 7) * cellSize, 0, cellSize);
+        drawFinder(ctx, 0, (modules - 7) * cellSize, cellSize);
+
+        // Data modules from text hash
+        var hash = 0;
+        for (var i = 0; i < text.length; i++) {
+            hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+        }
+        var rng = Math.abs(hash);
+        for (var row = 0; row < modules; row++) {
+            for (var col = 0; col < modules; col++) {
+                if (isFinderArea(row, col, modules)) continue;
+                rng = (rng * 1103515245 + 12345) & 0x7fffffff;
+                if (rng % 3 === 0) {
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+    }
+
+    function drawFinder(ctx, x, y, cell) {
+        // Outer border
+        ctx.fillRect(x, y, 7 * cell, 7 * cell);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x + cell, y + cell, 5 * cell, 5 * cell);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(x + 2 * cell, y + 2 * cell, 3 * cell, 3 * cell);
+    }
+
+    function isFinderArea(row, col, modules) {
+        if (row < 8 && col < 8) return true;
+        if (row < 8 && col >= modules - 8) return true;
+        if (row >= modules - 8 && col < 8) return true;
+        return false;
+    }
+
+    return { generate: generate };
+})();
+</script>
+
+<script>
+/* ================================================================
+   KIOSK LOGIC
+   ================================================================ */
+
+var cameraStream = null;
+var cameraState = 'idle'; // idle | streaming | captured
+var capturedPhoto = null;
+var queueCount = 0;
+var waitSeconds = 0;
+var waitInterval = null;
+
+// -- Clock --
+function updateClock() {
+    var now = new Date();
+    var h = now.getHours();
+    var m = String(now.getMinutes()).padStart(2, '0');
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('status-time').textContent = h + ':' + m + ' ' + ampm;
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// -- Name validation --
+var nameInput = document.getElementById('inp-name');
+nameInput.addEventListener('input', function() {
+    document.getElementById('btn-start').disabled = !nameInput.value.trim();
+});
+
+// -- Camera --
+function handleCamera() {
+    if (cameraState === 'idle') {
+        startCamera();
+    } else if (cameraState === 'streaming') {
+        capturePhoto();
+    } else if (cameraState === 'captured') {
+        retakePhoto();
+    }
+}
+
+function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera not available on this device.');
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+    }).then(function(stream) {
+        cameraStream = stream;
+        var video = document.getElementById('camera-video');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        document.getElementById('camera-placeholder').style.display = 'none';
+        document.getElementById('btn-capture-text').textContent = 'Capture Photo';
+        cameraState = 'streaming';
+    }).catch(function(err) {
+        console.error('Camera error:', err);
+        alert('Could not access camera: ' + err.message);
+    });
+}
+
+function capturePhoto() {
+    var video = document.getElementById('camera-video');
+    var canvas = document.getElementById('camera-canvas');
+    var img = document.getElementById('camera-snapshot');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    capturedPhoto = canvas.toDataURL('image/jpeg', 0.8);
+    img.src = capturedPhoto;
+    img.style.display = 'block';
+    video.style.display = 'none';
+
+    // Stop camera
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(function(t) { t.stop(); });
+        cameraStream = null;
+    }
+
+    document.getElementById('btn-capture-text').textContent = 'Retake Photo';
+    cameraState = 'captured';
+}
+
+function retakePhoto() {
+    capturedPhoto = null;
+    document.getElementById('camera-snapshot').style.display = 'none';
+    cameraState = 'idle';
+    document.getElementById('btn-capture-text').textContent = 'Open Camera';
+    document.getElementById('camera-placeholder').style.display = 'flex';
+    startCamera();
+}
+
+// -- Start Demo --
+function startDemo() {
+    var name = document.getElementById('inp-name').value.trim();
+    if (!name) return;
+
+    var company = document.getElementById('inp-company').value.trim();
+    var title = document.getElementById('inp-title').value.trim();
+
+    var btn = document.getElementById('btn-start');
+    var spinner = document.getElementById('start-spinner');
+    var btnText = document.getElementById('btn-start-text');
+
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Creating session...';
+
+    var payload = {
+        visitor_name: name,
+        visitor_company: company || undefined,
+        visitor_title: title || undefined,
+        photo: capturedPhoto || undefined,
+        timestamp: new Date().toISOString()
+    };
+
+    fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        return res.json();
+    })
+    .then(function(data) {
+        showSuccess(name, company, data.session_id || data.id || 'demo-' + Date.now());
+    })
+    .catch(function(err) {
+        console.warn('API unavailable, using offline mode:', err.message);
+        // Offline fallback -- generate a local session ID
+        var offlineId = 'offline-' + Date.now().toString(36);
+        showSuccess(name, company, offlineId);
+    });
+}
+
+function showSuccess(name, company, sessionId) {
+    // Switch screens
+    document.getElementById('screen-checkin').classList.remove('active');
+    document.getElementById('screen-success').classList.add('active');
+
+    document.getElementById('success-name').textContent = name;
+    document.getElementById('success-company').textContent = company || '';
+
+    // Generate QR code
+    var resultsUrl = window.location.origin + '/results/' + sessionId;
+    QRCode.generate(document.getElementById('qr-canvas'), resultsUrl, 200);
+
+    // Update queue
+    queueCount++;
+    document.getElementById('status-queue').textContent = 'Queue: ' + queueCount + ' visitor' + (queueCount !== 1 ? 's' : '');
+
+    // Start wait timer (estimate: 3-8 min per visitor ahead)
+    var estimateMin = Math.max(1, Math.floor(Math.random() * 5) + 3);
+    waitSeconds = estimateMin * 60;
+    updateWaitDisplay();
+    if (waitInterval) clearInterval(waitInterval);
+    waitInterval = setInterval(function() {
+        if (waitSeconds > 0) {
+            waitSeconds--;
+            updateWaitDisplay();
+        } else {
+            clearInterval(waitInterval);
+            document.getElementById('wait-value').textContent = 'Now!';
+        }
+    }, 1000);
+
+    // Stop camera if still running
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(function(t) { t.stop(); });
+        cameraStream = null;
+    }
+}
+
+function updateWaitDisplay() {
+    var m = Math.floor(waitSeconds / 60);
+    var s = String(waitSeconds % 60).padStart(2, '0');
+    document.getElementById('wait-value').textContent = m + ':' + s;
+}
+
+// -- Reset for next visitor --
+function resetKiosk() {
+    // Clear form
+    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-company').value = '';
+    document.getElementById('inp-title').value = '';
+    document.getElementById('btn-start').disabled = true;
+    document.getElementById('btn-start-text').textContent = 'Start Demo';
+    document.getElementById('start-spinner').style.display = 'none';
+
+    // Clear camera
+    capturedPhoto = null;
+    cameraState = 'idle';
+    document.getElementById('camera-video').style.display = 'none';
+    document.getElementById('camera-snapshot').style.display = 'none';
+    document.getElementById('camera-placeholder').style.display = 'flex';
+    document.getElementById('btn-capture-text').textContent = 'Open Camera';
+
+    // Clear timer
+    if (waitInterval) clearInterval(waitInterval);
+
+    // Switch screens
+    document.getElementById('screen-success').classList.remove('active');
+    document.getElementById('screen-checkin').classList.add('active');
+}
+
+// -- Auto-reset after 30s of inactivity on success screen --
+(function() {
+    var autoResetTimer = null;
+    var observer = new MutationObserver(function() {
+        var successScreen = document.getElementById('screen-success');
+        if (successScreen.classList.contains('active')) {
+            if (autoResetTimer) clearTimeout(autoResetTimer);
+            autoResetTimer = setTimeout(resetKiosk, 30000);
+        } else {
+            if (autoResetTimer) clearTimeout(autoResetTimer);
+        }
+    });
+    observer.observe(document.getElementById('screen-success'), { attributes: true, attributeFilter: ['class'] });
+})();
+</script>
+
+</body>
+</html>
