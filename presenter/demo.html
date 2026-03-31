@@ -328,6 +328,116 @@
             .logo-text { font-size: 36px; }
             .tagline { font-size: 16px; letter-spacing: 2px; }
         }
+
+        /* ============================================================
+           KEYBOARD SHORTCUTS UI
+           ============================================================ */
+        .kb-help-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-dim);
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, color .2s, box-shadow .2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,.3);
+        }
+        .kb-help-btn:hover {
+            background: var(--red);
+            color: #fff;
+            border-color: var(--red);
+        }
+
+        .kb-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0,0,0,.7);
+            backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+        }
+        .kb-overlay.active { display: flex; }
+
+        .kb-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 40px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        }
+        .kb-card h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+        .kb-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+        .kb-row:last-child { border-bottom: none; }
+        kbd {
+            display: inline-block;
+            min-width: 28px;
+            text-align: center;
+            padding: 3px 8px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            color: var(--text);
+            box-shadow: 0 2px 0 rgba(0,0,0,.3);
+        }
+        .kb-card .kb-close {
+            display: block;
+            margin-top: 16px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .feed-item.kb-highlight {
+            background: rgba(215,25,32,.08);
+            border-left: 3px solid var(--red);
+        }
+
+        .pause-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            background: rgba(255,171,0,.1);
+            border: 1px solid rgba(255,171,0,.3);
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--amber);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .pause-badge.active { display: inline-flex; }
+
+        .cards.kb-hidden { display: none; }
     </style>
 </head>
 <body>
@@ -387,6 +497,7 @@
                 Live Activity Feed
             </div>
             <div class="feed-refresh" id="refreshTimer">Refreshing in 5s</div>
+            <div class="pause-badge" id="pauseBadge">Paused</div>
         </div>
         <ul class="feed-list" id="feedList">
             <!-- populated by JS -->
@@ -400,6 +511,24 @@
         <span id="clock"></span>
     </div>
 
+</div>
+
+<!-- Keyboard shortcut help button -->
+<button class="kb-help-btn" id="kbHelpBtn" title="Keyboard shortcuts (?)">?</button>
+
+<!-- Keyboard shortcut overlay -->
+<div class="kb-overlay" id="kbOverlay">
+    <div class="kb-card">
+        <h2>Keyboard Shortcuts</h2>
+        <div class="kb-row"><span>Play / Pause feed</span> <kbd>P</kbd></div>
+        <div class="kb-row"><span>Previous moment</span> <kbd>&larr;</kbd></div>
+        <div class="kb-row"><span>Next moment</span> <kbd>&rarr;</kbd></div>
+        <div class="kb-row"><span>Toggle summary cards</span> <kbd>S</kbd></div>
+        <div class="kb-row"><span>Toggle fullscreen</span> <kbd>F</kbd></div>
+        <div class="kb-row"><span>Close overlay</span> <kbd>Esc</kbd></div>
+        <div class="kb-row"><span>Show this help</span> <kbd>?</kbd></div>
+        <span class="kb-close">Press <kbd>Esc</kbd> or <kbd>?</kbd> to close</span>
+    </div>
 </div>
 
 <script>
@@ -592,8 +721,116 @@
     renderCards();
     renderFeed();
     renderClock();
-    setInterval(renderClock, 1000);
-    setInterval(tickCountdown, 1000);
+    var clockInterval = setInterval(renderClock, 1000);
+    var countdownInterval = setInterval(tickCountdown, 1000);
+
+    // ------------------------------------------------------------------
+    // KEYBOARD SHORTCUTS
+    // ------------------------------------------------------------------
+    var paused = false;
+    var feedIndex = -1; // -1 = no selection
+
+    function togglePause() {
+        paused = !paused;
+        var badge = document.getElementById('pauseBadge');
+        var timer = document.getElementById('refreshTimer');
+        if (paused) {
+            clearInterval(countdownInterval);
+            badge.classList.add('active');
+            timer.textContent = 'Paused';
+        } else {
+            countdown = 5;
+            countdownInterval = setInterval(tickCountdown, 1000);
+            badge.classList.remove('active');
+        }
+    }
+
+    function highlightFeedItem(idx) {
+        var items = document.querySelectorAll('.feed-item');
+        if (items.length === 0) return;
+        // Clear previous
+        items.forEach(function (el) { el.classList.remove('kb-highlight'); });
+        // Clamp index
+        if (idx < 0) idx = 0;
+        if (idx >= items.length) idx = items.length - 1;
+        feedIndex = idx;
+        items[feedIndex].classList.add('kb-highlight');
+        items[feedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function toggleSummary() {
+        document.querySelector('.cards').classList.toggle('kb-hidden');
+    }
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(function () {});
+        } else {
+            document.exitFullscreen().catch(function () {});
+        }
+    }
+
+    function openOverlay() {
+        document.getElementById('kbOverlay').classList.add('active');
+    }
+
+    function closeOverlay() {
+        document.getElementById('kbOverlay').classList.remove('active');
+    }
+
+    function isOverlayOpen() {
+        return document.getElementById('kbOverlay').classList.contains('active');
+    }
+
+    // ? button
+    document.getElementById('kbHelpBtn').addEventListener('click', function () {
+        if (isOverlayOpen()) closeOverlay(); else openOverlay();
+    });
+
+    // Click outside card to close
+    document.getElementById('kbOverlay').addEventListener('click', function (e) {
+        if (e.target === this) closeOverlay();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        // Skip if user is typing in an input
+        var tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+
+        var key = e.key;
+
+        if (key === 'Escape') {
+            if (isOverlayOpen()) { closeOverlay(); e.preventDefault(); }
+            return;
+        }
+
+        if (key === '?' || (key === '/' && e.shiftKey)) {
+            if (isOverlayOpen()) closeOverlay(); else openOverlay();
+            e.preventDefault();
+            return;
+        }
+
+        // Don't process other shortcuts while overlay is open
+        if (isOverlayOpen()) return;
+
+        if (key === 'p' || key === 'P') {
+            togglePause();
+            e.preventDefault();
+        } else if (key === 'ArrowLeft') {
+            highlightFeedItem(feedIndex <= 0 ? 0 : feedIndex - 1);
+            e.preventDefault();
+        } else if (key === 'ArrowRight') {
+            var items = document.querySelectorAll('.feed-item');
+            highlightFeedItem(feedIndex < 0 ? 0 : Math.min(feedIndex + 1, items.length - 1));
+            e.preventDefault();
+        } else if (key === 's' || key === 'S') {
+            toggleSummary();
+            e.preventDefault();
+        } else if (key === 'f' || key === 'F') {
+            toggleFullscreen();
+            e.preventDefault();
+        }
+    });
 
 })();
 </script>
