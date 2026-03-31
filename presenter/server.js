@@ -102,6 +102,37 @@ app.get('/api/sessions/:id/summary', async (req, res) => {
     }
 });
 
+// SSE endpoint for real-time analysis completion notifications
+const sseClients = new Set();
+
+app.get('/api/notifications', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+});
+
+// POST /api/notifications/analysis-complete - trigger notification to all connected clients
+app.post('/api/notifications/analysis-complete', express.json(), (req, res) => {
+    const { visitor_name, score, session_id } = req.body || {};
+    const payload = JSON.stringify({
+        type: 'analysis_complete',
+        visitor_name: visitor_name || 'Unknown',
+        score: score || 'Medium',
+        session_id: session_id || '',
+        timestamp: Date.now(),
+    });
+
+    sseClients.forEach((client) => {
+        client.write(`data: ${payload}\n\n`);
+    });
+
+    res.json({ sent: sseClients.size });
+});
+
 app.listen(PORT, () => {
     console.log(`Presenter server running on http://localhost:${PORT}`);
 });
