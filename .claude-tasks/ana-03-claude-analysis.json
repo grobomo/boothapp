@@ -4,53 +4,56 @@
   "title": "Build Claude analysis engine for booth demo sessions",
   "description": "Send the correlated timeline to Claude API (via RONE AI endpoint) for analysis. Claude should determine: (1) which products/features were shown, (2) what the visitor asked about or showed interest in, (3) key moments worth highlighting, (4) recommended follow-up actions for the SDR. Use recording-analyzer engine pattern (modular, template-based). Output summary.json matching DATA-CONTRACT.md schema.",
   "priority": 3,
-  "status": "in_progress",
+  "status": "completed",
   "assigned_worker": "claude-sonnet-4-6-worker",
   "substeps": [
     {
       "id": "claude-client",
-      "title": "Create engines/claude_client.py — Anthropic client configured for RONE endpoint",
+      "title": "Create engines/claude_client.py \u2014 Anthropic client configured for RONE endpoint",
       "status": "completed",
       "pr": null,
       "notes": "get_client() reads RONE_AI_BASE_URL and RONE_AI_API_KEY (fallback ANTHROPIC_API_KEY)"
     },
     {
       "id": "prompts",
-      "title": "Create engines/prompts.py — System prompts and user message templates",
+      "title": "Create engines/prompts.py \u2014 System prompts and user message templates",
       "status": "completed",
       "pr": null,
       "notes": "SYSTEM_FACTUAL, SYSTEM_RECOMMENDATIONS, FACTUAL_EXTRACTION_PROMPT, RECOMMENDATIONS_PROMPT as module-level constants"
     },
     {
       "id": "analyzer",
-      "title": "Create engines/analyzer.py — SessionAnalyzer class with two-pass Claude analysis",
+      "title": "Create engines/analyzer.py \u2014 SessionAnalyzer class with two-pass Claude analysis",
       "status": "completed",
       "pr": null,
       "notes": "Pass 1: factual extraction with up to 10 screenshots as vision blocks. Pass 2: recommendations from factual JSON. Both use streaming with get_final_message(). Handles local and S3 session dirs."
     },
     {
       "id": "cli-entry",
-      "title": "Create analyze.py — CLI entry point with argparse",
+      "title": "Create analyze.py \u2014 CLI entry point with argparse",
       "status": "completed",
       "pr": null,
       "notes": "Usage: python analyze.py <session_dir> [output_dir] [--dry-run]. Writes summary.json and follow-up.json. Supports S3 output."
     },
     {
       "id": "sample-data",
-      "title": "Create sample_data/ — Realistic sample session files for testing",
+      "title": "Create sample_data/ \u2014 Realistic sample session files for testing",
       "status": "completed",
       "pr": null,
       "notes": "sample_metadata.json, sample_clicks.json (10 events), sample_transcript.json (20 entries). Scenario: Priya Sharma, financial firm, BYOD + XDR demo."
     }
   ],
-  "depends_on": ["ana-02-correlator"],
+  "depends_on": [
+    "ana-02-correlator"
+  ],
   "source_project": "ProjectsCL1/recording-analyzer/engines/",
-  "research_notes": "Two-pass Claude analysis chosen to separate factual grounding from opinion/recommendations — reduces hallucination risk. Pass 1 uses vision (up to 10 screenshots as base64 image blocks) to ground product identification in what was actually shown on screen. Pass 2 receives Pass 1 JSON as input and generates SDR-actionable recommendations. RONE AI endpoint configured via RONE_AI_BASE_URL env var (default api.anthropic.com); API key via RONE_AI_API_KEY with ANTHROPIC_API_KEY fallback. Streaming (client.messages.stream + get_final_message()) used for both passes for performance. Screenshot count capped at 10 to stay within token budget (~$0.15-0.25 per session at opus pricing). Model: claude-opus-4-6 with adaptive thinking for reasoning quality.",
+  "research_notes": "Two-pass Claude analysis chosen to separate factual grounding from opinion/recommendations \u2014 reduces hallucination risk. Pass 1 uses vision (up to 10 screenshots as base64 image blocks) to ground product identification in what was actually shown on screen. Pass 2 receives Pass 1 JSON as input and generates SDR-actionable recommendations. RONE AI endpoint configured via RONE_AI_BASE_URL env var (default api.anthropic.com); API key via RONE_AI_API_KEY with ANTHROPIC_API_KEY fallback. Streaming (client.messages.stream + get_final_message()) used for both passes for performance. Screenshot count capped at 10 to stay within token budget (~$0.15-0.25 per session at opus pricing). Model: claude-opus-4-6 with adaptive thinking for reasoning quality.",
   "tests": [
     "Feed sample timeline -> summary.json has all required fields",
     "Products shown list is accurate (not hallucinated)",
     "Visitor interests have evidence field referencing actual transcript/click",
     "Recommendations are actionable (not generic 'follow up')",
     "Analysis completes within 60 seconds for a 15-minute demo"
-  ]
+  ],
+  "completed_at": "2026-03-30T20:00:00Z"
 }

@@ -4,7 +4,7 @@
   "title": "Build audio-to-transcript pipeline",
   "description": "After recording ends, transcribe the WAV file to text. Research and choose best approach: local Whisper, AWS Transcribe, or Azure Speech-to-Text. Must produce transcript.json matching DATA-CONTRACT.md schema (entries with timestamp, speaker, text). Speaker diarization is nice-to-have (distinguish SE vs visitor). Upload transcript.json to S3 session folder when done.",
   "priority": 2,
-  "status": "in_progress",
+  "status": "completed",
   "assigned_worker": "ccc-aud-02",
   "research_notes": "Chose AWS Transcribe: already on AWS, no local GPU needed, handles 60-min WAV within 5-min wall clock at ~10x real-time, built-in speaker diarization (2 speakers). Job name uniqueness ensured with timestamp suffix. spk_0 maps to SE by convention (SE typically speaks first), configurable via SE_SPEAKER_LABEL env var.",
   "substeps": [
@@ -16,12 +16,15 @@
       "notes": "All unit tests pass"
     }
   ],
-  "depends_on": ["aud-01-recorder"],
+  "depends_on": [
+    "aud-01-recorder"
+  ],
   "tests": [
     "Feed 5-minute WAV -> transcript.json produced with correct schema",
     "Timestamps are accurate within 2 seconds",
     "Non-English words/names handled gracefully (not dropped)",
     "Empty/silent audio -> empty entries array, no error",
     "Large file (60-minute recording) completes within 5 minutes"
-  ]
+  ],
+  "completed_at": "2026-03-30T20:00:00Z"
 }
