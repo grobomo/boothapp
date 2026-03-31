@@ -125,7 +125,29 @@ def validate_recommendations(data: dict) -> list:
 
 def validate_summary(data: dict) -> list:
     """Validate final summary output. Returns list of error strings (empty = valid)."""
-    return _validate_against_schema(data, SUMMARY_SCHEMA, "summary")
+    errors = _validate_against_schema(data, SUMMARY_SCHEMA, "summary")
+    if not isinstance(data, dict):
+        return errors
+
+    # session_score must be 1-10 (maximum 10)
+    score = data.get("session_score")
+    if isinstance(score, (int, float)) and not (1 <= score <= 10):
+        errors.append("summary: 'session_score' must be between 1 and 10 (maximum 10)")
+
+    # key_interests items must have valid confidence enum
+    VALID_CONFIDENCE = {"high", "medium", "low"}
+    interests = data.get("key_interests")
+    if isinstance(interests, list):
+        for i, item in enumerate(interests):
+            if isinstance(item, dict):
+                conf = item.get("confidence")
+                if conf is not None and conf not in VALID_CONFIDENCE:
+                    errors.append(
+                        f"summary: 'key_interests[{i}].confidence' must be "
+                        f"one of {sorted(VALID_CONFIDENCE)}, got '{conf}'"
+                    )
+
+    return errors
 
 
 def validate_or_raise(data: dict, schema_name: str) -> dict:

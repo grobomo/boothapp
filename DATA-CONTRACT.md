@@ -24,7 +24,8 @@ sessions/<session-id>/
 └── output/
     ├── summary.html           # WHO: Workstream C (Analysis)
     ├── summary.json           # WHO: Workstream C (structured)
-    └── follow-up.json         # WHO: Workstream C (actions)
+    ├── follow-up.json         # WHO: Workstream C (actions)
+    └── follow-up-email.html   # WHO: Workstream C (visitor email template)
 ```
 
 ## Schema: metadata.json
