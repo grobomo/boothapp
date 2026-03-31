@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Session Comparison</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-dark:  #A8131A;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --amber:     #FFAB00;
+            --blue:      #448AFF;
+            --common-bg: rgba(0, 230, 118, 0.08);
+            --common-border: rgba(0, 230, 118, 0.25);
+            --diff-bg:   rgba(255, 171, 0, 0.08);
+            --diff-border: rgba(255, 171, 0, 0.25);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        /* ---- Header ---- */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--red), #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .header a:hover { color: var(--text); }
+
+        /* ---- Legend ---- */
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+        .legend-swatch--common {
+            background: var(--common-bg);
+            border: 1px solid var(--common-border);
+        }
+        .legend-swatch--diff {
+            background: var(--diff-bg);
+            border: 1px solid var(--diff-border);
+        }
+
+        /* ---- Loading / Error ---- */
+        .loading, .empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-dim);
+        }
+
+        #error-msg {
+            display: none;
+            background: rgba(215, 25, 32, 0.15);
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #FF6B6B;
+        }
+
+        /* ---- Comparison Table ---- */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .compare-table thead th {
+            background: var(--surface2);
+            padding: 0.85rem 1rem;
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+        .compare-table thead th:first-child {
+            width: 180px;
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        .compare-table tbody td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+
+        .compare-table tbody tr:last-child td { border-bottom: none; }
+
+        .compare-table .row-label {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        /* ---- Highlight classes ---- */
+        .cell-common {
+            background: var(--common-bg);
+            border-left: 3px solid var(--common-border);
+        }
+        .cell-diff {
+            background: var(--diff-bg);
+            border-left: 3px solid var(--diff-border);
+        }
+
+        /* ---- Tags / pills ---- */
+        .tag {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin: 0.15rem 0.2rem;
+        }
+        .tag-product {
+            background: rgba(68, 138, 255, 0.15);
+            color: var(--blue);
+        }
+        .tag-interest {
+            background: rgba(255, 171, 0, 0.15);
+            color: var(--amber);
+        }
+        .tag-common {
+            background: rgba(0, 230, 118, 0.15);
+            color: var(--success);
+        }
+
+        /* ---- Score badge ---- */
+        .score-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .score-high   { background: rgba(0,230,118,0.15); color: var(--success); }
+        .score-medium { background: rgba(68,138,255,0.15); color: var(--blue); }
+        .score-low    { background: rgba(255,171,0,0.15);  color: var(--amber); }
+        .score-unknown { background: rgba(107,115,133,0.15); color: var(--text-dim); }
+
+        /* ---- Actions list ---- */
+        .action-list {
+            list-style: none;
+            padding: 0;
+        }
+        .action-list li {
+            padding: 0.3rem 0;
+            font-size: 0.88rem;
+            color: var(--text);
+        }
+        .action-list li::before {
+            content: ">";
+            color: var(--red);
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+
+        /* ---- Summary cards ---- */
+        .summary-row {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .summary-card {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+        }
+        .summary-card h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+        }
+        .summary-card .items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 900px) {
+            body { padding: 1rem; }
+            .summary-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Session Comparison</h1>
+        <a href="/sessions.html">&larr; Back to Sessions</a>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <span class="legend-swatch legend-swatch--common"></span>
+            Common across sessions
+        </div>
+        <div class="legend-item">
+            <span class="legend-swatch legend-swatch--diff"></span>
+            Unique to session
+        </div>
+    </div>
+
+    <div id="error-msg"></div>
+    <div id="summary-area"></div>
+    <div id="table-area">
+        <div class="loading">Loading comparison data...</div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function getSessionIds() {
+            var params = new URLSearchParams(window.location.search);
+            var raw = params.get('sessions') || '';
+            return raw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '--';
+            var d = new Date(iso);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        }
+
+        function scoreBadge(score) {
+            var s = (score || 'unknown').toLowerCase();
+            var cls = 'score-unknown';
+            if (s === 'high') cls = 'score-high';
+            else if (s === 'medium') cls = 'score-medium';
+            else if (s === 'low') cls = 'score-low';
+            return '<span class="score-badge ' + cls + '">' + escHtml(score) + '</span>';
+        }
+
+        // Normalize product name for comparison
+        function normItem(item) {
+            if (typeof item === 'string') return item.toLowerCase().trim();
+            if (item && item.name) return item.name.toLowerCase().trim();
+            if (item && item.topic) return item.topic.toLowerCase().trim();
+            if (item && item.action) return item.action.toLowerCase().trim();
+            return String(item).toLowerCase().trim();
+        }
+
+        function displayName(item) {
+            if (typeof item === 'string') return item;
+            if (item && item.name) return item.name;
+            if (item && item.topic) return item.topic;
+            if (item && item.action) return item.action;
+            return String(item);
+        }
+
+        // Find items common to ALL sessions vs unique per-session
+        function classifyItems(sessionsData, field) {
+            var allNormed = {};  // normed -> {displayName, count}
+            var perSession = [];  // [{normed -> displayName}]
+
+            sessionsData.forEach(function(s) {
+                var items = s[field] || [];
+                var sessionMap = {};
+                items.forEach(function(item) {
+                    var n = normItem(item);
+                    var d = displayName(item);
+                    sessionMap[n] = d;
+                    if (!allNormed[n]) allNormed[n] = { display: d, count: 0 };
+                    allNormed[n].count++;
+                });
+                perSession.push(sessionMap);
+            });
+
+            var totalSessions = sessionsData.length;
+            var common = [];
+            var unique = [];  // per session
+
+            Object.keys(allNormed).forEach(function(n) {
+                if (allNormed[n].count === totalSessions) {
+                    common.push(allNormed[n].display);
+                }
+            });
+
+            perSession.forEach(function(sessionMap) {
+                var u = [];
+                Object.keys(sessionMap).forEach(function(n) {
+                    if (allNormed[n].count < totalSessions) {
+                        u.push(sessionMap[n]);
+                    }
+                });
+                unique.push(u);
+            });
+
+            return { common: common, unique: unique };
+        }
+
+        function renderTags(items, cls) {
+            if (!items || !items.length) return '<span style="color:var(--text-dim)">--</span>';
+            return items.map(function(item) {
+                return '<span class="tag ' + cls + '">' + escHtml(displayName(item)) + '</span>';
+            }).join('');
+        }
+
+        function renderActions(items) {
+            if (!items || !items.length) return '<span style="color:var(--text-dim)">--</span>';
+            var html = '<ul class="action-list">';
+            items.forEach(function(item) {
+                html += '<li>' + escHtml(displayName(item)) + '</li>';
+            });
+            html += '</ul>';
+            return html;
+        }
+
+        function renderSummary(sessionsData) {
+            var products = classifyItems(sessionsData, 'products_demonstrated');
+            var interests = classifyItems(sessionsData, 'key_interests');
+
+            var html = '<div class="summary-row">';
+
+            // Common products
+            html += '<div class="summary-card">';
+            html += '<h3>Common Products</h3>';
+            html += '<div class="items">';
+            if (products.common.length) {
+                html += renderTags(products.common, 'tag-common');
+            } else {
+                html += '<span style="color:var(--text-dim)">No common products</span>';
+            }
+            html += '</div></div>';
+
+            // Common interests
+            html += '<div class="summary-card">';
+            html += '<h3>Common Interests</h3>';
+            html += '<div class="items">';
+            if (interests.common.length) {
+                html += renderTags(interests.common, 'tag-common');
+            } else {
+                html += '<span style="color:var(--text-dim)">No common interests</span>';
+            }
+            html += '</div></div>';
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderTable(sessionsData) {
+            var ids = sessionsData.map(function(s) { return s.session_id; });
+            var products = classifyItems(sessionsData, 'products_demonstrated');
+            var interests = classifyItems(sessionsData, 'key_interests');
+            var actions = classifyItems(sessionsData, 'follow_up_actions');
+
+            // Check if all scores are the same
+            var scores = sessionsData.map(function(s) { return (s.engagement_score || 'unknown').toLowerCase(); });
+            var allSameScore = scores.every(function(s) { return s === scores[0]; });
+
+            var html = '<table class="compare-table">';
+
+            // Header row
+            html += '<thead><tr><th>Attribute</th>';
+            sessionsData.forEach(function(s) {
+                var label = s.visitor_name || s.session_id;
+                html += '<th>' + escHtml(label);
+                if (s.company) html += '<br><span style="font-weight:400;opacity:0.7;">' + escHtml(s.company) + '</span>';
+                html += '</th>';
+            });
+            html += '</tr></thead>';
+
+            html += '<tbody>';
+
+            // Row: Session ID
+            html += '<tr><td class="row-label">Session</td>';
+            sessionsData.forEach(function(s) {
+                html += '<td style="font-family:Consolas,Monaco,monospace;font-size:0.82rem;color:var(--text-dim);">' + escHtml(s.session_id) + '</td>';
+            });
+            html += '</tr>';
+
+            // Row: Date
+            html += '<tr><td class="row-label">Date</td>';
+            sessionsData.forEach(function(s) {
+                html += '<td>' + formatDate(s.created_at) + '</td>';
+            });
+            html += '</tr>';
+
+            // Row: Duration
+            html += '<tr><td class="row-label">Duration</td>';
+            sessionsData.forEach(function(s) {
+                html += '<td>' + (s.duration_minutes ? s.duration_minutes + ' min' : '--') + '</td>';
+            });
+            html += '</tr>';
+
+            // Row: Engagement Score
+            html += '<tr><td class="row-label">Engagement</td>';
+            sessionsData.forEach(function(s, i) {
+                var cls = allSameScore ? 'cell-common' : (scores[i] !== scores[0] ? 'cell-diff' : '');
+                html += '<td class="' + cls + '">' + scoreBadge(s.engagement_score) + '</td>';
+            });
+            html += '</tr>';
+
+            // Row: Products Demonstrated
+            html += '<tr><td class="row-label">Products</td>';
+            sessionsData.forEach(function(s, i) {
+                var sessionProducts = s.products_demonstrated || [];
+                var cellHtml = '';
+                var hasCommon = false;
+                var hasDiff = false;
+
+                sessionProducts.forEach(function(p) {
+                    var n = normItem(p);
+                    var isCommon = products.common.some(function(c) { return normItem(c) === n; });
+                    if (isCommon) {
+                        hasCommon = true;
+                        cellHtml += '<span class="tag tag-common">' + escHtml(displayName(p)) + '</span>';
+                    } else {
+                        hasDiff = true;
+                        cellHtml += '<span class="tag tag-product">' + escHtml(displayName(p)) + '</span>';
+                    }
+                });
+
+                var tdCls = '';
+                if (hasDiff && !hasCommon) tdCls = 'cell-diff';
+                else if (hasCommon && !hasDiff) tdCls = 'cell-common';
+                html += '<td class="' + tdCls + '">' + (cellHtml || '<span style="color:var(--text-dim)">--</span>') + '</td>';
+            });
+            html += '</tr>';
+
+            // Row: Key Interests
+            html += '<tr><td class="row-label">Interests</td>';
+            sessionsData.forEach(function(s, i) {
+                var sessionInterests = s.key_interests || [];
+                var cellHtml = '';
+                var hasCommon = false;
+                var hasDiff = false;
+
+                sessionInterests.forEach(function(p) {
+                    var n = normItem(p);
+                    var isCommon = interests.common.some(function(c) { return normItem(c) === n; });
+                    if (isCommon) {
+                        hasCommon = true;
+                        cellHtml += '<span class="tag tag-common">' + escHtml(displayName(p)) + '</span>';
+                    } else {
+                        hasDiff = true;
+                        cellHtml += '<span class="tag tag-interest">' + escHtml(displayName(p)) + '</span>';
+                    }
+                });
+
+                var tdCls = '';
+                if (hasDiff && !hasCommon) tdCls = 'cell-diff';
+                else if (hasCommon && !hasDiff) tdCls = 'cell-common';
+                html += '<td class="' + tdCls + '">' + (cellHtml || '<span style="color:var(--text-dim)">--</span>') + '</td>';
+            });
+            html += '</tr>';
+
+            // Row: Follow-up Actions
+            html += '<tr><td class="row-label">Follow-up</td>';
+            sessionsData.forEach(function(s, i) {
+                var sessionActions = s.follow_up_actions || [];
+                var hasDiff = actions.unique[i] && actions.unique[i].length > 0;
+                var hasCommon = sessionActions.some(function(a) {
+                    return actions.common.some(function(c) { return normItem(c) === normItem(a); });
+                });
+
+                var tdCls = '';
+                if (hasDiff && !hasCommon) tdCls = 'cell-diff';
+                else if (hasCommon && !hasDiff) tdCls = 'cell-common';
+                html += '<td class="' + tdCls + '">' + renderActions(sessionActions) + '</td>';
+            });
+            html += '</tr>';
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        async function load() {
+            var ids = getSessionIds();
+            if (ids.length < 2) {
+                document.getElementById('table-area').innerHTML =
+                    '<div class="empty">Select 2 or more sessions to compare.</div>';
+                return;
+            }
+
+            try {
+                var results = await Promise.all(ids.map(function(id) {
+                    return fetch('/api/sessions/' + encodeURIComponent(id) + '/analysis')
+                        .then(function(r) {
+                            if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + id);
+                            return r.json();
+                        });
+                }));
+
+                document.getElementById('summary-area').innerHTML = renderSummary(results);
+                document.getElementById('table-area').innerHTML = renderTable(results);
+            } catch (err) {
+                var errEl = document.getElementById('error-msg');
+                errEl.style.display = 'block';
+                errEl.textContent = 'Failed to load comparison data: ' + err.message;
+                document.getElementById('table-area').innerHTML =
+                    '<div class="empty">Could not load comparison data</div>';
+            }
+        }
+
+        load();
+    })();
+    </script>
+</body>
+</html>
