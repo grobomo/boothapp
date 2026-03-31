@@ -58,9 +58,16 @@ function createRouter() {
   // Delete event
   router.delete('/api/events/:id', (req, res) => {
     const db = getDb();
-    const result = db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
-    if (result.changes === 0) return res.status(404).json({ error: 'Event not found' });
-    res.json({ deleted: true });
+    try {
+      const result = db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
+      if (result.changes === 0) return res.status(404).json({ error: 'Event not found' });
+      res.json({ deleted: true });
+    } catch (err) {
+      if (err.message.includes('FOREIGN KEY')) {
+        return res.status(409).json({ error: 'Cannot delete event with associated sessions or contacts' });
+      }
+      throw err;
+    }
   });
 
   return router;
