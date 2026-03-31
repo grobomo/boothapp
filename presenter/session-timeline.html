@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Session Timeline</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --blue:      #448AFF;
+            --green:     #00E676;
+            --purple:    #B388FF;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex; align-items: center; gap: 16px;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header .badge {
+            font-size: 11px; padding: 3px 10px; border-radius: 99px;
+            background: rgba(215,25,32,.15); color: var(--red);
+            font-weight: 600; letter-spacing: .5px;
+        }
+        .header .spacer { flex: 1; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px; border-radius: 6px; border: none;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: background .15s;
+        }
+        .btn--primary {
+            background: var(--red); color: #fff;
+            box-shadow: 0 0 20px var(--red-glow);
+        }
+        .btn--primary:hover { background: #ff3038; }
+        .btn--secondary {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn--secondary:hover { background: var(--border); }
+
+        .toolbar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            flex-wrap: wrap;
+        }
+        .toolbar select {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: 4px;
+            padding: 6px 10px; font-size: 13px;
+        }
+        .toolbar label { font-size: 13px; color: var(--text-dim); }
+
+        .legend {
+            display: flex; gap: 20px; align-items: center;
+            font-size: 12px; color: var(--text-dim);
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+        }
+
+        .main {
+            display: flex; gap: 0; min-height: calc(100vh - 110px);
+        }
+        .sidebar {
+            width: 260px; min-width: 260px;
+            border-right: 1px solid var(--border);
+            background: var(--surface);
+            overflow-y: auto;
+        }
+        .sidebar-title {
+            padding: 14px 16px 10px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+        }
+        .session-item {
+            padding: 10px 16px; cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background .1s;
+        }
+        .session-item:hover { background: var(--surface2); }
+        .session-item.active {
+            background: rgba(215,25,32,.08);
+            border-left: 3px solid var(--red);
+        }
+        .session-item .name { font-size: 14px; font-weight: 600; }
+        .session-item .meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+        .viewer {
+            flex: 1; padding: 24px; overflow: auto;
+        }
+
+        .stats {
+            display: flex; gap: 24px; margin-bottom: 20px;
+            font-size: 13px; color: var(--text-dim);
+        }
+        .stats strong { color: var(--text); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>BoothApp Session Timeline</h1>
+    <span class="badge">TIMELINE</span>
+    <div class="spacer"></div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#448AFF"></div> Click</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00E676"></div> SE Speech</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#B388FF"></div> Visitor Speech</div>
+    </div>
+    <div style="width:16px"></div>
+    <button class="btn btn--primary" onclick="loadDemoData()">Load Demo Data</button>
+    <label class="btn btn--secondary" style="cursor:pointer">
+        Import JSON
+        <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleFileImport(event)">
+    </label>
+</div>
+
+<div class="toolbar">
+    <label>Session:</label>
+    <select id="sessionSelect" onchange="onSessionChange()"></select>
+    <label style="margin-left:16px">Filter:</label>
+    <select id="filterSelect" onchange="onFilterChange()">
+        <option value="all">All Events</option>
+        <option value="click">Clicks Only</option>
+        <option value="transcript">Transcript Only</option>
+        <option value="se">SE Speech Only</option>
+        <option value="visitor">Visitor Speech Only</option>
+    </select>
+</div>
+
+<div class="main">
+    <div class="sidebar">
+        <div class="sidebar-title">Sessions</div>
+        <div id="sessionList">
+            <div style="padding:40px 16px;text-align:center;color:#6B7385;font-size:12px">
+                No sessions loaded
+            </div>
+        </div>
+    </div>
+
+    <div class="viewer">
+        <div class="stats" id="statsRow">
+            <span>Clicks: <strong id="statClicks">0</strong></span>
+            <span>Transcript: <strong id="statTranscript">0</strong></span>
+            <span>Duration: <strong id="statDuration">--</strong></span>
+            <span>Products: <strong id="statProducts">--</strong></span>
+        </div>
+        <div id="timelineContainer"></div>
+    </div>
+</div>
+
+<script src="components/timeline-viz.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var sessions = [];
+    var activeIdx = -1;
+    var currentFilter = 'all';
+    var timeline = null;
+
+    function init() {
+        timeline = new BoothTimeline(document.getElementById('timelineContainer'), {
+            width: 800
+        });
+    }
+
+    // -------------------------------------------- demo data
+    window.loadDemoData = function () {
+        sessions = generateDemoSessions(4);
+        rebuildUI();
+        selectSession(0);
+    };
+
+    window.handleFileImport = function (evt) {
+        var file = evt.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                var data = JSON.parse(e.target.result);
+                if (Array.isArray(data.sessions)) {
+                    sessions = sessions.concat(data.sessions);
+                } else if (data.events) {
+                    sessions.push({ id: 'import-' + Date.now(), name: 'Imported', events: data.events });
+                }
+                rebuildUI();
+                selectSession(sessions.length - 1);
+            } catch (err) {
+                alert('Invalid JSON: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    window.onSessionChange = function () {
+        selectSession(parseInt(document.getElementById('sessionSelect').value, 10));
+    };
+
+    window.onFilterChange = function () {
+        currentFilter = document.getElementById('filterSelect').value;
+        if (activeIdx >= 0) renderTimeline(sessions[activeIdx]);
+    };
+
+    function selectSession(idx) {
+        if (idx < 0 || idx >= sessions.length) return;
+        activeIdx = idx;
+        renderTimeline(sessions[idx]);
+        highlightSidebar(idx);
+        document.getElementById('sessionSelect').value = idx;
+    }
+
+    function renderTimeline(sess) {
+        var events = filterEvents(sess.events || []);
+        timeline.setEvents(events);
+        timeline.render();
+        updateStats(sess);
+    }
+
+    function filterEvents(events) {
+        if (currentFilter === 'all') return events;
+        if (currentFilter === 'click') return events.filter(function (e) { return e.type === 'click'; });
+        if (currentFilter === 'transcript') return events.filter(function (e) { return e.type === 'transcript'; });
+        if (currentFilter === 'se') return events.filter(function (e) { return e.type === 'transcript' && e.speaker === 'se'; });
+        if (currentFilter === 'visitor') return events.filter(function (e) { return e.type === 'transcript' && e.speaker === 'visitor'; });
+        return events;
+    }
+
+    function updateStats(sess) {
+        var events = sess.events || [];
+        var clicks = 0, transcripts = 0, products = {};
+        for (var i = 0; i < events.length; i++) {
+            if (events[i].type === 'click') clicks++;
+            else transcripts++;
+            if (events[i].product) products[events[i].product] = 1;
+            if (events[i].url) {
+                var m = events[i].url.match(/\/([\w-]+)$/);
+                if (m) products[m[1]] = 1;
+            }
+        }
+        document.getElementById('statClicks').textContent = clicks;
+        document.getElementById('statTranscript').textContent = transcripts;
+        document.getElementById('statProducts').textContent = Object.keys(products).length || '--';
+
+        if (events.length > 1) {
+            var sec = Math.round((events[events.length - 1].timestamp - events[0].timestamp) / 1000);
+            document.getElementById('statDuration').textContent = Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
+        } else {
+            document.getElementById('statDuration').textContent = '--';
+        }
+    }
+
+    function rebuildUI() {
+        var sel = document.getElementById('sessionSelect');
+        sel.innerHTML = '';
+        for (var i = 0; i < sessions.length; i++) {
+            var o = document.createElement('option');
+            o.value = i;
+            o.textContent = sessions[i].name || ('Session ' + (i + 1));
+            sel.appendChild(o);
+        }
+
+        var list = document.getElementById('sessionList');
+        list.innerHTML = '';
+        for (var j = 0; j < sessions.length; j++) {
+            var div = document.createElement('div');
+            div.className = 'session-item';
+            div.setAttribute('data-idx', j);
+            div.onclick = (function (idx) { return function () { selectSession(idx); }; })(j);
+            var evts = sessions[j].events || [];
+            var cCount = 0, tCount = 0;
+            for (var k = 0; k < evts.length; k++) {
+                if (evts[k].type === 'click') cCount++;
+                else tCount++;
+            }
+            div.innerHTML =
+                '<div class="name">' + esc(sessions[j].name || 'Session ' + (j + 1)) + '</div>' +
+                '<div class="meta">' + cCount + ' clicks, ' + tCount + ' transcript</div>';
+            list.appendChild(div);
+        }
+    }
+
+    function highlightSidebar(idx) {
+        var items = document.querySelectorAll('.session-item');
+        for (var i = 0; i < items.length; i++) {
+            var isActive = parseInt(items[i].getAttribute('data-idx'), 10) === idx;
+            items[i].className = 'session-item' + (isActive ? ' active' : '');
+        }
+    }
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // -------------------------------------------- demo data generator
+    function generateDemoSessions(count) {
+        var names = [
+            'Sarah Chen - Acme Financial',
+            'Mike Rodriguez - TechGlobal',
+            'Priya Sharma - HealthFirst',
+            'James Wilson - RetailCorp'
+        ];
+        var products = [
+            { url: 'vision-one-xdr', name: 'Vision One XDR' },
+            { url: 'cloud-security', name: 'Cloud Security' },
+            { url: 'zero-trust', name: 'Zero Trust' },
+            { url: 'endpoint', name: 'Endpoint Security' },
+            { url: 'email-security', name: 'Email Security' },
+            { url: 'network-defense', name: 'Network Defense' }
+        ];
+        var elements = [
+            'button.demo-start', 'a.product-link', 'div.feature-card',
+            'button.learn-more', 'nav.sidebar-item', 'div.dashboard-widget',
+            'button.export-btn', 'span.alert-badge', 'input.search-box'
+        ];
+        var seLines = [
+            'Let me show you how Vision One correlates alerts across endpoints and email.',
+            'This is our XDR detection model -- it pulls telemetry from all sensors.',
+            'Here you can see the risk score dashboard. Each workload gets a score.',
+            'The Zero Trust module enforces least-privilege access per application.',
+            'Notice how the timeline shows the full attack chain across multiple vectors.',
+            'We can automatically isolate the endpoint right from this console.',
+            'The cloud security posture management scans across AWS, Azure, and GCP.',
+            'Email inspection catches BEC attacks that traditional gateways miss.'
+        ];
+        var visitorLines = [
+            'How does this integrate with our existing SIEM?',
+            'Can we get a trial for the XDR module specifically?',
+            'What about false positive rates on the email side?',
+            'We have about 5,000 endpoints -- what is the deployment timeline?',
+            'Does the Zero Trust agent work on macOS and Linux?',
+            'How does pricing work for the cloud security piece?',
+            'Can you show me the API for custom integrations?',
+            'What certifications does the platform have -- SOC2, FedRAMP?'
+        ];
+
+        var result = [];
+        for (var s = 0; s < count; s++) {
+            var events = [];
+            var baseTs = Date.now() - (count - s) * 3600000;
+            var eventCount = 15 + Math.floor(Math.random() * 25);
+            var currentProduct = products[Math.floor(Math.random() * products.length)];
+
+            for (var i = 0; i < eventCount; i++) {
+                var ts = baseTs + i * (2000 + Math.random() * 8000);
+                // Alternate between clicks and transcript with some randomness
+                if (Math.random() < 0.45) {
+                    // Click event
+                    if (Math.random() < 0.3) {
+                        currentProduct = products[Math.floor(Math.random() * products.length)];
+                    }
+                    events.push({
+                        type: 'click',
+                        timestamp: ts,
+                        x: 100 + Math.floor(Math.random() * 700),
+                        y: 80 + Math.floor(Math.random() * 350),
+                        element: elements[Math.floor(Math.random() * elements.length)],
+                        url: 'https://app.trendmicro.com/' + currentProduct.url,
+                        product: currentProduct.name,
+                        screenshot: ''  // placeholder -- real data has S3 paths
+                    });
+                } else {
+                    // Transcript event
+                    var isSE = Math.random() < 0.55;
+                    events.push({
+                        type: 'transcript',
+                        timestamp: ts,
+                        speaker: isSE ? 'se' : 'visitor',
+                        text: isSE
+                            ? seLines[Math.floor(Math.random() * seLines.length)]
+                            : visitorLines[Math.floor(Math.random() * visitorLines.length)],
+                        product: currentProduct.name
+                    });
+                }
+            }
+
+            result.push({
+                id: 'session-' + (s + 1),
+                name: names[s] || 'Session ' + (s + 1),
+                events: events
+            });
+        }
+        return result;
+    }
+
+    init();
+})();
+</script>
+</body>
+</html>
