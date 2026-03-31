@@ -103,6 +103,7 @@ fi
 
 # ── 6. Analysis pipeline Python deps ───────────
 echo "[6/9] Python Dependencies"
+pip3 install --break-system-packages boto3 anthropic >/dev/null 2>&1 || true
 if python3 -c 'import boto3' 2>/dev/null; then
   green "python3 boto3"
 else
