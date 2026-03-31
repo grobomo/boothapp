@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Session Viewer</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-dark:  #A8131A;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 { font-size: 1.5rem; font-weight: 600; }
+        .header h1 span { color: var(--red); }
+
+        .header .session-id {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .back-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { color: var(--text); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+        }
+
+        .kv-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .kv-row:last-child { border-bottom: none; }
+        .kv-label { color: var(--text-dim); font-weight: 500; }
+        .kv-value { font-weight: 600; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge--active { background: rgba(0, 230, 118, 0.15); color: var(--success); }
+        .badge--complete { background: rgba(68, 138, 255, 0.15); color: var(--blue); }
+        .badge--unknown { background: rgba(107,115,133,0.15); color: var(--text-dim); }
+
+        .full-width { grid-column: 1 / -1; }
+
+        .summary-link {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: var(--red);
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .summary-link:hover { background: var(--red-dark); }
+
+        .loading {
+            color: var(--text-dim);
+            font-style: italic;
+            padding: 2rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Booth<span>App</span> Session</h1>
+            <div class="session-id" id="sessionIdDisplay">--</div>
+        </div>
+        <a href="sessions.html" class="back-link">&larr; Back to Sessions</a>
+    </div>
+
+    <div id="sessionContent">
+        <div class="loading">Loading session data...</div>
+    </div>
+
+    <!-- Notes editor -->
+    <div id="notes-container"></div>
+
+    <script src="components/notes-editor.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        var params = new URLSearchParams(window.location.search);
+        var sessionId = params.get('id');
+
+        if (!sessionId) {
+            document.getElementById('sessionContent').innerHTML =
+                '<div class="loading">No session ID provided. Use ?id=SESSION_ID</div>';
+            return;
+        }
+
+        document.getElementById('sessionIdDisplay').textContent = sessionId;
+        document.title = 'BoothApp - Session ' + sessionId;
+
+        function escHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function renderSession(data) {
+            var html = '<div class="grid">';
+
+            // Visitor info
+            html += '<div class="card"><div class="card-title">Visitor</div>';
+            if (data.visitor_name) {
+                html += '<div class="kv-row"><span class="kv-label">Name</span>' +
+                    '<span class="kv-value">' + escHtml(data.visitor_name) + '</span></div>';
+            } else {
+                html += '<div style="color:var(--text-dim);font-style:italic">No badge data yet</div>';
+            }
+            html += '</div>';
+
+            // Status
+            var status = data.status || 'unknown';
+            var badgeClass = status === 'complete' ? 'badge--complete' :
+                             status === 'active' ? 'badge--active' : 'badge--unknown';
+            html += '<div class="card"><div class="card-title">Status</div>';
+            html += '<div class="kv-row"><span class="kv-label">Status</span>' +
+                '<span class="badge ' + badgeClass + '">' + escHtml(status) + '</span></div>';
+            if (data.created_at) {
+                html += '<div class="kv-row"><span class="kv-label">Started</span>' +
+                    '<span class="kv-value">' + escHtml(new Date(data.created_at).toLocaleString()) + '</span></div>';
+            }
+            html += '</div>';
+
+            // Analysis link
+            if (data.has_analysis && data.summary_link) {
+                html += '<div class="card full-width"><div class="card-title">Analysis</div>' +
+                    '<a class="summary-link" href="' + escHtml(data.summary_link) +
+                    '" target="_blank">View Analysis Report</a></div>';
+            }
+
+            html += '</div>';
+            document.getElementById('sessionContent').innerHTML = html;
+        }
+
+        // Fetch session data from the sessions list API
+        fetch('/api/sessions')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var sessions = data.sessions || [];
+                var match = sessions.find(function (s) { return s.session_id === sessionId; });
+                if (match) {
+                    renderSession(match);
+                } else {
+                    document.getElementById('sessionContent').innerHTML =
+                        '<div class="grid"><div class="card full-width">' +
+                        '<div class="card-title">Session</div>' +
+                        '<div style="color:var(--text-dim)">Session not found or still recording.</div>' +
+                        '</div></div>';
+                }
+            })
+            .catch(function () {
+                document.getElementById('sessionContent').innerHTML =
+                    '<div class="grid"><div class="card full-width">' +
+                    '<div class="card-title">Session</div>' +
+                    '<div style="color:var(--text-dim)">Could not load session data.</div>' +
+                    '</div></div>';
+            });
+
+        // Initialize notes editor
+        NotesEditor.init('notes-container', { sessionId: sessionId });
+    })();
+    </script>
+</body>
+</html>
