@@ -83,6 +83,44 @@ app.get('/api/sessions', async (req, res) => {
     }
 });
 
+// GET /api/sessions/:id/transcript - fetch transcript segments from S3
+app.get('/api/sessions/:id/transcript', async (req, res) => {
+    try {
+        const cmd = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: `${req.params.id}/transcript.json`,
+        });
+        const result = await s3.send(cmd);
+        const body = await result.Body.transformToString();
+        res.json(JSON.parse(body));
+    } catch (err) {
+        if (err.name === 'NoSuchKey') {
+            res.status(404).json({ error: 'Transcript not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch transcript', detail: err.message });
+        }
+    }
+});
+
+// GET /api/sessions/:id/analysis - fetch analysis results from S3
+app.get('/api/sessions/:id/analysis', async (req, res) => {
+    try {
+        const cmd = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: `${req.params.id}/analysis.json`,
+        });
+        const result = await s3.send(cmd);
+        const body = await result.Body.transformToString();
+        res.json(JSON.parse(body));
+    } catch (err) {
+        if (err.name === 'NoSuchKey') {
+            res.status(404).json({ error: 'Analysis not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch analysis', detail: err.message });
+        }
+    }
+});
+
 // GET /api/sessions/:id/summary - proxy the summary HTML from S3
 app.get('/api/sessions/:id/summary', async (req, res) => {
     try {
