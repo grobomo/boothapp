@@ -238,6 +238,68 @@
       overflow: hidden;
     }
 
+    .screenshot-real {
+      width: 100%;
+      max-width: 720px;
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+    }
+
+    .screenshot-real img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: var(--radius);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .screenshot-real img.loaded { opacity: 1; }
+
+    .screenshot-real .img-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .screenshot-real .img-loading.hidden { display: none; }
+
+    .screenshot-real .click-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 0.5rem 0.75rem;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .screenshot-real .click-overlay .click-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(0, 212, 170, 0.2);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid var(--accent-dim);
+    }
+
+    .screenshot-real .click-overlay .click-label {
+      font-size: 0.75rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
     .screenshot-placeholder .mock-browser {
       width: 100%;
       height: 100%;
@@ -596,6 +658,7 @@
     <span class="timeline-current" id="currentTime">00:00</span>
     <div style="flex:1"></div>
     <button id="playBtn" style="background:var(--accent);color:#0a0a0f;border:none;padding:0.3rem 0.8rem;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;">PLAY</button>
+    <span style="font-size:0.6rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SPACE play/pause &middot; &larr;&rarr; skip 5s</span>
   </div>
   <div class="timeline-bar" id="timelineBar">
     <div class="timeline-progress" id="timelineProgress"></div>
@@ -659,6 +722,8 @@ var sessionStartTime = null;
 var isPlaying = false;
 var playTimer = null;
 var isDragging = false;
+var useRealScreenshots = false;
+var sessionBaseUrl = '';
 
 // =====================================================================
 // DATA LOADING
@@ -676,7 +741,8 @@ function fetchJson(url) {
 
 function loadSessionData(sessionId) {
   if (!sessionId) {
-    // Use sample data
+    // Use sample data with mock browser frames
+    useRealScreenshots = false;
     sessionData.metadata = SAMPLE_METADATA;
     sessionData.clicks = SAMPLE_CLICKS;
     sessionData.transcript = SAMPLE_TRANSCRIPT;
@@ -686,6 +752,9 @@ function loadSessionData(sessionId) {
   }
 
   var base = S3_ENDPOINT + '/sessions/' + sessionId;
+  sessionBaseUrl = base;
+  useRealScreenshots = true;
+
   Promise.all([
     fetchJson(base + '/metadata.json'),
     fetchJson(base + '/clicks/clicks.json'),
@@ -696,6 +765,8 @@ function loadSessionData(sessionId) {
     sessionData.clicks = results[1] || SAMPLE_CLICKS;
     sessionData.transcript = results[2] || SAMPLE_TRANSCRIPT;
     sessionData.summary = results[3] || SAMPLE_SUMMARY;
+    // Fall back to mock frames if S3 fetch failed
+    if (!results[0] && !results[1]) useRealScreenshots = false;
     initReplay();
   });
 }
@@ -728,6 +799,7 @@ function formatTime(seconds) {
 // INIT
 // =====================================================================
 function initReplay() {
+  lastScreenshotIndex = -1;
   var meta = sessionData.metadata;
   var clicks = sessionData.clicks;
   var transcript = sessionData.transcript;
@@ -875,6 +947,8 @@ function updateView(seconds) {
   updateTranscript(currentSeconds);
 }
 
+var lastScreenshotIndex = -1;
+
 function updateScreenshot(seconds) {
   var area = document.getElementById('screenshotArea');
   var clicks = sessionData.clicks.events;
@@ -891,6 +965,7 @@ function updateScreenshot(seconds) {
   }
 
   if (!activeClick) {
+    lastScreenshotIndex = -1;
     area.innerHTML =
       '<div class="no-click-state">' +
         '<div class="icon">[  ]</div>' +
@@ -899,28 +974,67 @@ function updateScreenshot(seconds) {
     return;
   }
 
-  var pageUrl = activeClick.page_url || '';
+  // Skip DOM update if same screenshot is already showing
+  if (activeClick.index === lastScreenshotIndex) return;
+  lastScreenshotIndex = activeClick.index;
+
   var pageTitle = activeClick.page_title || 'Unknown Page';
   var clickText = activeClick.element ? activeClick.element.text : '';
   var clickSec = parseClickTime(activeClick.timestamp, startIso);
 
-  area.innerHTML =
-    '<div class="screenshot-placeholder">' +
-      '<div class="mock-browser">' +
-        '<div class="mock-browser-bar">' +
-          '<div class="mock-dots"><span></span><span></span><span></span></div>' +
-          '<div class="mock-url">' + escapeHtml(pageUrl) + '</div>' +
-        '</div>' +
-        '<div class="mock-content">' +
-          '<div class="mock-page-title">' + escapeHtml(pageTitle) + '</div>' +
-          '<div class="mock-click-label">Click #' + activeClick.index + '</div>' +
-          '<div class="mock-click-target">' + escapeHtml(clickText) + '</div>' +
+  if (useRealScreenshots && activeClick.screenshot_file) {
+    // Real screenshot from S3
+    var imgUrl = sessionBaseUrl + '/' + activeClick.screenshot_file;
+    area.innerHTML =
+      '<div class="screenshot-real">' +
+        '<div class="img-loading">Loading screenshot...</div>' +
+        '<img alt="Click #' + activeClick.index + ' - ' + escapeHtml(clickText) + '">' +
+        '<div class="click-overlay">' +
+          '<span class="click-num">#' + activeClick.index + '</span>' +
+          '<span class="click-label">' + escapeHtml(clickText) + '</span>' +
         '</div>' +
       '</div>' +
-    '</div>' +
-    '<div class="screenshot-meta">' +
-      escapeHtml(activeClick.screenshot_file) + ' @ ' + formatTime(clickSec) +
-    '</div>';
+      '<div class="screenshot-meta">' +
+        escapeHtml(pageTitle) + ' @ ' + formatTime(clickSec) +
+      '</div>';
+
+    var img = area.querySelector('img');
+    var loader = area.querySelector('.img-loading');
+    img.onload = function() {
+      img.classList.add('loaded');
+      loader.classList.add('hidden');
+    };
+    img.onerror = function() {
+      // Fall back to mock browser on image load failure
+      loader.textContent = 'Screenshot unavailable';
+      loader.style.flexDirection = 'column';
+      loader.innerHTML =
+        '<div style="font-size:1.5rem;opacity:0.3;margin-bottom:0.5rem">[x]</div>' +
+        '<div>' + escapeHtml(pageTitle) + '</div>' +
+        '<div style="color:var(--accent);margin-top:0.3rem">Click #' + activeClick.index + ': ' + escapeHtml(clickText) + '</div>';
+    };
+    img.src = imgUrl;
+  } else {
+    // Mock browser frame for sample data
+    var pageUrl = activeClick.page_url || '';
+    area.innerHTML =
+      '<div class="screenshot-placeholder">' +
+        '<div class="mock-browser">' +
+          '<div class="mock-browser-bar">' +
+            '<div class="mock-dots"><span></span><span></span><span></span></div>' +
+            '<div class="mock-url">' + escapeHtml(pageUrl) + '</div>' +
+          '</div>' +
+          '<div class="mock-content">' +
+            '<div class="mock-page-title">' + escapeHtml(pageTitle) + '</div>' +
+            '<div class="mock-click-label">Click #' + activeClick.index + '</div>' +
+            '<div class="mock-click-target">' + escapeHtml(clickText) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="screenshot-meta">' +
+        escapeHtml(activeClick.screenshot_file) + ' @ ' + formatTime(clickSec) +
+      '</div>';
+  }
 }
 
 function updateTranscript(seconds) {
