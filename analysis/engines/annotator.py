@@ -17,10 +17,16 @@ import io
 import json
 import logging
 import os
+import subprocess
 import sys
 
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "Pillow"])
+    from PIL import Image, ImageDraw, ImageFont
+
 import boto3
-from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
