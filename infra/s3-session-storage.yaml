@@ -59,6 +59,7 @@ Resources:
           - Id: ProductionWebAccess
             AllowedOrigins:
               - "https://boothapp.trendcyberrange.com"
+              - "https://hackathon.trendcyberrange.com"
             AllowedMethods:
               - PUT
               - GET

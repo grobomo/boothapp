@@ -98,6 +98,7 @@ async function handler(event) {
 
 const ALLOWED_ORIGINS = [
   'https://boothapp.trendcyberrange.com',
+  'https://hackathon.trendcyberrange.com',
   'http://localhost:3000',
 ];
 
