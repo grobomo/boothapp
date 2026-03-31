@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trend Micro — AI Demo Experience</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #050508;
+      --text: #eaeaf2;
+      --text-dim: #6a6a88;
+      --tm-red: #d71920;
+      --tm-red-glow: rgba(215, 25, 32, 0.25);
+      --accent: #ff2d37;
+      --accent-b: #ff6b35;
+      --accent-c: #d71920;
+      --surface: rgba(20, 18, 28, 0.7);
+      --border: rgba(100, 80, 100, 0.2);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      cursor: default;
+      user-select: none;
+    }
+
+    /* -- Mesh Canvas ---------------------------------------- */
+    #meshCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    /* -- Animated Gradient Background ----------------------- */
+    .gradient-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      background:
+        radial-gradient(ellipse 90% 70% at 15% 50%, rgba(215,25,32,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 80% at 85% 25%, rgba(255,107,53,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 80% 60% at 50% 85%, rgba(215,25,32,0.06) 0%, transparent 60%);
+      animation: gradMove 14s ease-in-out infinite alternate;
+    }
+
+    @keyframes gradMove {
+      0% {
+        background:
+          radial-gradient(ellipse 90% 70% at 15% 50%, rgba(215,25,32,0.10) 0%, transparent 60%),
+          radial-gradient(ellipse 70% 80% at 85% 25%, rgba(255,107,53,0.08) 0%, transparent 60%),
+          radial-gradient(ellipse 80% 60% at 50% 85%, rgba(215,25,32,0.06) 0%, transparent 60%);
+      }
+      50% {
+        background:
+          radial-gradient(ellipse 90% 70% at 65% 35%, rgba(215,25,32,0.12) 0%, transparent 60%),
+          radial-gradient(ellipse 70% 80% at 25% 70%, rgba(255,107,53,0.10) 0%, transparent 60%),
+          radial-gradient(ellipse 80% 60% at 70% 20%, rgba(215,25,32,0.08) 0%, transparent 60%);
+      }
+      100% {
+        background:
+          radial-gradient(ellipse 90% 70% at 45% 60%, rgba(215,25,32,0.08) 0%, transparent 60%),
+          radial-gradient(ellipse 70% 80% at 55% 15%, rgba(255,107,53,0.12) 0%, transparent 60%),
+          radial-gradient(ellipse 80% 60% at 30% 50%, rgba(215,25,32,0.10) 0%, transparent 60%);
+      }
+    }
+
+    /* -- Scan Lines (subtle CRT effect) --------------------- */
+    .scanlines {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 2;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* -- Main Layout ---------------------------------------- */
+    .container {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 2rem 3rem;
+      text-align: center;
+    }
+
+    /* -- Trend Micro Logo ----------------------------------- */
+    .tm-brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 1s ease-out 0.2s forwards;
+    }
+
+    .tm-logo {
+      width: 64px;
+      height: 64px;
+      flex-shrink: 0;
+    }
+
+    .tm-logo svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 20px var(--tm-red-glow));
+    }
+
+    .tm-wordmark {
+      text-align: left;
+    }
+
+    .tm-wordmark .tm-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .tm-wordmark .tm-tagline {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* -- Hero Heading ---------------------------------------- */
+    .hero {
+      margin-bottom: 2.5rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.6rem, 5.5vw, 5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.8rem;
+      opacity: 0;
+      animation: fadeUp 1s ease-out 0.5s forwards;
+    }
+
+    .hero h1 .accent-text {
+      background: linear-gradient(135deg, var(--accent), var(--accent-b), var(--accent-c));
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 5s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .hero .subtitle {
+      font-size: clamp(0.95rem, 1.8vw, 1.3rem);
+      font-weight: 300;
+      color: var(--text-dim);
+      opacity: 0;
+      animation: fadeUp 1s ease-out 0.8s forwards;
+    }
+
+    /* -- Middle Row: Counter + QR --------------------------- */
+    .middle-row {
+      display: flex;
+      align-items: center;
+      gap: 4rem;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 1s ease-out 1.1s forwards;
+    }
+
+    /* -- Session Counter ------------------------------------ */
+    .counter-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .counter-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(3rem, 6vw, 5rem);
+      font-weight: 600;
+      color: var(--accent);
+      text-shadow: 0 0 40px var(--tm-red-glow), 0 0 80px rgba(215,25,32,0.10);
+      line-height: 1;
+    }
+
+    .counter-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    /* -- Divider -------------------------------------------- */
+    .divider {
+      width: 1px;
+      height: 120px;
+      background: linear-gradient(180deg, transparent, rgba(215,25,32,0.3), transparent);
+    }
+
+    /* -- QR Code -------------------------------------------- */
+    .qr-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .qr-frame {
+      width: 160px;
+      height: 160px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .qr-frame::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-b), var(--accent-c), var(--accent));
+      background-size: 300% 300%;
+      animation: borderRotate 5s ease-in-out infinite;
+      z-index: -2;
+    }
+
+    .qr-frame::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 16px;
+      background: var(--bg);
+      z-index: -1;
+    }
+
+    @keyframes borderRotate {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 2px;
+      width: 108px;
+      height: 108px;
+    }
+
+    .qr-cell {
+      border-radius: 1.5px;
+      background: rgba(255,255,255,0.6);
+    }
+
+    .qr-cell.empty {
+      background: transparent;
+    }
+
+    .qr-label {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    .qr-label .scan-icon {
+      display: inline-block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* -- Clock ---------------------------------------------- */
+    .clock-section {
+      opacity: 0;
+      animation: fadeUp 1s ease-out 1.4s forwards;
+    }
+
+    .clock {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.06em;
+    }
+
+    .clock-date {
+      font-size: 0.85rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* -- Bottom Status Bar ---------------------------------- */
+    .status-bar {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.2rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      animation: fadeUp 1s ease-out 1.7s forwards;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .status-text {
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    /* -- Animations ----------------------------------------- */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* -- Session Active Overlay ----------------------------- */
+    .session-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+
+    .session-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .session-overlay h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .session-overlay h2 .accent-text {
+      background: linear-gradient(135deg, var(--accent), var(--accent-b));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .session-overlay .session-visitor {
+      font-size: 1.2rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(215,25,32,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* -- Responsive ----------------------------------------- */
+    @media (max-width: 700px) {
+      .middle-row {
+        flex-direction: column;
+        gap: 2rem;
+      }
+      .divider {
+        width: 120px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(215,25,32,0.3), transparent);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="meshCanvas"></canvas>
+<div class="gradient-bg"></div>
+<div class="scanlines"></div>
+
+<div class="container">
+  <!-- Trend Micro Brand -->
+  <div class="tm-brand">
+    <div class="tm-logo">
+      <!-- Trend Micro "T" shield icon (simplified SVG) -->
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="tmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ff2d37"/>
+            <stop offset="100%" stop-color="#d71920"/>
+          </linearGradient>
+        </defs>
+        <path d="M32 4C18.7 4 8 14.7 8 28v4c0 15.5 10.5 24.8 23.2 28.8a2.5 2.5 0 001.6 0C45.5 56.8 56 47.5 56 32v-4C56 14.7 45.3 4 32 4z" fill="url(#tmGrad)" opacity="0.9"/>
+        <text x="32" y="42" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="30" fill="#fff">T</text>
+      </svg>
+    </div>
+    <div class="tm-wordmark">
+      <div class="tm-name">Trend Micro</div>
+      <div class="tm-tagline">Securing Your Connected World</div>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Welcome to<br><span class="accent-text">Trend Micro</span></h1>
+    <div class="subtitle">Experience AI-powered cybersecurity — live demo</div>
+  </div>
+
+  <!-- Counter + QR -->
+  <div class="middle-row">
+    <div class="counter-block">
+      <div class="counter-value" id="counterValue">0</div>
+      <div class="counter-label">Demos Today</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="qr-block">
+      <div class="qr-frame">
+        <div class="qr-grid" id="qrGrid"></div>
+      </div>
+      <div class="qr-label"><span class="scan-icon">&#9632;</span> Scan to start your demo</div>
+    </div>
+  </div>
+
+  <!-- Clock -->
+  <div class="clock-section">
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="clock-date" id="clockDate">---</div>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <span class="status-text">Ready for visitors</span>
+</div>
+
+<!-- Session In Progress Overlay -->
+<div class="session-overlay" id="sessionOverlay">
+  <h2><span class="accent-text">Session in Progress</span></h2>
+  <div class="session-visitor" id="sessionVisitor">--</div>
+  <div class="spinner"></div>
+</div>
+
+<script>
+// =====================================================================
+// CONFIG
+// =====================================================================
+var S3_ENDPOINT = 'https://boothapp-sessions-752266476357.s3.us-east-1.amazonaws.com';
+var POLL_INTERVAL = 3000;
+var DEMO_COUNT_KEY = 'tm_landing_demo_count';
+var DEMO_COUNT_DATE_KEY = 'tm_landing_demo_date';
+
+// =====================================================================
+// SESSION COUNTER (localStorage, resets daily)
+// =====================================================================
+function getTodayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function getDemoCount() {
+  var storedDate = localStorage.getItem(DEMO_COUNT_DATE_KEY);
+  var today = getTodayStr();
+  if (storedDate !== today) {
+    localStorage.setItem(DEMO_COUNT_DATE_KEY, today);
+    localStorage.setItem(DEMO_COUNT_KEY, '0');
+    return 0;
+  }
+  return parseInt(localStorage.getItem(DEMO_COUNT_KEY) || '0', 10);
+}
+
+function incrementDemoCount() {
+  var count = getDemoCount() + 1;
+  localStorage.setItem(DEMO_COUNT_KEY, String(count));
+  localStorage.setItem(DEMO_COUNT_DATE_KEY, getTodayStr());
+  return count;
+}
+
+function animateCounter(target) {
+  var el = document.getElementById('counterValue');
+  var current = parseInt(el.textContent, 10) || 0;
+  if (current === target) return;
+
+  var step = target > current ? 1 : -1;
+  var interval = setInterval(function() {
+    current += step;
+    el.textContent = current;
+    if (current === target) clearInterval(interval);
+  }, 60);
+}
+
+// Init counter display
+animateCounter(getDemoCount());
+
+// =====================================================================
+// CLOCK
+// =====================================================================
+function updateClock() {
+  var now = new Date();
+  var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+  document.getElementById('clock').textContent =
+    pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  document.getElementById('clockDate').textContent =
+    days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// =====================================================================
+// QR CODE PLACEHOLDER (decorative 9x9 grid)
+// =====================================================================
+(function() {
+  var grid = document.getElementById('qrGrid');
+  /* prettier pattern that mimics QR finder + data */
+  var p = [
+    1,1,1,1,1,0,1,1,1,
+    1,0,0,0,1,0,1,0,1,
+    1,0,1,0,1,0,1,0,1,
+    1,0,0,0,1,0,1,1,1,
+    1,1,1,1,1,0,0,0,0,
+    0,0,0,0,0,0,1,0,1,
+    1,1,1,0,1,0,1,1,1,
+    1,0,1,0,0,0,0,0,1,
+    1,1,1,0,1,0,1,1,1,
+  ];
+  for (var i = 0; i < p.length; i++) {
+    var cell = document.createElement('div');
+    cell.className = 'qr-cell' + (p[i] === 0 ? ' empty' : '');
+    grid.appendChild(cell);
+  }
+})();
+
+// =====================================================================
+// PARTICLE MESH
+// =====================================================================
+(function() {
+  var canvas = document.getElementById('meshCanvas');
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var COUNT = 50;
+  var LINK_DIST = 140;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (var i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: (Math.random() - 0.5) * 0.35,
+      r: Math.random() * 1.5 + 0.5,
+      a: Math.random() * 0.35 + 0.1
+    });
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(215, 25, 32, ' + p.a + ')';
+      ctx.fill();
+
+      for (var j = i + 1; j < particles.length; j++) {
+        var q = particles[j];
+        var dx = p.x - q.x;
+        var dy = p.y - q.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < LINK_DIST) {
+          var la = (1 - dist / LINK_DIST) * 0.10;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = 'rgba(215, 25, 32, ' + la + ')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// =====================================================================
+// S3 SESSION POLLING
+// =====================================================================
+var lastSessionId = null;
+
+function fetchJson(url) {
+  return fetch(url, { mode: 'cors', cache: 'no-store' })
+    .then(function(res) {
+      if (!res.ok) return null;
+      return res.json();
+    })
+    .catch(function() { return null; });
+}
+
+function pollSession() {
+  var url = S3_ENDPOINT.replace(/\/+$/, '') + '/active-session.json';
+
+  fetchJson(url).then(function(data) {
+    if (data && data.active === true && data.session_id) {
+      // New session detected
+      if (data.session_id !== lastSessionId) {
+        lastSessionId = data.session_id;
+        var newCount = incrementDemoCount();
+        animateCounter(newCount);
+      }
+      showSessionOverlay(data);
+    } else {
+      hideSessionOverlay();
+    }
+  });
+}
+
+function showSessionOverlay(session) {
+  var overlay = document.getElementById('sessionOverlay');
+  document.getElementById('sessionVisitor').textContent = session.visitor_name || 'Guest';
+  overlay.classList.add('active');
+}
+
+function hideSessionOverlay() {
+  var overlay = document.getElementById('sessionOverlay');
+  overlay.classList.remove('active');
+  lastSessionId = null;
+}
+
+pollSession();
+setInterval(pollSession, POLL_INTERVAL);
+</script>
+
+</body>
+</html>
