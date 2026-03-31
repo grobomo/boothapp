@@ -1,3 +1,11 @@
+// ─── Version ─────────────────────────────────────────────────────────────────
+
+(function setVersion() {
+  var manifest = chrome.runtime.getManifest();
+  var el = document.getElementById('footerVer');
+  if (el && manifest.version) el.textContent = 'v' + manifest.version;
+})();
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 var currentSessionActive = false;
