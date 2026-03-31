@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/error-boundary.js"></script>
+<script src="components/nav.js"></script>
+<title>BoothApp -- Product Coverage Matrix</title>
+<script src="auth.js"></script>
+<link rel="stylesheet" href="styles/mobile.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+  .header-right a { color: var(--text2); text-decoration: none; }
+  .header-right a:hover { color: var(--text); }
+
+  /* -- Legend -- */
+  .legend {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--text2);
+  }
+  .legend-group { display: flex; align-items: center; gap: 0.5rem; }
+  .legend-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* -- KPI row -- */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+  .kpi-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .kpi-card .label {
+    font-size: 0.8rem;
+    color: var(--text2);
+    margin-top: 0.25rem;
+  }
+
+  /* -- Matrix table -- */
+  .matrix-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 900px;
+  }
+
+  thead th {
+    background: var(--surface2);
+    color: var(--text2);
+    font-weight: 600;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+    text-align: center;
+  }
+  thead th:first-child {
+    text-align: left;
+    padding-left: 1rem;
+    min-width: 160px;
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: var(--surface2);
+  }
+
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: rgba(88, 166, 255, 0.04); }
+
+  tbody td {
+    padding: 0.5rem;
+    text-align: center;
+    vertical-align: middle;
+  }
+  tbody td:first-child {
+    text-align: left;
+    padding-left: 1rem;
+    font-weight: 500;
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+  tbody tr:hover td:first-child { background: #161e29; }
+
+  /* -- Heatmap cell -- */
+  .heat-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 6px;
+    min-width: 70px;
+    transition: transform 0.1s;
+  }
+  .heat-cell:hover { transform: scale(1.08); }
+
+  .heat-cell .demo-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .heat-cell .demo-badge.yes { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .heat-cell .demo-badge.no  { background: rgba(139, 148, 158, 0.15); color: var(--text3); }
+
+  .heat-cell .metric {
+    font-size: 0.75rem;
+    color: var(--text2);
+  }
+  .heat-cell .metric .num {
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  /* Gradient backgrounds for heat levels 0-5 */
+  .heat-0 { background: rgba(139, 148, 158, 0.05); }
+  .heat-1 { background: rgba(210, 153, 34, 0.10); }
+  .heat-2 { background: rgba(210, 153, 34, 0.20); }
+  .heat-3 { background: rgba(210, 153, 34, 0.35); }
+  .heat-4 { background: rgba(63, 185, 80, 0.30); }
+  .heat-5 { background: rgba(63, 185, 80, 0.45); }
+
+  /* Column summary row */
+  tfoot td {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--accent);
+    border-top: 2px solid var(--border);
+    background: var(--surface2);
+    font-size: 0.8rem;
+  }
+  tfoot td:first-child {
+    text-align: left;
+    padding-left: 1rem;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface2);
+  }
+
+  /* Module column header with vertical text */
+  .module-header {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    min-height: 80px;
+    display: inline-block;
+  }
+
+  /* -- Status indicators -- */
+  .loading { text-align: center; padding: 4rem 2rem; color: var(--text2); }
+  .loading .spinner {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty { text-align: center; padding: 4rem 2rem; color: var(--text3); }
+  .error-banner {
+    background: rgba(248, 81, 73, 0.15);
+    color: var(--red);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    display: none;
+    font-size: 0.85rem;
+  }
+
+  /* -- Tooltip -- */
+  .tooltip {
+    position: fixed;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    max-width: 300px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .tooltip .tt-title { font-weight: 600; color: var(--accent); margin-bottom: 0.25rem; }
+  .tooltip .tt-row { color: var(--text2); margin: 2px 0; }
+  .tooltip .tt-evidence { color: var(--text3); font-style: italic; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Product Coverage Matrix</h1>
+    <div class="header-right">
+      <a href="/sessions.html">Sessions</a>
+      <a href="/analytics.html">Analytics</a>
+    </div>
+  </header>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="legend">
+    <div class="legend-group">
+      <div class="legend-swatch" style="background: rgba(63,185,80,0.45);"></div>
+      <span>High (5)</span>
+    </div>
+    <div class="legend-group">
+      <div class="legend-swatch" style="background: rgba(210,153,34,0.35);"></div>
+      <span>Medium (3)</span>
+    </div>
+    <div class="legend-group">
+      <div class="legend-swatch" style="background: rgba(139,148,158,0.05);"></div>
+      <span>None (0)</span>
+    </div>
+    <div class="legend-group">
+      <span class="demo-badge yes" style="font-size:0.75rem; padding:2px 8px; border-radius:3px; background:rgba(63,185,80,0.2); color:#3fb950;">DEMO</span>
+      <span>= demonstrated</span>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>Loading sessions...</div>
+  </div>
+
+  <div class="empty" id="empty" style="display:none;">No analyzed sessions found.</div>
+
+  <div class="matrix-wrap" id="matrixWrap" style="display:none;">
+    <table id="matrixTable">
+      <thead id="matrixHead"></thead>
+      <tbody id="matrixBody"></tbody>
+      <tfoot id="matrixFoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tt-title" id="ttTitle"></div>
+  <div class="tt-row" id="ttDemo"></div>
+  <div class="tt-row" id="ttInterest"></div>
+  <div class="tt-row" id="ttFollowup"></div>
+  <div class="tt-evidence" id="ttEvidence"></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── V1 Modules ────────────────────────────────────────────────────────────
+  var V1_MODULES = [
+    { id: 'xdr',           label: 'XDR',           aliases: ['xdr', 'detection & response', 'detection and response', 'detections'] },
+    { id: 'endpoint',      label: 'Endpoint',      aliases: ['endpoint', 'endpoint security', 'endpoint protection', 'epp', 'edr'] },
+    { id: 'email',         label: 'Email',          aliases: ['email', 'email security', 'cloud email', 'email gateway'] },
+    { id: 'network',       label: 'Network',        aliases: ['network', 'network security', 'network defense', 'tippingpoint', 'ids', 'ips'] },
+    { id: 'cloud',         label: 'Cloud',          aliases: ['cloud', 'cloud security', 'cloud one', 'workload security', 'container security'] },
+    { id: 'risk',          label: 'Risk Insights',  aliases: ['risk', 'risk insights', 'risk index', 'cyber risk', 'risk score'] },
+    { id: 'workbench',     label: 'Workbench',      aliases: ['workbench', 'investigation', 'incident', 'alerts', 'alert management'] },
+    { id: 'threat_intel',  label: 'Threat Intel',   aliases: ['threat intel', 'threat intelligence', 'threat encyclopedia', 'intelligence reports', 'campaign'] },
+    { id: 'asrm',          label: 'ASRM',           aliases: ['asrm', 'attack surface', 'attack surface risk', 'exposure', 'asset discovery'] },
+    { id: 'zero_trust',    label: 'Zero Trust',     aliases: ['zero trust', 'ztsa', 'secure access', 'private access', 'internet access'] }
+  ];
+
+  var apiUrl = window.location.origin;
+  var loadingEl = document.getElementById('loading');
+  var emptyEl = document.getElementById('empty');
+  var matrixWrap = document.getElementById('matrixWrap');
+  var errorBanner = document.getElementById('errorBanner');
+  var tooltip = document.getElementById('tooltip');
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function normalize(str) {
+    return (str || '').toLowerCase().trim();
+  }
+
+  // Check if a module matches a product string
+  function moduleMatches(mod, productStr) {
+    var p = normalize(productStr);
+    for (var i = 0; i < mod.aliases.length; i++) {
+      if (p.indexOf(mod.aliases[i]) !== -1) return true;
+    }
+    return false;
+  }
+
+  // Extract interest level (0-5) for a module from key_interests
+  function getInterestLevel(mod, interests) {
+    if (!Array.isArray(interests)) return 0;
+    for (var i = 0; i < interests.length; i++) {
+      var topic = normalize(interests[i].topic || '');
+      var matched = false;
+      for (var j = 0; j < mod.aliases.length; j++) {
+        if (topic.indexOf(mod.aliases[j]) !== -1) { matched = true; break; }
+      }
+      if (matched) {
+        var conf = normalize(interests[i].confidence || '');
+        if (conf === 'high') return 5;
+        if (conf === 'medium') return 3;
+        if (conf === 'low') return 1;
+        return 3; // default if present but no confidence
+      }
+    }
+    return 0;
+  }
+
+  // Get evidence text for a module
+  function getEvidence(mod, interests) {
+    if (!Array.isArray(interests)) return '';
+    for (var i = 0; i < interests.length; i++) {
+      var topic = normalize(interests[i].topic || '');
+      for (var j = 0; j < mod.aliases.length; j++) {
+        if (topic.indexOf(mod.aliases[j]) !== -1) return interests[i].evidence || '';
+      }
+    }
+    return '';
+  }
+
+  // Compute follow-up relevance (0-5) based on whether follow-up actions mention the module
+  function getFollowupRelevance(mod, actions) {
+    if (!Array.isArray(actions)) return 0;
+    for (var i = 0; i < actions.length; i++) {
+      var a = normalize(actions[i]);
+      for (var j = 0; j < mod.aliases.length; j++) {
+        if (a.indexOf(mod.aliases[j]) !== -1) return 4; // mentioned in follow-up = high relevance
+      }
+    }
+    return 0;
+  }
+
+  // Combine scores: max of interest and follow-up, capped at 5
+  function heatLevel(interest, followup) {
+    return Math.min(5, Math.max(interest, followup));
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = 'block';
+  }
+
+  // ── Tooltip ───────────────────────────────────────────────────────────────
+  function showTooltip(e, data) {
+    document.getElementById('ttTitle').textContent = data.module + ' — ' + data.visitor;
+    document.getElementById('ttDemo').textContent = 'Demonstrated: ' + (data.demonstrated ? 'Yes' : 'No');
+    document.getElementById('ttInterest').textContent = 'Interest: ' + data.interest + '/5';
+    document.getElementById('ttFollowup').textContent = 'Follow-up: ' + data.followup + '/5';
+    document.getElementById('ttEvidence').textContent = data.evidence || '';
+    document.getElementById('ttEvidence').style.display = data.evidence ? 'block' : 'none';
+    tooltip.style.display = 'block';
+    positionTooltip(e);
+  }
+
+  function positionTooltip(e) {
+    var x = e.clientX + 12;
+    var y = e.clientY + 12;
+    if (x + 310 > window.innerWidth) x = e.clientX - 310;
+    if (y + 150 > window.innerHeight) y = e.clientY - 150;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  }
+
+  function hideTooltip() {
+    tooltip.style.display = 'none';
+  }
+
+  // ── Build Matrix ──────────────────────────────────────────────────────────
+
+  function buildMatrix(sessions) {
+    // Filter to sessions with analysis data
+    var analyzed = sessions.filter(function(s) { return s._summary; });
+
+    if (analyzed.length === 0) {
+      loadingEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    // Build KPIs
+    var totalSessions = analyzed.length;
+    var moduleCounts = {};
+    V1_MODULES.forEach(function(m) { moduleCounts[m.id] = 0; });
+
+    var rows = analyzed.map(function(s) {
+      var summary = s._summary;
+      var products = summary.products_demonstrated || [];
+      var interests = summary.key_interests || [];
+      var actions = summary.follow_up_actions || [];
+      var cells = {};
+
+      V1_MODULES.forEach(function(mod) {
+        var demonstrated = false;
+        for (var p = 0; p < products.length; p++) {
+          if (moduleMatches(mod, products[p])) { demonstrated = true; break; }
+        }
+        var interest = getInterestLevel(mod, interests);
+        var followup = getFollowupRelevance(mod, actions);
+        var evidence = getEvidence(mod, interests);
+        if (demonstrated) moduleCounts[mod.id]++;
+        cells[mod.id] = {
+          demonstrated: demonstrated,
+          interest: interest,
+          followup: followup,
+          heat: heatLevel(interest, followup),
+          evidence: evidence
+        };
+      });
+
+      return {
+        session_id: s.session_id,
+        visitor: summary.visitor_name || s.visitor_name || s.session_id,
+        score: summary.session_score || 0,
+        cells: cells
+      };
+    });
+
+    // Sort by score descending
+    rows.sort(function(a, b) { return b.score - a.score; });
+
+    // KPI cards
+    var mostDemoed = V1_MODULES.slice().sort(function(a, b) {
+      return moduleCounts[b.id] - moduleCounts[a.id];
+    })[0];
+    var leastDemoed = V1_MODULES.slice().sort(function(a, b) {
+      return moduleCounts[a.id] - moduleCounts[b.id];
+    })[0];
+
+    var avgInterest = 0;
+    var interestCount = 0;
+    rows.forEach(function(r) {
+      V1_MODULES.forEach(function(m) {
+        if (r.cells[m.id].interest > 0) { avgInterest += r.cells[m.id].interest; interestCount++; }
+      });
+    });
+    avgInterest = interestCount > 0 ? (avgInterest / interestCount).toFixed(1) : '0';
+
+    var kpiHtml = '';
+    kpiHtml += '<div class="kpi-card"><div class="value">' + totalSessions + '</div><div class="label">Analyzed Sessions</div></div>';
+    kpiHtml += '<div class="kpi-card"><div class="value">' + mostDemoed.label + '</div><div class="label">Most Demonstrated (' + moduleCounts[mostDemoed.id] + 'x)</div></div>';
+    kpiHtml += '<div class="kpi-card"><div class="value">' + leastDemoed.label + '</div><div class="label">Least Demonstrated (' + moduleCounts[leastDemoed.id] + 'x)</div></div>';
+    kpiHtml += '<div class="kpi-card"><div class="value">' + avgInterest + '</div><div class="label">Avg Interest Level</div></div>';
+    document.getElementById('kpiRow').innerHTML = kpiHtml;
+
+    // Table header
+    var headHtml = '<tr><th>Visitor</th>';
+    V1_MODULES.forEach(function(m) {
+      headHtml += '<th><span class="module-header">' + m.label + '</span></th>';
+    });
+    headHtml += '</tr>';
+    document.getElementById('matrixHead').innerHTML = headHtml;
+
+    // Table body
+    var bodyHtml = '';
+    rows.forEach(function(row) {
+      bodyHtml += '<tr>';
+      bodyHtml += '<td>' + escapeHtml(row.visitor) + ' <span style="color:var(--text3);font-size:0.75rem;">(' + row.score + '/10)</span></td>';
+      V1_MODULES.forEach(function(mod) {
+        var c = row.cells[mod.id];
+        var cls = 'heat-' + c.heat;
+        bodyHtml += '<td>';
+        bodyHtml += '<div class="heat-cell ' + cls + '"';
+        bodyHtml += ' data-module="' + mod.label + '"';
+        bodyHtml += ' data-visitor="' + escapeAttr(row.visitor) + '"';
+        bodyHtml += ' data-demonstrated="' + (c.demonstrated ? '1' : '0') + '"';
+        bodyHtml += ' data-interest="' + c.interest + '"';
+        bodyHtml += ' data-followup="' + c.followup + '"';
+        bodyHtml += ' data-evidence="' + escapeAttr(c.evidence) + '"';
+        bodyHtml += '>';
+        bodyHtml += '<span class="demo-badge ' + (c.demonstrated ? 'yes' : 'no') + '">';
+        bodyHtml += c.demonstrated ? 'demo' : '--';
+        bodyHtml += '</span>';
+        if (c.interest > 0) {
+          bodyHtml += '<span class="metric">Int <span class="num">' + c.interest + '</span></span>';
+        }
+        if (c.followup > 0) {
+          bodyHtml += '<span class="metric">F/U <span class="num">' + c.followup + '</span></span>';
+        }
+        bodyHtml += '</div>';
+        bodyHtml += '</td>';
+      });
+      bodyHtml += '</tr>';
+    });
+    document.getElementById('matrixBody').innerHTML = bodyHtml;
+
+    // Table footer (column summaries)
+    var footHtml = '<tr><td>Total Demos</td>';
+    V1_MODULES.forEach(function(m) {
+      var pct = totalSessions > 0 ? Math.round(moduleCounts[m.id] / totalSessions * 100) : 0;
+      footHtml += '<td>' + moduleCounts[m.id] + '/' + totalSessions + ' (' + pct + '%)</td>';
+    });
+    footHtml += '</tr>';
+    document.getElementById('matrixFoot').innerHTML = footHtml;
+
+    // Show table
+    loadingEl.style.display = 'none';
+    matrixWrap.style.display = 'block';
+
+    // Bind tooltip events
+    var cells = document.querySelectorAll('.heat-cell');
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].addEventListener('mouseenter', function(e) {
+        var el = e.currentTarget;
+        showTooltip(e, {
+          module: el.getAttribute('data-module'),
+          visitor: el.getAttribute('data-visitor'),
+          demonstrated: el.getAttribute('data-demonstrated') === '1',
+          interest: parseInt(el.getAttribute('data-interest'), 10),
+          followup: parseInt(el.getAttribute('data-followup'), 10),
+          evidence: el.getAttribute('data-evidence')
+        });
+      });
+      cells[i].addEventListener('mousemove', positionTooltip);
+      cells[i].addEventListener('mouseleave', hideTooltip);
+    }
+  }
+
+  function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function escapeAttr(str) {
+    return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ── Load Data ─────────────────────────────────────────────────────────────
+
+  function loadData() {
+    fetch(apiUrl + '/api/sessions?include=analysis')
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(sessions) {
+        if (!Array.isArray(sessions) || sessions.length === 0) {
+          loadingEl.style.display = 'none';
+          emptyEl.style.display = 'block';
+          return;
+        }
+
+        // Filter to completed sessions that have analysis
+        var completed = sessions.filter(function(s) {
+          return s.has_analysis || ['completed', 'ended', 'analyzed', 'reviewed', 'sent'].indexOf((s.status || '').toLowerCase()) !== -1;
+        });
+
+        if (completed.length === 0) {
+          loadingEl.style.display = 'none';
+          emptyEl.style.display = 'block';
+          return;
+        }
+
+        // Fetch full detail for each session to get summary.json data
+        var fetches = completed.map(function(s) {
+          return fetch(apiUrl + '/api/sessions/' + encodeURIComponent(s.session_id))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(detail) {
+              if (detail && detail.analysis) {
+                s._summary = detail.analysis;
+              }
+              return s;
+            })
+            .catch(function() { return s; });
+        });
+
+        return Promise.all(fetches).then(function(results) {
+          buildMatrix(results);
+        });
+      })
+      .catch(function(err) {
+        loadingEl.style.display = 'none';
+        showError('Failed to load sessions: ' + err.message);
+      });
+  }
+
+  loadData();
+})();
+</script>
+</body>
+</html>
