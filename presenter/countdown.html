@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Presentation Timer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #0d1117;
+    --bg-card: #161b22;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-muted: #8b949e;
+    --color-green: #3fb950;
+    --color-yellow: #d29922;
+    --color-red: #f85149;
+  }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .timer-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .timer-label {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .timer-display {
+    font-size: clamp(6rem, 20vw, 16rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transition: color 0.4s ease;
+    color: var(--color-green);
+  }
+
+  .timer-display.yellow { color: var(--color-yellow); }
+  .timer-display.red { color: var(--color-red); }
+
+  .timer-display.pulse {
+    animation: pulse 0.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+  }
+
+  .timer-display.finished {
+    animation: flash 0.4s ease-in-out infinite alternate;
+  }
+
+  @keyframes flash {
+    from { opacity: 1; color: var(--color-red); }
+    to { opacity: 0.2; color: #ff0000; }
+  }
+
+  .controls {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .btn:hover {
+    background: #21262d;
+    border-color: #484f58;
+  }
+
+  .btn.primary {
+    background: #238636;
+    border-color: #2ea043;
+  }
+
+  .btn.primary:hover {
+    background: #2ea043;
+  }
+
+  .btn.primary.paused {
+    background: #1f6feb;
+    border-color: #388bfd;
+  }
+
+  .btn.primary.paused:hover {
+    background: #388bfd;
+  }
+
+  .progress-bar {
+    width: min(80vw, 600px);
+    height: 6px;
+    background: var(--bg-card);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--color-green);
+    transition: width 0.25s linear, background 0.4s ease;
+    width: 100%;
+  }
+
+  .progress-fill.yellow { background: var(--color-yellow); }
+  .progress-fill.red { background: var(--color-red); }
+
+  .notes-section {
+    width: min(80vw, 700px);
+    margin-top: 1rem;
+  }
+
+  .notes-toggle {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    margin-bottom: 0.5rem;
+  }
+
+  .notes-area {
+    display: none;
+    width: 100%;
+    min-height: 120px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: vertical;
+  }
+
+  .notes-area.visible {
+    display: block;
+  }
+
+  .sound-indicator {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="timer-container">
+  <div class="timer-label">Presentation Time Remaining</div>
+  <div class="timer-display" id="display">05:00</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+  <div class="controls">
+    <button class="btn primary" id="startBtn" onclick="toggleTimer()">Start</button>
+    <button class="btn" onclick="resetTimer()">Reset</button>
+    <button class="btn" id="fullscreenBtn" onclick="toggleFullscreen()">Fullscreen</button>
+    <button class="btn" id="soundBtn" onclick="toggleSound()">Sound: On</button>
+  </div>
+
+  <div class="notes-section">
+    <button class="notes-toggle" onclick="toggleNotes()">Show presenter notes</button>
+    <textarea class="notes-area" id="notes" placeholder="Type your presenter notes here..."></textarea>
+  </div>
+</div>
+
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var totalMinutes = parseFloat(params.get('minutes')) || 5;
+  var totalSeconds = Math.round(totalMinutes * 60);
+  var remaining = totalSeconds;
+  var running = false;
+  var interval = null;
+  var soundEnabled = true;
+  var alertedAt60 = false;
+  var alertedAt30 = false;
+
+  var display = document.getElementById('display');
+  var progress = document.getElementById('progress');
+  var startBtn = document.getElementById('startBtn');
+  var soundBtn = document.getElementById('soundBtn');
+
+  // Audio context for beep alerts
+  var audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function beep(freq, duration, count) {
+    if (!soundEnabled) return;
+    var ctx = getAudioCtx();
+    for (var i = 0; i < count; i++) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.value = 0.3;
+      var start = ctx.currentTime + i * (duration / 1000 + 0.15);
+      osc.start(start);
+      osc.stop(start + duration / 1000);
+    }
+  }
+
+  function formatTime(sec) {
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function getColorClass(sec) {
+    if (sec <= 0) return 'red';
+    if (sec < 60) return 'red';
+    if (sec < 120) return 'yellow';
+    return '';
+  }
+
+  function render() {
+    display.textContent = formatTime(Math.max(0, remaining));
+
+    // Color
+    var cls = getColorClass(remaining);
+    display.className = 'timer-display' + (cls ? ' ' + cls : '');
+    progress.className = 'progress-fill' + (cls ? ' ' + cls : '');
+
+    // Pulse in last 30s
+    if (remaining <= 30 && remaining > 0 && running) {
+      display.classList.add('pulse');
+    }
+
+    // Finished
+    if (remaining <= 0) {
+      display.classList.remove('pulse');
+      display.classList.add('finished');
+    }
+
+    // Progress bar
+    var pct = totalSeconds > 0 ? (remaining / totalSeconds) * 100 : 0;
+    progress.style.width = Math.max(0, pct) + '%';
+
+    // Sound alerts
+    if (running && soundEnabled) {
+      if (remaining === 60 && !alertedAt60) {
+        alertedAt60 = true;
+        beep(880, 200, 2);
+      }
+      if (remaining === 30 && !alertedAt30) {
+        alertedAt30 = true;
+        beep(1100, 150, 3);
+      }
+      if (remaining === 0) {
+        beep(440, 500, 1);
+      }
+    }
+  }
+
+  function tick() {
+    if (remaining > 0) {
+      remaining--;
+      render();
+    } else {
+      clearInterval(interval);
+      interval = null;
+      running = false;
+      startBtn.textContent = 'Done';
+      render();
+    }
+  }
+
+  window.toggleTimer = function() {
+    if (remaining <= 0) return;
+    if (running) {
+      clearInterval(interval);
+      interval = null;
+      running = false;
+      startBtn.textContent = 'Resume';
+      startBtn.classList.add('paused');
+      display.classList.remove('pulse');
+    } else {
+      running = true;
+      startBtn.textContent = 'Pause';
+      startBtn.classList.remove('paused');
+      interval = setInterval(tick, 1000);
+      render();
+    }
+  };
+
+  window.resetTimer = function() {
+    clearInterval(interval);
+    interval = null;
+    running = false;
+    remaining = totalSeconds;
+    alertedAt60 = false;
+    alertedAt30 = false;
+    startBtn.textContent = 'Start';
+    startBtn.classList.remove('paused');
+    display.classList.remove('finished');
+    render();
+  };
+
+  window.toggleFullscreen = function() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  window.toggleSound = function() {
+    soundEnabled = !soundEnabled;
+    soundBtn.textContent = 'Sound: ' + (soundEnabled ? 'On' : 'Off');
+  };
+
+  window.toggleNotes = function() {
+    var notes = document.getElementById('notes');
+    var toggle = notes.previousElementSibling;
+    var visible = notes.classList.toggle('visible');
+    toggle.textContent = visible ? 'Hide presenter notes' : 'Show presenter notes';
+  };
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'TEXTAREA') return;
+    if (e.code === 'Space') { e.preventDefault(); toggleTimer(); }
+    if (e.code === 'KeyR') resetTimer();
+    if (e.code === 'KeyF') toggleFullscreen();
+    if (e.code === 'KeyS') toggleSound();
+    if (e.code === 'KeyN') toggleNotes();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
