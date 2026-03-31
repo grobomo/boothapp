@@ -163,10 +163,10 @@ document.getElementById('sessionBtn').addEventListener('click', () => {
 
 // ─── S3 Config ────────────────────────────────────────────────────────────────
 
-const S3_KEYS = ['s3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
+const S3_KEYS = ['s3Bucket', 's3Region', 'presignEndpoint', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
 
 function isConfigured(config) {
-  return !!(config.s3Bucket && config.s3Region && config.awsAccessKeyId && config.awsSecretAccessKey);
+  return !!(config.s3Bucket && config.s3Region && config.presignEndpoint && config.awsAccessKeyId && config.awsSecretAccessKey);
 }
 
 function updateConfiguredBadge(config) {
@@ -177,6 +177,7 @@ function updateConfiguredBadge(config) {
 chrome.storage.local.get(S3_KEYS, (config) => {
   if (config.s3Bucket)            document.getElementById('s3Bucket').value = config.s3Bucket;
   if (config.s3Region)            document.getElementById('s3Region').value = config.s3Region;
+  if (config.presignEndpoint)     document.getElementById('presignEndpoint').value = config.presignEndpoint;
   if (config.awsAccessKeyId)      document.getElementById('awsAccessKeyId').value = config.awsAccessKeyId;
   if (config.awsSecretAccessKey)  document.getElementById('awsSecretAccessKey').value = config.awsSecretAccessKey;
   if (config.awsSessionToken)     document.getElementById('awsSessionToken').value = config.awsSessionToken;
@@ -188,6 +189,7 @@ document.getElementById('s3SaveBtn').addEventListener('click', () => {
   const config = {
     s3Bucket:           document.getElementById('s3Bucket').value.trim(),
     s3Region:           document.getElementById('s3Region').value.trim(),
+    presignEndpoint:    document.getElementById('presignEndpoint').value.trim(),
     awsAccessKeyId:     document.getElementById('awsAccessKeyId').value.trim(),
     awsSecretAccessKey: document.getElementById('awsSecretAccessKey').value.trim(),
     awsSessionToken:    document.getElementById('awsSessionToken').value.trim(),

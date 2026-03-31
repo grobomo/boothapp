@@ -134,7 +134,62 @@ function startPeriodicScreenshots() {
   }, 10_000);
 }
 
-// ─── AWS SigV4 Signing ────────────────────────────────────────────────────────
+// ─── Pre-signed URL Upload ────────────────────────────────────────────────────
+// Uses a Lambda Function URL to get pre-signed S3 PUT URLs instead of
+// embedding AWS credentials in the extension for uploads.
+
+async function getPresignedUrl(sessionId, fileType, filename) {
+  const { presignEndpoint } = await chrome.storage.local.get(['presignEndpoint']);
+  if (!presignEndpoint) {
+    throw new Error('Presign endpoint not configured — set presignEndpoint in extension settings');
+  }
+
+  const body = { session_id: sessionId, file_type: fileType };
+  if (filename) body.filename = filename;
+
+  const response = await fetch(presignEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Presign request failed: ${response.status} ${text}`);
+  }
+
+  return response.json(); // { upload_url, key, expires_in }
+}
+
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function s3PutPresigned(sessionId, fileType, body, contentType, filename) {
+  const { upload_url } = await getPresignedUrl(sessionId, fileType, filename);
+
+  const bodyBytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
+  const response = await fetch(upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: bodyBytes,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`S3 presigned PUT failed: ${response.status} ${text}`);
+  }
+
+  return response;
+}
+
+// ─── AWS SigV4 Signing (retained for S3 GET polling of active-session.json) ──
 
 function toHex(bytes) {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -156,17 +211,7 @@ async function hmacSHA256(key, data) {
   return new Uint8Array(sig);
 }
 
-function dataUrlToBytes(dataUrl) {
-  const base64 = dataUrl.split(',')[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-async function signS3Request(method, bucket, key, region, body, contentType, credentials) {
+async function signS3GetRequest(bucket, key, region, credentials) {
   const { awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = credentials;
 
   const now = new Date();
@@ -176,13 +221,10 @@ async function signS3Request(method, bucket, key, region, body, contentType, cre
   const host = `${bucket}.s3.${region}.amazonaws.com`;
   const url = `https://${host}/${key}`;
 
-  const bodyBytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
-  const payloadHash = await sha256Hex(bodyBytes);
+  const payloadHash = await sha256Hex(new Uint8Array(0));
 
-  // Canonical headers (sorted, lowercase) — host is NOT sent in fetch headers
-  // but must be in canonical headers for signing
   const canonicalHeadersMap = {
-    'content-type': contentType,
+    'content-type': 'application/json',
     'host': host,
     'x-amz-content-sha256': payloadHash,
     'x-amz-date': amzDate,
@@ -197,9 +239,9 @@ async function signS3Request(method, bucket, key, region, body, contentType, cre
 
   const encodedKey = key.split('/').map(encodeURIComponent).join('/');
   const canonicalRequest = [
-    method,
+    'GET',
     '/' + encodedKey,
-    '', // query string
+    '',
     canonicalHeaders,
     signedHeaders,
     payloadHash,
@@ -213,7 +255,6 @@ async function signS3Request(method, bucket, key, region, body, contentType, cre
     await sha256Hex(canonicalRequest),
   ].join('\n');
 
-  // Derive signing key
   const kDate = await hmacSHA256('AWS4' + awsSecretAccessKey, dateStamp);
   const kRegion = await hmacSHA256(kDate, region);
   const kService = await hmacSHA256(kRegion, 's3');
@@ -222,9 +263,8 @@ async function signS3Request(method, bucket, key, region, body, contentType, cre
 
   const authorization = `AWS4-HMAC-SHA256 Credential=${awsAccessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-  // Build fetch headers — omit 'host' (browser sets it automatically)
   const fetchHeaders = {
-    'content-type': contentType,
+    'content-type': 'application/json',
     'x-amz-content-sha256': payloadHash,
     'x-amz-date': amzDate,
     'authorization': authorization,
@@ -233,32 +273,11 @@ async function signS3Request(method, bucket, key, region, body, contentType, cre
     fetchHeaders['x-amz-security-token'] = awsSessionToken;
   }
 
-  return { url, headers: fetchHeaders, bodyBytes };
+  return { url, headers: fetchHeaders };
 }
-
-async function s3Put(bucket, key, region, body, contentType, credentials) {
-  const { url, headers, bodyBytes } = await signS3Request(
-    'PUT', bucket, key, region, body, contentType, credentials
-  );
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers,
-    body: bodyBytes,
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`S3 PUT ${key} failed: ${response.status} ${text}`);
-  }
-  return response;
-}
-
-// ─── Signed S3 GET ───────────────────────────────────────────────────────────
 
 async function s3GetJson(bucket, key, region, credentials) {
-  const body = new Uint8Array(0);
-  const { url, headers } = await signS3Request(
-    'GET', bucket, key, region, body, 'application/json', credentials
-  );
+  const { url, headers } = await signS3GetRequest(bucket, key, region, credentials);
   const response = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
   if (!response.ok) return null;
   return response.json();
@@ -348,28 +367,10 @@ setInterval(pollActiveSession, 2000);
 // ─── Session Upload ───────────────────────────────────────────────────────────
 
 async function uploadSessionData(sessionId, clickBuffer) {
-  const config = await chrome.storage.local.get([
-    's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
-  ]);
-
-  const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
-
-  if (!s3Bucket || !s3Region || !awsAccessKeyId || !awsSecretAccessKey) {
-    throw new Error('S3 credentials not configured');
-  }
-
-  const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
-
   // 30-second timeout for the entire upload
   const deadline = Date.now() + 30_000;
 
   const screenshots = await getAllScreenshots();
-
-  // Build a map from filename -> data_url for quick lookup
-  const screenshotMap = {};
-  for (const s of screenshots) {
-    screenshotMap[s.filename] = s.data_url;
-  }
 
   // Fix screenshot_file paths in clicks buffer (prepend 'screenshots/')
   const buffer = clickBuffer || { session_id: sessionId, events: [] };
@@ -380,12 +381,11 @@ async function uploadSessionData(sessionId, clickBuffer) {
     }
   }
 
-  // Upload clicks.json
-  const clicksKey = `sessions/${sessionId}/clicks/clicks.json`;
+  // Upload clicks.json via presigned URL
   const clicksBody = JSON.stringify(buffer, null, 2);
-  await s3Put(s3Bucket, clicksKey, s3Region, clicksBody, 'application/json', credentials);
+  await s3PutPresigned(sessionId, 'clicks', clicksBody, 'application/json');
 
-  // Upload screenshots in batches of 10
+  // Upload screenshots in batches of 10 via presigned URLs
   const BATCH_SIZE = 10;
   for (let i = 0; i < screenshots.length; i += BATCH_SIZE) {
     if (Date.now() > deadline) {
@@ -394,9 +394,8 @@ async function uploadSessionData(sessionId, clickBuffer) {
     }
     const batch = screenshots.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(async (s) => {
-      const imgKey = `sessions/${sessionId}/screenshots/${s.filename}`;
       const imgBytes = dataUrlToBytes(s.data_url);
-      await s3Put(s3Bucket, imgKey, s3Region, imgBytes, 'image/jpeg', credentials);
+      await s3PutPresigned(sessionId, 'screenshot', imgBytes, 'image/jpeg', s.filename);
     }));
   }
 
