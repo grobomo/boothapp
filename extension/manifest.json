@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "V1-Helper",
-  "version": "1.0.0",
-  "description": "TrendAI V1-Helper: Chrome extension providing access to MCP tools for AI-assisted workflows. Connects to the MCP relay to expose 30 tools directly in your browser.",
+  "name": "CaseyApp Capture",
+  "version": "2.0.0",
+  "description": "CaseyApp: AI-powered demo capture for trade show booths. Captures screenshots and click data during live demos.",
   "permissions": [
     "activeTab",
     "tabs",
@@ -11,7 +11,7 @@
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "V1-Helper"
+    "default_title": "CaseyApp Capture"
   },
   "background": {
     "service_worker": "background.js"

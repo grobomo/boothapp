@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "watcher": "node analysis/watcher.js",
+    "management": "node management/server.js",
+    "packager": "node packager/server.js",
+    "presenter": "node presenter/server.js",
     "test": "node analysis/test/errors.test.js && node analysis/test/correlator.test.js && node analysis/test/email-template.test.js && node analysis/test/retry.test.js && node analysis/test/pipeline-run.test.js && node presenter/test/teams-webhook.test.js && node management/test/management.test.js"
   },
   "dependencies": {

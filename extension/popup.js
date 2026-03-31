@@ -1,6 +1,6 @@
-// ─── V1-Helper Popup ──────────────────────────────────────────────────────────
+// ─── CaseyApp Popup ──────────────────────────────────────────────────────────
 
-const S3_KEYS = ['s3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
+const S3_KEYS = ['managementUrl', 's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -125,6 +125,7 @@ loadSessionState();
 // ─── Load S3 Config ───────────────────────────────────────────────────────────
 
 chrome.storage.local.get(S3_KEYS, (config) => {
+  if (config.managementUrl) document.getElementById('managementUrl').value = config.managementUrl;
   if (config.s3Bucket) document.getElementById('s3Bucket').value = config.s3Bucket;
   if (config.s3Region) document.getElementById('s3Region').value = config.s3Region;
   if (config.awsAccessKeyId) document.getElementById('awsAccessKeyId').value = config.awsAccessKeyId;
@@ -144,6 +145,7 @@ settingsBtn.addEventListener('click', () => {
 
 document.getElementById('s3SaveBtn').addEventListener('click', () => {
   const config = {
+    managementUrl: document.getElementById('managementUrl').value.trim(),
     s3Bucket: document.getElementById('s3Bucket').value.trim(),
     s3Region: document.getElementById('s3Region').value.trim(),
     awsAccessKeyId: document.getElementById('awsAccessKeyId').value.trim(),
@@ -166,6 +168,7 @@ document.getElementById('s3SaveBtn').addEventListener('click', () => {
 // ─── Pre-fill Demo ────────────────────────────────────────────────────────────
 
 document.getElementById('s3DemoBtn').addEventListener('click', () => {
+  document.getElementById('managementUrl').value = 'https://caseyapp.trendcyberrange.com';
   document.getElementById('s3Bucket').value = 'boothapp-sessions-752266476357';
   document.getElementById('s3Region').value = 'us-east-1';
 });
