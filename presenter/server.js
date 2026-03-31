@@ -12,6 +12,9 @@ const s3 = new S3Client({ region: REGION });
 // Serve static HTML files
 app.use(express.static(path.join(__dirname)));
 
+// Serve i18n assets
+app.use('/infra/i18n', express.static(path.join(__dirname, '..', 'infra', 'i18n')));
+
 // GET /api/sessions - list all sessions with metadata and analysis status
 app.get('/api/sessions', async (req, res) => {
     try {
