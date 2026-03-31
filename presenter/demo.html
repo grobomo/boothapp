@@ -176,6 +176,61 @@
         }
 
         /* ============================================================
+           STATS COUNTER STRIP
+           ============================================================ */
+        .stats-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            margin-top: 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeInUp .5s ease-out .2s both;
+        }
+
+        .stat-cell {
+            padding: 24px 16px;
+            text-align: center;
+            position: relative;
+        }
+        .stat-cell + .stat-cell::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 20%; bottom: 20%;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .stat-value {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-value--red     { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+        .stat-value--blue    { color: var(--blue); text-shadow: 0 0 20px rgba(68,138,255,.3); }
+        .stat-value--green   { color: var(--success); text-shadow: 0 0 20px rgba(0,230,118,.3); }
+        .stat-value--amber   { color: var(--amber); text-shadow: 0 0 20px rgba(255,171,0,.3); }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 900px) {
+            .stats-strip { grid-template-columns: repeat(2, 1fr); }
+            .stat-cell:nth-child(3)::before { width: 0; }
+            .stat-value { font-size: 32px; }
+        }
+
+        /* ============================================================
            STATUS CARDS
            ============================================================ */
         .cards {
@@ -515,6 +570,26 @@
             <span class="live-dot"></span>
             Live Dashboard
         </div>
+
+        <!-- Stats Counter Strip -->
+        <div class="stats-strip">
+            <div class="stat-cell">
+                <div class="stat-value stat-value--red" id="statTotalSessions">0</div>
+                <div class="stat-label">Total Sessions</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-value stat-value--blue" id="statAvgScore">0</div>
+                <div class="stat-label">Avg Score</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-value stat-value--green" id="statProductsDemo">0</div>
+                <div class="stat-label">Products Demonstrated</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-value stat-value--amber" id="statFollowUps">0</div>
+                <div class="stat-label">Follow-Up Actions</div>
+            </div>
+        </div>
     </header>
 
     <!-- ============ STATUS CARDS ============ -->
@@ -739,6 +814,10 @@
         activeSessions: 0,
         totalDemos: 0,
         reportsGenerated: 0,
+        totalSessions: 0,
+        avgScore: 0,
+        productsDemo: 0,
+        followUpActions: 0,
         events: [],
         productCounts: {}
     };
@@ -784,6 +863,15 @@
         if (state.totalDemos < state.activeSessions) state.totalDemos = state.activeSessions;
         if (state.reportsGenerated > state.totalDemos) state.reportsGenerated = state.totalDemos;
 
+        // Stats counter: accumulate totals over time
+        state.totalSessions += Math.floor(Math.random() * 2);
+        state.productsDemo += Math.floor(Math.random() * 3);
+        state.followUpActions += Math.floor(Math.random() * 2);
+        // Average score drifts between 70-95
+        if (state.totalSessions > 0) {
+            state.avgScore = Math.min(95, Math.max(70, state.avgScore + Math.floor(Math.random() * 5) - 2));
+        }
+
         var n = 1 + Math.floor(Math.random() * 2);
         for (var i = 0; i < n; i++) {
             state.events.unshift(generateMockEvent());
@@ -806,6 +894,13 @@
         animateValue(document.getElementById('activeSessions'),   state.activeSessions);
         animateValue(document.getElementById('totalDemos'),       state.totalDemos);
         animateValue(document.getElementById('reportsGenerated'), state.reportsGenerated);
+    }
+
+    function renderStats() {
+        animateValue(document.getElementById('statTotalSessions'), state.totalSessions);
+        animateValue(document.getElementById('statAvgScore'),      state.avgScore);
+        animateValue(document.getElementById('statProductsDemo'),  state.productsDemo);
+        animateValue(document.getElementById('statFollowUps'),     state.followUpActions);
     }
 
     function renderRingChart() {
@@ -875,6 +970,7 @@
 
     function renderAll() {
         renderCards();
+        renderStats();
         renderRingChart();
         renderProducts();
         renderFeed();
@@ -896,6 +992,10 @@
                 if (data.activeSessions  !== undefined) state.activeSessions  = data.activeSessions;
                 if (data.totalDemos      !== undefined) state.totalDemos      = data.totalDemos;
                 if (data.reportsGenerated !== undefined) state.reportsGenerated = data.reportsGenerated;
+                if (data.totalSessions   !== undefined) state.totalSessions   = data.totalSessions;
+                if (data.avgScore        !== undefined) state.avgScore        = data.avgScore;
+                if (data.productsDemo    !== undefined) state.productsDemo    = data.productsDemo;
+                if (data.followUpActions !== undefined) state.followUpActions = data.followUpActions;
                 if (data.events && data.events.length) {
                     state.events = data.events.map(function (e) {
                         return { type: e.type || 'session', text: e.text || e.message, ts: e.ts || Date.now() };
@@ -932,13 +1032,47 @@
     state.activeSessions   = 3;
     state.totalDemos       = 14;
     state.reportsGenerated = 9;
+    state.totalSessions    = 47;
+    state.avgScore         = 82;
+    state.productsDemo     = 23;
+    state.followUpActions  = 31;
 
     // Seed product counts
     PRODUCTS.forEach(function (p, i) {
         state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
     });
 
+    // Initial count-up from 0: save real values, render at 0, then animate up
+    var realActive = state.activeSessions;
+    var realDemos = state.totalDemos;
+    var realReports = state.reportsGenerated;
+    var realTotalSessions = state.totalSessions;
+    var realAvgScore = state.avgScore;
+    var realProductsDemo = state.productsDemo;
+    var realFollowUps = state.followUpActions;
+
+    state.activeSessions = 0;
+    state.totalDemos = 0;
+    state.reportsGenerated = 0;
+    state.totalSessions = 0;
+    state.avgScore = 0;
+    state.productsDemo = 0;
+    state.followUpActions = 0;
     renderAll();
+
+    setTimeout(function () {
+        state.activeSessions = realActive;
+        state.totalDemos = realDemos;
+        state.reportsGenerated = realReports;
+        state.totalSessions = realTotalSessions;
+        state.avgScore = realAvgScore;
+        state.productsDemo = realProductsDemo;
+        state.followUpActions = realFollowUps;
+        renderCards();
+        renderStats();
+        renderRingChart();
+    }, 300);
+
     renderClock();
     setInterval(renderClock, 1000);
     setInterval(tickCountdown, 1000);
