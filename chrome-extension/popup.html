@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #000;
+      color: #e5e5e5;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #1a1a1a;
+      padding-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+    }
+    .status-dot.active {
+      background: #d71920;
+      box-shadow: 0 0 6px #d71920;
+    }
+    .section {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .interval-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #d71920;
+    }
+    .interval-value {
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 40px;
+      text-align: right;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .stat .label {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-start {
+      background: linear-gradient(135deg, #d71920, #ff9500);
+      color: #fff;
+    }
+    .btn-stop {
+      background: #333;
+      color: #d71920;
+      border: 1px solid #d71920;
+    }
+    .elapsed {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      margin: 8px 0;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="status-dot" id="statusDot"></div>
+    <h1>CaseyApp Capture</h1>
+  </div>
+
+  <!-- Idle state -->
+  <div id="idleView">
+    <div class="section">
+      <label>Screenshot Interval</label>
+      <div class="interval-row">
+        <input type="range" id="intervalSlider" min="200" max="5000" step="100" value="1000">
+        <span class="interval-value" id="intervalDisplay">1.0s</span>
+      </div>
+    </div>
+    <button class="btn btn-start" id="startBtn">Start Capture</button>
+  </div>
+
+  <!-- Active state -->
+  <div id="activeView" class="hidden">
+    <div class="section">
+      <label>Session Active</label>
+      <div class="elapsed" id="elapsedTime">00:00</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="value" id="screenshotCount">0</div>
+          <div class="label">Screenshots</div>
+        </div>
+        <div class="stat">
+          <div class="value" id="clickCount">0</div>
+          <div class="label">Clicks</div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <label>Screenshot Interval</label>
+      <div class="interval-row">
+        <input type="range" id="intervalSliderActive" min="200" max="5000" step="100" value="1000">
+        <span class="interval-value" id="intervalDisplayActive">1.0s</span>
+      </div>
+    </div>
+    <button class="btn btn-stop" id="stopBtn">Stop Capture</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
