@@ -1,0 +1,9 @@
+{
+  "webhooks": [
+    {
+      "label": "Slack Incoming Webhook",
+      "url": "https://hooks.slack.com/services/REPLACE/WITH/ACTUAL",
+      "enabled": false
+    }
+  ]
+}
