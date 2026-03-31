@@ -1,0 +1,13 @@
+{
+  "name": "boothapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "ws-server": "node infra/ws-server.js",
+    "watcher": "node analysis/watcher.js",
+    "test:ws": "node tests/test_ws_server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
