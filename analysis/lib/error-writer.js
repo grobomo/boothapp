@@ -1,0 +1,42 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { classifyError } = require('./errors');
+
+/**
+ * Write structured error.json to sessions/<id>/output/.
+ *
+ * @param {string} sessionsDir - base sessions directory
+ * @param {string} sessionId   - session identifier
+ * @param {string} stage       - pipeline stage that failed
+ * @param {Error}  err         - the caught error
+ * @param {number} [attempts]  - how many attempts were made
+ * @returns {string} path to written file
+ */
+function writeErrorJson(sessionsDir, sessionId, stage, err, attempts) {
+  const classified = classifyError(err);
+  const outputDir = path.join(sessionsDir, sessionId, 'output');
+
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const payload = {
+    error: true,
+    timestamp: new Date().toISOString(),
+    sessionId,
+    stage,
+    type: classified.type,
+    retryable: classified.retryable,
+    message: classified.message,
+    code: classified.code,
+    detail: classified.detail,
+    attempts: attempts || null,
+    stack: err.stack || null,
+  };
+
+  const filePath = path.join(outputDir, 'error.json');
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n');
+  return filePath;
+}
+
+module.exports = { writeErrorJson };
