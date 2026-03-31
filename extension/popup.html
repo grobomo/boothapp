@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CaseyApp</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 360px;
+      min-height: 200px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000000;
+      color: #e5e5e5;
+    }
+
+    /* -- Header -- */
+    .header {
+      background: #0a0a0a;
+      border-bottom: 2px solid #d71920;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: #d71920;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .brand { display: flex; flex-direction: column; flex: 1; }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      color: #d71920;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .settings-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 6px;
+      color: #6b7280;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+    }
+
+    .settings-btn:hover { color: #e5e5e5; border-color: #1a1a1a; background: rgba(255,255,255,0.05); }
+    .settings-btn.active { color: #d71920; border-color: #d7192033; background: #d7192011; }
+    .settings-btn svg { width: 18px; height: 18px; transition: transform 0.3s; }
+    .settings-btn.active svg { transform: rotate(90deg); }
+
+    /* -- Connection Status -- */
+    .status-bar {
+      padding: 10px 20px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+
+    .status-dot.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e66; }
+    .status-dot.disconnected { background: #ef4444; box-shadow: 0 0 6px #ef444466; }
+    .status-dot.connecting { background: #ff9500; box-shadow: 0 0 6px #ff950066; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text { color: #6b7280; flex: 1; }
+    .status-text.connected { color: #22c55e; }
+    .status-text.disconnected { color: #ef4444; }
+    .status-text.connecting { color: #ff9500; }
+
+    /* -- Event Info -- */
+    .event-info {
+      padding: 16px 20px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .event-info.hidden { display: none; }
+
+    .event-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .event-detail {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .demo-pc-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 10px;
+      background: #d7192015;
+      border: 1px solid #d7192033;
+      border-radius: 12px;
+      font-size: 11px;
+      color: #d71920;
+      font-weight: 600;
+    }
+
+    /* -- QR Section -- */
+    .qr-section {
+      padding: 20px;
+      text-align: center;
+    }
+
+    .qr-section.hidden { display: none; }
+
+    .qr-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+
+    .qr-container {
+      display: inline-block;
+      padding: 12px;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 12px;
+    }
+
+    .qr-container img {
+      display: block;
+      width: 240px;
+      height: 240px;
+      border-radius: 4px;
+    }
+
+    .qr-hint {
+      margin-top: 12px;
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    /* -- Setup Section -- */
+    .setup-section {
+      padding: 20px;
+    }
+
+    .setup-section.hidden { display: none; }
+
+    .setup-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .field-label { font-size: 11px; color: #6b7280; }
+
+    .field-input {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: #e5e5e5;
+      outline: none;
+      width: 100%;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .field-input:focus { border-color: #d71920; box-shadow: 0 0 0 2px #d7192022; }
+    .field-input::placeholder { color: #333; }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #d71920, #ff9500);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #0a0a0a;
+      border: 1px solid #d7192044;
+      color: #d71920;
+    }
+
+    .btn-secondary:hover { background: #d7192011; border-color: #d71920; }
+
+    /* -- Session Status -- */
+    .session-bar {
+      padding: 12px 20px;
+      background: #0a0a0a;
+      border-top: 1px solid #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .session-bar.hidden { display: none; }
+
+    .session-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .session-indicator.idle { background: #6b7280; }
+    .session-indicator.recording { background: #d71920; box-shadow: 0 0 8px #d71920aa; animation: pulse-rec 1.5s infinite; }
+
+    @keyframes pulse-rec {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .session-label { font-size: 12px; font-weight: 600; flex: 1; }
+    .session-label.idle { color: #6b7280; }
+    .session-label.recording { color: #d71920; }
+
+    /* -- Counters -- */
+    .counters {
+      padding: 12px 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .counters.hidden { display: none; }
+
+    .counter-card {
+      flex: 1;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .counter-value { font-size: 24px; font-weight: 700; color: #e5e5e5; line-height: 1; }
+    .counter-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+    .counter-card.clicks .counter-value { color: #d71920; }
+    .counter-card.screenshots .counter-value { color: #ff9500; }
+
+    /* -- Settings Panel -- */
+    .settings-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s, padding 0.35s;
+      padding: 0 20px;
+      background: #050505;
+      border-top: 1px solid transparent;
+    }
+
+    .settings-panel.open {
+      max-height: 300px;
+      padding: 16px 20px;
+      border-top-color: #1a1a1a;
+    }
+
+    /* -- Error -- */
+    .error-msg {
+      padding: 8px 20px;
+      font-size: 11px;
+      color: #ef4444;
+      background: #ef444411;
+      border-bottom: 1px solid #ef444433;
+    }
+
+    .error-msg.hidden { display: none; }
+
+    /* -- Footer -- */
+    .footer {
+      padding: 10px 20px;
+      border-top: 1px solid #1a1a1a;
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: #333;
+      letter-spacing: 0.3px;
+    }
+
+    .footer-text span { color: #d71920; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-icon">C</div>
+    <div class="brand">
+      <div class="brand-name">CaseyApp</div>
+      <div class="brand-sub">Demo Capture</div>
+    </div>
+    <button class="settings-btn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Connection Status -->
+  <div class="status-bar">
+    <div class="status-dot disconnected" id="statusDot"></div>
+    <span class="status-text disconnected" id="statusText">Not connected</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error-msg hidden" id="errorMsg"></div>
+
+  <!-- Setup (shown when not registered) -->
+  <div class="setup-section" id="setupSection">
+    <div class="setup-title">Register Demo PC</div>
+    <div class="field">
+      <label class="field-label" for="serverUrl">Management Server</label>
+      <input class="field-input" id="serverUrl" type="text" value="https://caseyapp.trendcyberrange.com" placeholder="https://caseyapp.trendcyberrange.com" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="pcName">Demo PC Name</label>
+      <input class="field-input" id="pcName" type="text" placeholder="booth-pc-1" />
+    </div>
+    <button class="btn btn-primary" id="registerBtn">REGISTER & GENERATE QR</button>
+  </div>
+
+  <!-- Event Info (shown when registered) -->
+  <div class="event-info hidden" id="eventInfo">
+    <div class="event-name" id="eventName"></div>
+    <div class="event-detail" id="eventDetail"></div>
+    <span class="demo-pc-badge" id="demoPcBadge"></span>
+  </div>
+
+  <!-- QR Code (shown when registered) -->
+  <div class="qr-section hidden" id="qrSection">
+    <div class="qr-title">Scan to Pair Phone</div>
+    <div class="qr-container">
+      <img id="qrImage" alt="QR Code" />
+    </div>
+    <div class="qr-hint">Open CaseyApp on Android and scan this code</div>
+  </div>
+
+  <!-- Session Status -->
+  <div class="session-bar hidden" id="sessionBar">
+    <div class="session-indicator idle" id="sessionIndicator"></div>
+    <span class="session-label idle" id="sessionLabel">Idle -- waiting for session</span>
+  </div>
+
+  <!-- Counters -->
+  <div class="counters hidden" id="counters">
+    <div class="counter-card clicks">
+      <div class="counter-value" id="clickCount">0</div>
+      <div class="counter-label">Clicks</div>
+    </div>
+    <div class="counter-card screenshots">
+      <div class="counter-value" id="screenshotCount">0</div>
+      <div class="counter-label">Screenshots</div>
+    </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="setup-title">Settings</div>
+    <div class="field">
+      <label class="field-label">Server URL</label>
+      <input class="field-input" id="settingsServerUrl" type="text" disabled />
+    </div>
+    <div class="field">
+      <label class="field-label">Demo PC ID</label>
+      <input class="field-input" id="settingsDemoPcId" type="text" disabled />
+    </div>
+    <button class="btn btn-secondary" id="disconnectBtn" style="margin-top:8px">DISCONNECT</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-text">Powered by <span>Trend Micro</span></div>
+  </div>
+
+  <script src="lib/qrcode.min.js"></script>
+  <script src="management-api.js"></script>
+  <script src="qr-generator.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
