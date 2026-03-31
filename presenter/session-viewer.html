@@ -631,22 +631,159 @@
     margin-top: 2px;
   }
 
+  /* ── Screenshot Gallery ────────────────────────────────── */
+  .gallery-card { grid-column: 1 / -1; }
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    padding: 20px;
+  }
+  .gallery-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .gallery-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .gallery-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .gallery-thumb .placeholder {
+    color: var(--text3);
+    font-size: 12px;
+  }
+  .gallery-caption {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .gallery-caption .gc-element {
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .gallery-caption .gc-time {
+    color: var(--text3);
+    font-family: monospace;
+    font-size: 11px;
+  }
+  .gallery-caption .gc-page {
+    color: var(--text3);
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
   /* ── Lightbox ──────────────────────────────────────────── */
   .lightbox {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.92);
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
   }
-  .lightbox img {
+  .lightbox img.lightbox-img {
     max-width: 90vw;
-    max-height: 90vh;
+    max-height: 85vh;
     border-radius: 8px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    cursor: default;
+  }
+  .lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+  .lightbox-nav.prev { left: 20px; }
+  .lightbox-nav.next { right: 20px; }
+  .lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.25); }
+  .lightbox-caption {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px 20px;
+    color: #e6edf3;
+    font-size: 13px;
+    text-align: center;
+    max-width: 600px;
+    pointer-events: none;
+  }
+  .lightbox-caption .lc-element { font-weight: 600; }
+  .lightbox-caption .lc-time { color: #8b949e; font-family: monospace; font-size: 12px; margin-left: 8px; }
+  .lightbox-counter {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    font-family: monospace;
+    pointer-events: none;
+  }
+
+  @media (max-width: 900px) {
+    .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 14px; }
+  }
+  @media (max-width: 480px) {
+    .gallery-grid { grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; }
   }
 
   /* ── Notes Panel ──────────────────────────────────────── */
@@ -1269,6 +1406,12 @@ if (!BoothAuth.requireAwsCreds()) {
       <div class="analysis-scroll" id="analysis"></div>
     </div>
 
+    <!-- Screenshot Gallery -->
+    <div class="card gallery-card hidden" id="gallery-card">
+      <div class="card-header"><span class="icon">[+]</span> Screenshot Gallery <span id="gallery-count" style="font-weight:400;color:var(--text3);margin-left:6px"></span></div>
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
+
     <!-- Session Notes -->
     <div class="card notes-card">
       <div class="card-header"><span class="icon">[#]</span> Session Notes</div>
@@ -1430,7 +1573,115 @@ if (!BoothAuth.requireAwsCreds()) {
 
   // ── Lightbox / Annotator ─────────────────────────────────────────
   var _screenshotFileMap = {}; // url -> screenshotFile name mapping
+  var _galleryItems = [];      // [{url, file, element, timestamp, page}]
+  var _activeLightbox = null;
+  var _lightboxKeyHandler = null;
+
+  function closeLightbox() {
+    if (_activeLightbox) {
+      document.body.removeChild(_activeLightbox);
+      _activeLightbox = null;
+    }
+    if (_lightboxKeyHandler) {
+      document.removeEventListener("keydown", _lightboxKeyHandler);
+      _lightboxKeyHandler = null;
+    }
+  }
+
+  function openGalleryLightbox(index) {
+    if (_galleryItems.length === 0) return;
+    closeLightbox();
+
+    var currentIdx = Math.max(0, Math.min(index, _galleryItems.length - 1));
+    var item = _galleryItems[currentIdx];
+
+    var lb = document.createElement("div");
+    lb.className = "lightbox";
+    _activeLightbox = lb;
+
+    var img = document.createElement("img");
+    img.className = "lightbox-img";
+    img.src = item.url;
+    img.alt = "Screenshot";
+    lb.appendChild(img);
+
+    // Counter
+    var counterEl = document.createElement("div");
+    counterEl.className = "lightbox-counter";
+    counterEl.textContent = (currentIdx + 1) + " / " + _galleryItems.length;
+    lb.appendChild(counterEl);
+
+    // Close button
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "lightbox-close";
+    closeBtn.textContent = "x";
+    closeBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLightbox(); });
+    lb.appendChild(closeBtn);
+
+    // Nav buttons
+    if (_galleryItems.length > 1) {
+      var prevBtn = document.createElement("button");
+      prevBtn.className = "lightbox-nav prev";
+      prevBtn.innerHTML = "&#8249;";
+      prevBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openGalleryLightbox((currentIdx - 1 + _galleryItems.length) % _galleryItems.length);
+      });
+      lb.appendChild(prevBtn);
+
+      var nextBtn = document.createElement("button");
+      nextBtn.className = "lightbox-nav next";
+      nextBtn.innerHTML = "&#8250;";
+      nextBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openGalleryLightbox((currentIdx + 1) % _galleryItems.length);
+      });
+      lb.appendChild(nextBtn);
+    }
+
+    // Caption with click event details
+    if (item.element || item.timestamp) {
+      var cap = document.createElement("div");
+      cap.className = "lightbox-caption";
+      var capHtml = "";
+      if (item.element) capHtml += '<span class="lc-element">' + esc(item.element) + '</span>';
+      if (item.timestamp) capHtml += '<span class="lc-time">' + esc(item.timestamp) + '</span>';
+      if (item.page) capHtml += '<div style="margin-top:4px;font-size:11px;color:#8b949e">' + esc(item.page) + '</div>';
+      cap.innerHTML = capHtml;
+      lb.appendChild(cap);
+    }
+
+    // Click backdrop to close (but not on img/buttons)
+    lb.addEventListener("click", function (e) {
+      if (e.target === lb) closeLightbox();
+    });
+
+    // Keyboard navigation
+    _lightboxKeyHandler = function (e) {
+      if (e.key === "Escape") { closeLightbox(); }
+      else if (e.key === "ArrowLeft") { openGalleryLightbox((currentIdx - 1 + _galleryItems.length) % _galleryItems.length); }
+      else if (e.key === "ArrowRight") { openGalleryLightbox((currentIdx + 1) % _galleryItems.length); }
+    };
+    document.addEventListener("keydown", _lightboxKeyHandler);
+
+    document.body.appendChild(lb);
+  }
+
   function openLightbox(src, screenshotFile) {
+    // Check if this image is in the gallery for nav support
+    var galleryIdx = -1;
+    for (var gi = 0; gi < _galleryItems.length; gi++) {
+      if (_galleryItems[gi].url === src || _galleryItems[gi].file === screenshotFile) {
+        galleryIdx = gi;
+        break;
+      }
+    }
+    if (galleryIdx >= 0) {
+      openGalleryLightbox(galleryIdx);
+      return;
+    }
+
+    // Fallback: annotator or simple lightbox for non-gallery images
     if (typeof BoothAnnotator !== 'undefined') {
       new BoothAnnotator(document.body, src, {
         sessionId: sessionId,
@@ -1439,13 +1690,23 @@ if (!BoothAuth.requireAwsCreds()) {
         bucket: BUCKET
       });
     } else {
+      closeLightbox();
       var lb = document.createElement("div");
       lb.className = "lightbox";
+      _activeLightbox = lb;
       var img = document.createElement("img");
+      img.className = "lightbox-img";
       img.src = src;
       img.alt = "Screenshot";
       lb.appendChild(img);
-      lb.addEventListener("click", function () { document.body.removeChild(lb); });
+      var closeBtn = document.createElement("button");
+      closeBtn.className = "lightbox-close";
+      closeBtn.textContent = "x";
+      closeBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLightbox(); });
+      lb.appendChild(closeBtn);
+      lb.addEventListener("click", function (e) { if (e.target === lb) closeLightbox(); });
+      _lightboxKeyHandler = function (e) { if (e.key === "Escape") closeLightbox(); };
+      document.addEventListener("keydown", _lightboxKeyHandler);
       document.body.appendChild(lb);
     }
   }
@@ -1638,6 +1899,7 @@ if (!BoothAuth.requireAwsCreds()) {
       animateCardsIn();
       renderVisitorCard(sess.metadata, sess.summary);
       renderTimeline(sess.clicks, sess.metadata);
+      renderScreenshotGallery(sess.clicks, sess.metadata);
       renderTranscript(sess.transcript);
       renderAnalysis(sess.summary, sess.followUp);
       renderEventFeed(sess.clicks, sess.transcript, sess.metadata, sess.summary);
@@ -1708,6 +1970,7 @@ if (!BoothAuth.requireAwsCreds()) {
         animateCardsIn();
         renderVisitorCard(metadata, summary);
         renderTimeline(clicks, metadata);
+        renderScreenshotGallery(clicks, metadata);
         renderTranscript(transcript);
         renderAnalysis(summary, followUp);
         renderEventFeed(clicks, transcript, metadata, summary);
@@ -1910,6 +2173,148 @@ if (!BoothAuth.requireAwsCreds()) {
         })(j);
       }
     }
+  }
+
+  // ── Render: Screenshot Gallery ──────────────────────────────────
+  function renderScreenshotGallery(clicks, meta) {
+    // In demo mode, prefix is not defined and there are no real S3 screenshots
+    if (isDemoMode) return;
+
+    var galleryCard = document.getElementById("gallery-card");
+    var galleryGrid = document.getElementById("gallery-grid");
+    var galleryCount = document.getElementById("gallery-count");
+    var startIso = (meta && meta.started_at) || "";
+
+    // Build a map of screenshot_file -> click event data
+    var clickEventMap = {};
+    var events = (clicks && clicks.events) ? clicks.events : [];
+    for (var i = 0; i < events.length; i++) {
+      var ev = events[i];
+      if (ev.screenshot_file) {
+        var fname = ev.screenshot_file.replace(/^screenshots\//, "");
+        clickEventMap[fname] = {
+          element: ev.element ? (ev.element.text || ev.dom_path || "Click") : "Click",
+          timestamp: startIso ? formatRelTime(ev.timestamp, startIso) : "#" + ev.index,
+          page: ev.page_title || ev.page_url || ""
+        };
+      }
+    }
+
+    // List all screenshots from S3
+    var ssPrefix = prefix + "screenshots/";
+    s3.listObjectsV2({ Prefix: ssPrefix, Delimiter: "/" }, function (err, data) {
+      if (err || !data || !data.Contents || data.Contents.length === 0) return;
+
+      // Filter to image files only
+      var files = [];
+      for (var f = 0; f < data.Contents.length; f++) {
+        var key = data.Contents[f].Key;
+        var name = key.replace(ssPrefix, "");
+        if (!name) continue;
+        var lower = name.toLowerCase();
+        if (lower.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+          files.push({ key: key, name: name, lastModified: data.Contents[f].LastModified });
+        }
+      }
+
+      if (files.length === 0) return;
+
+      // Sort by name (typically chronological: screenshot_001.jpg, etc.)
+      files.sort(function (a, b) {
+        return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+      });
+
+      // Show gallery card
+      galleryCard.classList.remove("hidden");
+      galleryCount.textContent = "(" + files.length + ")";
+
+      // Reset gallery items for lightbox navigation
+      _galleryItems = [];
+
+      // Render grid with placeholders, then lazy-load
+      var html = "";
+      for (var g = 0; g < files.length; g++) {
+        var ssName = files[g].name;
+        var clickData = clickEventMap[ssName] || null;
+
+        html += '<div class="gallery-item" data-gallery-idx="' + g + '" id="gallery-item-' + g + '">' +
+          '<div class="gallery-thumb" id="gallery-thumb-' + g + '">' +
+            '<span class="placeholder">Loading...</span>' +
+          '</div>' +
+          '<div class="gallery-caption">';
+
+        if (clickData) {
+          html += '<div class="gc-element">' + esc(clickData.element) + '</div>' +
+            '<div class="gc-time">' + esc(clickData.timestamp) + '</div>';
+          if (clickData.page) html += '<div class="gc-page">' + esc(clickData.page) + '</div>';
+        } else {
+          html += '<div class="gc-element">' + esc(ssName) + '</div>';
+        }
+
+        html += '</div></div>';
+
+        // Pre-populate gallery items (URL loaded later)
+        _galleryItems.push({
+          url: null,
+          file: ssName,
+          element: clickData ? clickData.element : ssName,
+          timestamp: clickData ? clickData.timestamp : "",
+          page: clickData ? clickData.page : ""
+        });
+      }
+      galleryGrid.innerHTML = html;
+
+      // Lazy-load thumbnails using IntersectionObserver
+      var observer = null;
+      var loadThumb = function (idx) {
+        fetchS3ImageUrl(files[idx].key).then(function (url) {
+          if (!url) return;
+          _galleryItems[idx].url = url;
+          _screenshotFileMap[url] = files[idx].name;
+          var thumbEl = document.getElementById("gallery-thumb-" + idx);
+          if (!thumbEl) return;
+          thumbEl.innerHTML = "";
+          var img = document.createElement("img");
+          img.src = url;
+          img.alt = files[idx].name;
+          thumbEl.appendChild(img);
+        });
+      };
+
+      if ("IntersectionObserver" in window) {
+        observer = new IntersectionObserver(function (entries) {
+          for (var e = 0; e < entries.length; e++) {
+            if (entries[e].isIntersecting) {
+              var itemEl = entries[e].target;
+              var idx = parseInt(itemEl.getAttribute("data-gallery-idx"), 10);
+              if (!isNaN(idx)) loadThumb(idx);
+              observer.unobserve(itemEl);
+            }
+          }
+        }, { rootMargin: "200px" });
+
+        var items = galleryGrid.querySelectorAll(".gallery-item");
+        for (var q = 0; q < items.length; q++) {
+          observer.observe(items[q]);
+        }
+      } else {
+        // Fallback: load all
+        for (var r = 0; r < files.length; r++) {
+          loadThumb(r);
+        }
+      }
+
+      // Click handlers for gallery items
+      var galleryItems = galleryGrid.querySelectorAll(".gallery-item");
+      for (var h = 0; h < galleryItems.length; h++) {
+        galleryItems[h].addEventListener("click", function () {
+          var idx = parseInt(this.getAttribute("data-gallery-idx"), 10);
+          if (!isNaN(idx) && _galleryItems[idx].url) {
+            openGalleryLightbox(idx);
+          }
+        });
+      }
+    });
   }
 
   // ── Render: Transcript ──────────────────────────────────────────
