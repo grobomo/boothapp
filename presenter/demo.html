@@ -609,6 +609,9 @@
                 <div class="product-list" id="productList"></div>
             </div>
 
+            <!-- Cost Estimator -->
+            <div id="costEstimator"></div>
+
         </div>
     </div>
 
@@ -621,6 +624,7 @@
 
 </div>
 
+<script src="components/cost-estimator.js"></script>
 <script>
 (function () {
     'use strict';
@@ -942,6 +946,20 @@
     renderClock();
     setInterval(renderClock, 1000);
     setInterval(tickCountdown, 1000);
+
+    // Mount cost estimator -- updates with session count
+    var costWidget = CostEstimator.mount('#costEstimator', {
+        sessionCount: state.totalDemos
+    });
+
+    // Keep cost estimator in sync with session count
+    var origRenderAll = renderAll;
+    renderAll = function () {
+        origRenderAll();
+        if (costWidget) {
+            costWidget.update({ sessionCount: state.totalDemos || 1 });
+        }
+    };
 
 })();
 </script>
