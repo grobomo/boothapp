@@ -18,7 +18,13 @@ from .prompts import (
 from .email_template import render_follow_up_email
 from .validator import validate_summary_or_raise
 
-MODEL = os.environ.get("ANALYSIS_MODEL", "claude-sonnet-4-6")
+def _default_model():
+    """Return the default model ID, accounting for Bedrock vs direct API."""
+    if os.environ.get("USE_BEDROCK", "").strip() in ("1", "true", "yes"):
+        return "us.anthropic.claude-sonnet-4-6"
+    return "claude-sonnet-4-6"
+
+MODEL = os.environ.get("ANALYSIS_MODEL") or _default_model()
 MAX_TOKENS = 4096
 MAX_SCREENSHOTS = 10
 
@@ -39,8 +45,20 @@ def _is_retryable_api_error(err):
         return True
     if isinstance(err, anthropic.APITimeoutError):
         return True
+    # Bedrock-specific errors from botocore (wrapped by AnthropicBedrock)
+    err_name = getattr(err, "name", "") or type(err).__name__
+    if err_name in (
+        "ThrottlingException",
+        "ServiceUnavailableException",
+        "ModelTimeoutException",
+        "ModelErrorException",
+        "InternalServerException",
+    ):
+        return True
     err_str = str(err).lower()
     if "throttling" in err_str or "too many requests" in err_str or "service unavailable" in err_str:
+        return True
+    if "model timeout" in err_str or "internal server" in err_str:
         return True
     return False
 
@@ -74,7 +92,7 @@ class SessionAnalyzer:
 
     def analyze(self) -> dict:
         self._load_inputs()
-        timeline_text, screenshot_map = self._build_timeline_context()
+        timeline_text, screenshot_map = self._load_correlator_timeline()
 
         try:
             factual = self._pass1_factual_extraction(timeline_text, screenshot_map)
@@ -201,6 +219,60 @@ class SessionAnalyzer:
 
         if not self._transcript_entries and not self._clicks_list:
             raise ValueError("No transcript and no clicks found — cannot analyze session")
+
+    def _load_correlator_timeline(self) -> tuple:
+        """Try loading the correlator's timeline.json, fall back to building our own."""
+        try:
+            timeline_data = self._read_json("output/timeline.json")
+            events = timeline_data.get("timeline", [])
+            if events:
+                logger.info("Using correlator timeline.json (%d events)", len(events))
+                return self._format_correlator_timeline(timeline_data)
+        except Exception:
+            pass
+        logger.info("No correlator timeline found, building from raw inputs")
+        return self._build_timeline_context()
+
+    def _format_correlator_timeline(self, timeline_data: dict) -> tuple:
+        """Convert correlator timeline.json into text + screenshot_map for the LLM."""
+        lines = []
+        screenshot_map = {}
+        click_indices = []
+
+        for i, event in enumerate(timeline_data.get("timeline", [])):
+            etype = event.get("type", "")
+            if etype == "speech":
+                speaker = event.get("speaker", "")
+                text = event.get("description", event.get("text", ""))
+                # Strip "Speaker: " prefix if description has it
+                if text.startswith(f"{speaker}: "):
+                    text = text[len(f"{speaker}: "):]
+                ts_offset = event.get("timestamp_offset", "")
+                lines.append(f"[{ts_offset}] {speaker}: {text}")
+            elif etype == "click":
+                desc = event.get("description", "")
+                page = event.get("page_title", "")
+                screenshot = event.get("screenshot")
+                if screenshot:
+                    click_indices.append(i)
+                    screenshot_map[i] = screenshot
+                    lines.append(f"{desc} -- {page} [SCREENSHOT]")
+                else:
+                    lines.append(f"{desc} -- {page}")
+
+        # Include detected topics as context for the LLM
+        topics = timeline_data.get("topics_detected", [])
+        if topics:
+            lines.append("")
+            lines.append("=== Product Topics Detected ===")
+            for t in topics:
+                lines.append(f"  {t['topic']}: {t['mentions']} mentions (first at {t.get('first_seen_offset', 0):.0f}s)")
+
+        engagement = timeline_data.get("engagement_score")
+        if engagement is not None:
+            lines.append(f"Engagement score: {engagement}/10")
+
+        return "\n".join(lines), screenshot_map
 
     def _load_screenshot(self, filename: str) -> str:
         data = self._read_file(filename)
