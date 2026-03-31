@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — User Management</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  header {
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #58a6ff;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+  .header-right a {
+    color: #8b949e;
+    text-decoration: none;
+  }
+  .header-right a:hover { color: #e6edf3; }
+
+  .user-badge {
+    color: #8b949e;
+    font-family: monospace;
+  }
+
+  /* -- Cards -- */
+  .section {
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+  }
+
+  .section h2 {
+    font-size: 1.2rem;
+    color: #e6edf3;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #21262d;
+  }
+
+  /* -- Add user form -- */
+  .add-form {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .add-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .add-form label {
+    font-size: 0.75rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .add-form input, .add-form select {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    color: #e6edf3;
+  }
+  .add-form input:focus, .add-form select:focus { outline: 2px solid #58a6ff; }
+
+  .btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-danger { background: #da3633; color: #fff; }
+  .btn-danger:hover { background: #f85149; }
+  .btn-warning { background: #9e6a03; color: #fff; }
+  .btn-warning:hover { background: #d29922; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* -- User table -- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    border-bottom: 1px solid #30363d;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #21262d;
+  }
+
+  td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+    vertical-align: middle;
+  }
+
+  td.mono { font-family: monospace; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-admin { background: #58a6ff33; color: #58a6ff; }
+  .badge-viewer { background: #8b949e33; color: #8b949e; }
+  .badge-reset { background: #d2992233; color: #d29922; }
+
+  .action-btns {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .action-btns .btn {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+  }
+
+  /* -- Messages -- */
+  .msg {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: none;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .msg-error { background: #f8514922; border: 1px solid #f85149; color: #f85149; }
+  .msg-success { background: #23863622; border: 1px solid #238636; color: #3fb950; }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #484f58;
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 600px) {
+    body { padding: 1rem; }
+    .add-form { flex-direction: column; }
+    .add-form .field { width: 100%; }
+    .add-form input, .add-form select { width: 100%; }
+    .action-btns { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>User Management</h1>
+  <div class="header-right">
+    <span class="user-badge" id="current-user"></span>
+    <a href="sessions.html">Dashboard</a>
+    <a href="#" id="logout-link">Logout</a>
+  </div>
+</header>
+
+<div class="msg msg-error" id="error-msg"></div>
+<div class="msg msg-success" id="success-msg"></div>
+
+<!-- Add User -->
+<div class="section">
+  <h2>Add User</h2>
+  <form id="add-form" class="add-form">
+    <div class="field">
+      <label for="new-username">Username</label>
+      <input id="new-username" type="text" placeholder="jdoe" required>
+    </div>
+    <div class="field">
+      <label for="new-password">Password</label>
+      <input id="new-password" type="password" placeholder="temp password" required>
+    </div>
+    <div class="field">
+      <label for="new-role">Role</label>
+      <select id="new-role">
+        <option value="viewer">Viewer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" id="add-btn">Add User</button>
+  </form>
+  <div style="font-size:0.75rem;color:#484f58;margin-top:0.5rem;">
+    New users must change their password on first login.
+  </div>
+</div>
+
+<!-- User List -->
+<div class="section">
+  <h2>Users</h2>
+  <table id="user-table" class="hidden">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="user-body"></tbody>
+  </table>
+  <div class="empty-state hidden" id="empty-state">No users found.</div>
+  <div class="empty-state" id="loading-state">Loading users...</div>
+</div>
+
+<script src="auth.js"></script>
+<script>
+(function () {
+  // ── Auth gate ─────────────────────────────────────────────────────────────
+  if (!BoothAuth.requireAwsCreds()) {
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+    return;
+  }
+  if (!BoothAuth.requireLogin()) return;
+  if (!BoothAuth.isAdmin()) {
+    document.body.innerHTML = '<div style="text-align:center;padding:4rem;color:#f85149;font-size:1.2rem;">Access denied. Admin role required.</div>';
+    return;
+  }
+
+  document.getElementById("current-user").textContent = BoothAuth.currentUser();
+  document.getElementById("logout-link").addEventListener("click", function (e) {
+    e.preventDefault();
+    BoothAuth.logout();
+  });
+
+  var errorEl   = document.getElementById("error-msg");
+  var successEl = document.getElementById("success-msg");
+  var tableEl   = document.getElementById("user-table");
+  var tbodyEl   = document.getElementById("user-body");
+  var emptyEl   = document.getElementById("empty-state");
+  var loadingEl = document.getElementById("loading-state");
+
+  function showError(msg) {
+    errorEl.textContent = msg; errorEl.style.display = "block";
+    successEl.style.display = "none";
+  }
+  function showSuccess(msg) {
+    successEl.textContent = msg; successEl.style.display = "block";
+    errorEl.style.display = "none";
+    setTimeout(function () { successEl.style.display = "none"; }, 3000);
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "--";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "--";
+    var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return mon[d.getMonth()] + " " + d.getDate();
+  }
+
+  // ── Load users ────────────────────────────────────────────────────────────
+  function refreshUsers() {
+    BoothAuth.listUsers().then(function (users) {
+      loadingEl.classList.add("hidden");
+      if (users.length === 0) {
+        tableEl.classList.add("hidden");
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+      emptyEl.classList.add("hidden");
+      tableEl.classList.remove("hidden");
+      tbodyEl.innerHTML = "";
+
+      users.forEach(function (u) {
+        var tr = document.createElement("tr");
+        var roleClass = u.role === "admin" ? "badge-admin" : "badge-viewer";
+        var statusHtml = u.force_password_change
+          ? '<span class="badge badge-reset">reset pending</span>'
+          : '<span style="color:#3fb950;">active</span>';
+        var isSelf = u.username === BoothAuth.currentUser();
+
+        tr.innerHTML =
+          '<td class="mono">' + esc(u.username) + '</td>' +
+          '<td><span class="badge ' + roleClass + '">' + esc(u.role) + '</span></td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + esc(formatDate(u.created_at)) + '</td>' +
+          '<td class="action-btns">' +
+            (isSelf ? '' :
+              '<button class="btn btn-warning reset-btn" data-user="' + esc(u.username) + '">Force Reset</button>' +
+              '<button class="btn btn-danger delete-btn" data-user="' + esc(u.username) + '">Delete</button>'
+            ) +
+          '</td>';
+        tbodyEl.appendChild(tr);
+      });
+
+      // Bind action buttons
+      tbodyEl.querySelectorAll(".reset-btn").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var username = btn.getAttribute("data-user");
+          btn.disabled = true;
+          BoothAuth.forcePasswordReset(username).then(function () {
+            showSuccess("Password reset forced for " + username);
+            refreshUsers();
+          }).catch(function (err) {
+            showError("Failed: " + (err.message || err));
+            btn.disabled = false;
+          });
+        });
+      });
+
+      tbodyEl.querySelectorAll(".delete-btn").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var username = btn.getAttribute("data-user");
+          if (!confirm("Delete user '" + username + "'? This cannot be undone.")) return;
+          btn.disabled = true;
+          BoothAuth.deleteUser(username).then(function () {
+            showSuccess("Deleted user " + username);
+            refreshUsers();
+          }).catch(function (err) {
+            showError("Failed: " + (err.message || err));
+            btn.disabled = false;
+          });
+        });
+      });
+    }).catch(function (err) {
+      loadingEl.classList.add("hidden");
+      showError("Failed to load users: " + (err.message || err));
+    });
+  }
+
+  refreshUsers();
+
+  // ── Add user ──────────────────────────────────────────────────────────────
+  document.getElementById("add-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var username = document.getElementById("new-username").value.trim();
+    var password = document.getElementById("new-password").value;
+    var role = document.getElementById("new-role").value;
+
+    if (!username || !password) { showError("Username and password required"); return; }
+    if (username.length < 2) { showError("Username must be at least 2 characters"); return; }
+    if (password.length < 4) { showError("Password must be at least 4 characters"); return; }
+
+    var btn = document.getElementById("add-btn");
+    btn.disabled = true;
+
+    BoothAuth.addUser(username, password, role).then(function () {
+      showSuccess("User '" + username + "' created (must change password on first login)");
+      document.getElementById("new-username").value = "";
+      document.getElementById("new-password").value = "";
+      document.getElementById("new-role").value = "viewer";
+      btn.disabled = false;
+      refreshUsers();
+    }).catch(function (err) {
+      showError("Failed: " + (err.message || err));
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>

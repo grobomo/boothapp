@@ -246,6 +246,22 @@
   </style>
 </head>
 <body>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<script src="auth.js"></script>
+<script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
+else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
+
+<div style="max-width:1100px;margin:0 auto;padding:0.5rem 24px;display:flex;justify-content:flex-end;gap:1rem;font-size:0.85rem;">
+  <span id="auth-user" style="color:var(--text3);font-family:monospace;"></span>
+  <a href="sessions.html" style="color:var(--text3);text-decoration:none;">Sessions</a>
+  <a href="admin.html" id="admin-link" style="color:var(--text3);text-decoration:none;display:none;">Admin</a>
+  <a href="#" id="auth-logout-link" style="color:var(--text3);text-decoration:none;">Logout</a>
+</div>
+<script>
+  document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
+  if (BoothAuth.isAdmin()) document.getElementById("admin-link").style.display = "";
+  document.getElementById("auth-logout-link").addEventListener("click", function(e) { e.preventDefault(); BoothAuth.logout(); });
+</script>
 
 <!-- Setup screen (shown when no AWS credentials in localStorage) -->
 <div id="setup" style="display:none">
@@ -361,8 +377,9 @@ function esc(str) {
 // ── Credential Storage ──────────────────────────────────────
 
 function getCredentials() {
-  const ak = localStorage.getItem('booth_aws_access_key');
-  const sk = localStorage.getItem('booth_aws_secret_key');
+  // Check both key formats (timeline's own keys and shared auth keys)
+  const ak = localStorage.getItem('booth_aws_access_key') || localStorage.getItem('boothapp_aws_ak');
+  const sk = localStorage.getItem('booth_aws_secret_key') || localStorage.getItem('boothapp_aws_sk');
   const region = localStorage.getItem('booth_aws_region') || 'us-east-1';
   const bucket = localStorage.getItem('booth_aws_bucket') || 'boothapp-sessions-752266476357';
   if (!ak || !sk) return null;

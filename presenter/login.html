@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Login</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .login-box {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    color: #58a6ff;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #8b949e;
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+  }
+
+  input {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    color: #e6edf3;
+    margin-bottom: 1rem;
+  }
+  input:focus { outline: 2px solid #58a6ff; }
+
+  button {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 0.7rem;
+    border-radius: 8px;
+    border: none;
+    background: #238636;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+  button:hover { background: #2ea043; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .error-msg {
+    background: #f8514922;
+    border: 1px solid #f85149;
+    color: #f85149;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .success-msg {
+    background: #23863622;
+    border: 1px solid #238636;
+    color: #3fb950;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .info-msg {
+    background: #58a6ff22;
+    border: 1px solid #58a6ff;
+    color: #58a6ff;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .aws-setup {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #30363d;
+  }
+
+  .aws-setup .hint {
+    font-size: 0.75rem;
+    color: #484f58;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .hidden { display: none !important; }
+
+  .password-rules {
+    font-size: 0.75rem;
+    color: #484f58;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <h1>BoothApp</h1>
+  <div class="subtitle" id="subtitle">Presenter Dashboard</div>
+
+  <div class="error-msg" id="error-msg"></div>
+  <div class="success-msg" id="success-msg"></div>
+  <div class="info-msg" id="info-msg"></div>
+
+  <!-- AWS Credentials (shown if not configured) -->
+  <div id="aws-setup" class="aws-setup hidden">
+    <label for="aws-ak">AWS Access Key ID</label>
+    <input id="aws-ak" type="text" placeholder="AKIA...">
+    <label for="aws-sk">AWS Secret Access Key</label>
+    <input id="aws-sk" type="password" placeholder="wJalr...">
+    <div class="hint">Required for first-time setup. Stored in browser only.</div>
+    <button id="aws-save-btn" type="button">Save AWS Credentials</button>
+  </div>
+
+  <!-- Login Form -->
+  <form id="login-form" class="hidden">
+    <label for="username">Username</label>
+    <input id="username" type="text" autocomplete="username" autofocus>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <button type="submit" id="login-btn">Sign In</button>
+  </form>
+
+  <!-- Change Password Form -->
+  <form id="change-form" class="hidden">
+    <label for="new-password">New Password</label>
+    <input id="new-password" type="password" autocomplete="new-password">
+    <div class="password-rules">Minimum 4 characters</div>
+    <label for="confirm-password">Confirm Password</label>
+    <input id="confirm-password" type="password" autocomplete="new-password">
+    <button type="submit" id="change-btn">Change Password</button>
+  </form>
+</div>
+
+<script src="auth.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var redirect = params.get("redirect") || "sessions.html";
+  var needsChange = params.get("change_password") === "1";
+
+  var errorEl   = document.getElementById("error-msg");
+  var successEl = document.getElementById("success-msg");
+  var infoEl    = document.getElementById("info-msg");
+  var subtitle  = document.getElementById("subtitle");
+  var awsSetup  = document.getElementById("aws-setup");
+  var loginForm = document.getElementById("login-form");
+  var changeForm = document.getElementById("change-form");
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.style.display = "block";
+    successEl.style.display = "none";
+    infoEl.style.display = "none";
+  }
+  function showSuccess(msg) {
+    successEl.textContent = msg;
+    successEl.style.display = "block";
+    errorEl.style.display = "none";
+    infoEl.style.display = "none";
+  }
+  function showInfo(msg) {
+    infoEl.textContent = msg;
+    infoEl.style.display = "block";
+    errorEl.style.display = "none";
+    successEl.style.display = "none";
+  }
+  function clearMessages() {
+    errorEl.style.display = "none";
+    successEl.style.display = "none";
+    infoEl.style.display = "none";
+  }
+
+  // ── Check if already logged in ────────────────────────────────────────────
+  var session = BoothAuth.getSession();
+  if (session && !session.force_password_change && !needsChange) {
+    window.location.href = redirect;
+    return;
+  }
+
+  // ── AWS credentials check ─────────────────────────────────────────────────
+  if (!BoothAuth.requireAwsCreds()) {
+    awsSetup.classList.remove("hidden");
+    subtitle.textContent = "First-time setup: enter AWS credentials";
+  } else if (needsChange || (session && session.force_password_change)) {
+    showChangePasswordForm();
+  } else {
+    loginForm.classList.remove("hidden");
+  }
+
+  // ── AWS save ──────────────────────────────────────────────────────────────
+  document.getElementById("aws-save-btn").addEventListener("click", function () {
+    var ak = document.getElementById("aws-ak").value.trim();
+    var sk = document.getElementById("aws-sk").value.trim();
+    if (!ak || !sk) { showError("Both fields are required"); return; }
+    localStorage.setItem("boothapp_aws_ak", ak);
+    localStorage.setItem("boothapp_aws_sk", sk);
+    awsSetup.classList.add("hidden");
+    subtitle.textContent = "Presenter Dashboard";
+    clearMessages();
+    showInfo("Default credentials: admin / admin");
+    loginForm.classList.remove("hidden");
+    document.getElementById("username").focus();
+  });
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var username = document.getElementById("username").value.trim();
+    var password = document.getElementById("password").value;
+    if (!username || !password) { showError("Enter username and password"); return; }
+
+    var btn = document.getElementById("login-btn");
+    btn.disabled = true;
+    btn.textContent = "Signing in...";
+
+    BoothAuth.login(username, password).then(function (result) {
+      if (!result.success) {
+        showError(result.error);
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+        return;
+      }
+      if (result.user.force_password_change) {
+        loginForm.classList.add("hidden");
+        showChangePasswordForm();
+        return;
+      }
+      window.location.href = redirect;
+    }).catch(function (err) {
+      showError("Login failed: " + (err.message || err));
+      btn.disabled = false;
+      btn.textContent = "Sign In";
+    });
+  });
+
+  // ── Change password ───────────────────────────────────────────────────────
+  function showChangePasswordForm() {
+    loginForm.classList.add("hidden");
+    changeForm.classList.remove("hidden");
+    subtitle.textContent = "Password Change Required";
+    showInfo("You must change your password before continuing.");
+    document.getElementById("new-password").focus();
+  }
+
+  changeForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var newPw = document.getElementById("new-password").value;
+    var confirmPw = document.getElementById("confirm-password").value;
+
+    if (newPw.length < 4) { showError("Password must be at least 4 characters"); return; }
+    if (newPw !== confirmPw) { showError("Passwords do not match"); return; }
+
+    var currentSession = BoothAuth.getSession();
+    if (!currentSession) { showError("Session expired. Please log in again."); return; }
+
+    var btn = document.getElementById("change-btn");
+    btn.disabled = true;
+    btn.textContent = "Changing...";
+
+    BoothAuth.changePassword(currentSession.username, newPw).then(function () {
+      showSuccess("Password changed successfully. Redirecting...");
+      setTimeout(function () { window.location.href = redirect; }, 1000);
+    }).catch(function (err) {
+      showError("Failed: " + (err.message || err));
+      btn.disabled = false;
+      btn.textContent = "Change Password";
+    });
+  });
+})();
+</script>
+</body>
+</html>

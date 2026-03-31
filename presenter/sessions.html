@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BoothApp — Session Review</title>
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<script src="auth.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -300,30 +301,26 @@
 </style>
 </head>
 <body>
-
-<!-- Setup: AWS credentials -->
-<div id="setup" class="setup hidden">
-  <h1>BoothApp</h1>
-  <h2>Session Review Dashboard</h2>
-  <label for="access-key">AWS Access Key ID</label>
-  <input id="access-key" type="text" placeholder="AKIA...">
-  <label for="secret-key">AWS Secret Access Key</label>
-  <input id="secret-key" type="password" placeholder="wJalr...">
-  <button id="save-creds">Connect</button>
-  <div class="hint">Credentials are stored in localStorage only.</div>
-</div>
+<script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
+else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
 <!-- Dashboard -->
-<div id="dashboard" class="hidden">
+<div id="dashboard">
   <header>
     <h1>Session Review</h1>
     <div class="header-right">
       <span class="session-count" id="session-count"></span>
       <span class="refresh-badge" id="refresh-badge">--s</span>
       <a href="workers.html" style="color:#58a6ff;text-decoration:none;font-size:0.85rem;">Workers</a>
+      <span style="color:#8b949e;font-family:monospace;" id="auth-user"></span>
+      <a href="admin.html" id="admin-link" style="color:#484f58;text-decoration:none;font-size:0.8rem;display:none;">[admin]</a>
       <a href="#" id="logout-link" style="color:#484f58;text-decoration:none;font-size:0.8rem;">[logout]</a>
     </div>
   </header>
+  <script>
+    document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
+    if (BoothAuth.isAdmin()) document.getElementById("admin-link").style.display = "";
+  </script>
 
   <div class="error-banner" id="error-banner"></div>
 
@@ -354,7 +351,6 @@
   var LS_KEY_SK = "boothapp_aws_sk";
 
   // ── Elements ────────────────────────────────────────────────────────────────
-  var setupEl      = document.getElementById("setup");
   var dashboardEl  = document.getElementById("dashboard");
   var errorBanner  = document.getElementById("error-banner");
   var loadingEl    = document.getElementById("loading");
@@ -363,10 +359,7 @@
   var emptyEl      = document.getElementById("empty-state");
   var countEl      = document.getElementById("session-count");
   var refreshBadge = document.getElementById("refresh-badge");
-  var saveBtn      = document.getElementById("save-creds");
   var logoutLink   = document.getElementById("logout-link");
-  var akInput      = document.getElementById("access-key");
-  var skInput      = document.getElementById("secret-key");
 
   // ── AWS client ──────────────────────────────────────────────────────────────
   var s3 = null;
@@ -376,52 +369,14 @@
     s3 = new AWS.S3({ params: { Bucket: BUCKET } });
   }
 
-  // ── Credentials ─────────────────────────────────────────────────────────────
-  function loadCreds() {
-    var ak = localStorage.getItem(LS_KEY_AK);
-    var sk = localStorage.getItem(LS_KEY_SK);
-    if (ak && sk) {
-      initS3(ak, sk);
-      return true;
-    }
-    return false;
-  }
-
-  function saveCreds(ak, sk) {
-    localStorage.setItem(LS_KEY_AK, ak);
-    localStorage.setItem(LS_KEY_SK, sk);
-    initS3(ak, sk);
-  }
-
-  function clearCreds() {
-    localStorage.removeItem(LS_KEY_AK);
-    localStorage.removeItem(LS_KEY_SK);
-    s3 = null;
-  }
-
-  // ── Setup flow ──────────────────────────────────────────────────────────────
-  if (loadCreds()) {
-    showDashboard();
-  } else {
-    setupEl.classList.remove("hidden");
-  }
-
-  saveBtn.addEventListener("click", function () {
-    var ak = akInput.value.trim();
-    var sk = skInput.value.trim();
-    if (!ak || !sk) return;
-    saveCreds(ak, sk);
-    showDashboard();
-  });
+  // ── Init (AWS creds guaranteed by auth gate) ──────────────────────────────
+  var ak = localStorage.getItem(LS_KEY_AK);
+  var sk = localStorage.getItem(LS_KEY_SK);
+  initS3(ak, sk);
 
   logoutLink.addEventListener("click", function (e) {
     e.preventDefault();
-    clearCreds();
-    dashboardEl.classList.add("hidden");
-    setupEl.classList.remove("hidden");
-    akInput.value = "";
-    skInput.value = "";
-    if (refreshTimer) clearInterval(refreshTimer);
+    BoothAuth.logout();
   });
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
@@ -433,13 +388,10 @@
   var countdown = 0;
   var countdownTimer = null;
 
-  function showDashboard() {
-    setupEl.classList.add("hidden");
-    dashboardEl.classList.remove("hidden");
-    loadSessions();
-    refreshTimer = setInterval(loadSessions, REFRESH_MS);
-    startCountdown();
-  }
+  // Auto-start dashboard (auth gate already passed)
+  loadSessions();
+  refreshTimer = setInterval(loadSessions, REFRESH_MS);
+  startCountdown();
 
   function startCountdown() {
     countdown = Math.floor(REFRESH_MS / 1000);

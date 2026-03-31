@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BoothApp — Presenter Dashboard</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -217,6 +218,21 @@
 </style>
 </head>
 <body>
+<script src="auth.js"></script>
+<script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
+else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
+
+<div style="max-width:900px;margin:0 auto 1rem;display:flex;justify-content:flex-end;gap:1rem;font-size:0.85rem;">
+  <span id="auth-user" style="color:#8b949e;font-family:monospace;"></span>
+  <a href="sessions.html" style="color:#8b949e;text-decoration:none;">Sessions</a>
+  <a href="admin.html" id="admin-link" style="color:#8b949e;text-decoration:none;display:none;">Admin</a>
+  <a href="#" id="logout-link" style="color:#8b949e;text-decoration:none;">Logout</a>
+</div>
+<script>
+  document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
+  if (BoothAuth.isAdmin()) document.getElementById("admin-link").style.display = "";
+  document.getElementById("logout-link").addEventListener("click", function(e) { e.preventDefault(); BoothAuth.logout(); });
+</script>
 
 <!-- Setup: enter session ID if not in URL -->
 <div id="setup" class="setup">
