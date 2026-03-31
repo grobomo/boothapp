@@ -7,6 +7,7 @@ const {
   DeleteObjectCommand,
   ListObjectsV2Command,
 } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../lib/s3-encryption');
 
 const client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const BUCKET = process.env.S3_BUCKET;
@@ -17,6 +18,7 @@ async function putObject(key, body, opts = {}) {
     Key: key,
     Body: typeof body === 'string' ? body : JSON.stringify(body, null, 2),
     ContentType: opts.contentType || 'application/json',
+    ...SSE_PARAMS,
   };
   if (opts.ifNoneMatch) params.IfNoneMatch = '*';
   await client.send(new PutObjectCommand(params));

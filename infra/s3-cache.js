@@ -11,6 +11,7 @@
  */
 
 const { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('./lib/s3-encryption');
 
 // ── LRU Cache ───────────────────────────────────────────────────────────────
 
@@ -263,6 +264,7 @@ class S3Cache {
       Key: key,
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
+      ...SSE_PARAMS,
     });
     await this.client.send(cmd);
     // Invalidate caches that include this key

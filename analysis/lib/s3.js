@@ -8,6 +8,7 @@ const {
   GetObjectCommand,
   PutObjectCommand,
 } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../../infra/lib/s3-encryption');
 
 const REGION = process.env.AWS_REGION || 'us-east-1';
 
@@ -79,6 +80,7 @@ async function writeMarker(bucket, sessionId, markerData) {
     Key: key,
     Body: JSON.stringify(markerData),
     ContentType: 'application/json',
+    ...SSE_PARAMS,
   }));
 }
 
@@ -180,6 +182,7 @@ async function updateMetadata(bucket, sessionId, updates) {
     Key: key,
     Body: JSON.stringify(metadata, null, 2),
     ContentType: 'application/json',
+    ...SSE_PARAMS,
   }));
 }
 

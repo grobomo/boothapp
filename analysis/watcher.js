@@ -34,6 +34,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const health = require('./watcher-health');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../infra/lib/s3-encryption');
 
 // --test flag: run a dry notification with sample data and exit
 if (process.argv.includes('--test')) {
@@ -240,6 +241,7 @@ async function writeErrorJson(sessionId, err) {
     Key: key,
     Body: JSON.stringify(payload, null, 2),
     ContentType: 'application/json',
+    ...SSE_PARAMS,
   }));
   log(`  ${sessionId}: wrote error.json to S3`);
 }

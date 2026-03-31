@@ -8,6 +8,7 @@ const {
   S3Client,
   PutObjectCommand,
 } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../../infra/lib/s3-encryption');
 
 const REGION = process.env.AWS_REGION || 'us-east-1';
 
@@ -51,6 +52,7 @@ function createTracker(sessionId, bucket) {
         Key: s3Key,
         Body: JSON.stringify(payload, null, 2),
         ContentType: 'application/json',
+        ...SSE_PARAMS,
       }));
     } catch (err) {
       console.error(`[status:${sessionId}] Failed to write status.json: ${err.message}`);

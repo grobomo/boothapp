@@ -1,6 +1,7 @@
 'use strict';
 
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../../infra/lib/s3-encryption');
 
 /**
  * Upload transcript.json to S3.
@@ -18,6 +19,7 @@ async function uploadTranscript(s3Client, bucket, sessionId, transcript) {
     Key: key,
     ContentType: 'application/json',
     Body: JSON.stringify(transcript, null, 2),
+    ...SSE_PARAMS,
   });
 
   await s3Client.send(command);

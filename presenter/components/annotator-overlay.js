@@ -575,7 +575,9 @@ var BoothAnnotator = (function () {
         Bucket: self.bucket,
         Key: key,
         Body: JSON.stringify(existing, null, 2),
-        ContentType: 'application/json'
+        ContentType: 'application/json',
+        ServerSideEncryption: 'aws:kms',
+        SSEKMSKeyId: 'alias/hackathon26-cmk'
       }, function (putErr) {
         if (putErr) {
           self.statusEl.textContent = 'Save failed: ' + putErr.message;

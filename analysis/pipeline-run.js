@@ -33,6 +33,7 @@ const {
   S3Client,
   PutObjectCommand,
 } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../infra/lib/s3-encryption');
 
 const [, , sessionId, bucket] = process.argv;
 
@@ -99,6 +100,7 @@ async function putJson(key, data) {
       Key: key,
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
+      ...SSE_PARAMS,
     }));
   });
 }
@@ -333,6 +335,7 @@ async function writeErrors(errors) {
       Key: errorsKey,
       Body: JSON.stringify(payload, null, 2),
       ContentType: 'application/json',
+      ...SSE_PARAMS,
     }));
     log(`Wrote ${errors.length} error(s) to ${errorsKey}`);
   } catch (writeErr) {

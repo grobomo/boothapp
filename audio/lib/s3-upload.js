@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
+const { SSE_PARAMS } = require('../../infra/lib/s3-encryption');
 
 const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100MB
 const MAX_RETRIES = 3;
@@ -64,6 +65,7 @@ async function uploadFileWithRetry(s3, bucket, key, filePath, contentType) {
             Key: key,
             ContentType: contentType,
             Body: fs.createReadStream(filePath),
+            ...SSE_PARAMS,
           },
           queueSize: 4,
           partSize: 10 * 1024 * 1024, // 10MB parts
@@ -86,6 +88,7 @@ async function uploadFileWithRetry(s3, bucket, key, filePath, contentType) {
           Key: key,
           ContentType: contentType,
           Body: body,
+          ...SSE_PARAMS,
         }));
       }
       return; // success
@@ -119,6 +122,7 @@ async function uploadJsonWithRetry(s3, bucket, key, data) {
         Key: key,
         ContentType: 'application/json',
         Body: body,
+        ...SSE_PARAMS,
       }));
       return;
     } catch (err) {

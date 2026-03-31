@@ -83,7 +83,9 @@ var BoothAuth = (function () {
       client.putObject({
         Key: AUTH_KEY,
         Body: JSON.stringify(usersObj, null, 2),
-        ContentType: "application/json"
+        ContentType: "application/json",
+        ServerSideEncryption: "aws:kms",
+        SSEKMSKeyId: "alias/hackathon26-cmk"
       }, function (err) {
         if (err) reject(err);
         else resolve();

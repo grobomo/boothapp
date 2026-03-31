@@ -295,7 +295,9 @@ var AdminConsole = (function () {
         s3.putObject({
           Key: "sessions/" + sid + "/metadata.json",
           Body: JSON.stringify(meta, null, 2),
-          ContentType: "application/json"
+          ContentType: "application/json",
+          ServerSideEncryption: "aws:kms",
+          SSEKMSKeyId: "alias/hackathon26-cmk"
         }, function (err3) {
           btn.disabled = false;
           btn.textContent = "Re-analyze";

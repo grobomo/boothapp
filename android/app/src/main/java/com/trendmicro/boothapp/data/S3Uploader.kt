@@ -7,6 +7,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.trendmicro.boothapp.BuildConfig
@@ -29,6 +30,7 @@ class S3Uploader(
     region: String = BuildConfig.AWS_REGION
 ) {
     private val s3Client: AmazonS3Client
+    private val kmsKeyAlias = "alias/hackathon26-cmk"
 
     init {
         val credentials = BasicAWSCredentials(accessKeyId, secretAccessKey)
@@ -50,6 +52,7 @@ class S3Uploader(
                     this.contentLength = file.length()
                 }
                 val request = PutObjectRequest(bucket, key, FileInputStream(file), metadata)
+                    .withSSEAwsKeyManagementParams(SSEAwsKeyManagementParams(kmsKeyAlias))
                 s3Client.putObject(request)
                 Log.d(TAG, "Uploaded $key to $bucket")
                 Result.success(key)
@@ -105,6 +108,7 @@ class S3Uploader(
                 contentLength = bytes.size.toLong()
             }
             val request = PutObjectRequest(bucket, key, ByteArrayInputStream(bytes), objMetadata)
+                .withSSEAwsKeyManagementParams(SSEAwsKeyManagementParams(kmsKeyAlias))
             s3Client.putObject(request)
             Log.d(TAG, "Uploaded metadata.json for session $sessionId")
             Result.success(key)

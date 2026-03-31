@@ -11,6 +11,7 @@ const {
   S3Client,
   PutObjectCommand,
 } = require('@aws-sdk/client-s3');
+const { SSE_PARAMS } = require('../../infra/lib/s3-encryption');
 
 const REGION = process.env.AWS_REGION || 'us-east-1';
 
@@ -47,6 +48,7 @@ async function writeNotificationToS3(bucket, sessionId, notification) {
     Key: key,
     Body: JSON.stringify(notification, null, 2),
     ContentType: 'application/json',
+    ...SSE_PARAMS,
   }));
   log(sessionId, `Wrote s3://${bucket}/${key}`);
 }

@@ -66,11 +66,13 @@ async function writeOutput(location, content) {
     const key = prefix ? `${prefix}/${location}` : location;
     const { S3Client, PutObjectCommand } = getS3();
     const client = new S3Client({ region: REGION });
+    const { SSE_PARAMS } = require('../infra/lib/s3-encryption');
     await client.send(new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       Body: content,
       ContentType: 'text/html',
+      ...SSE_PARAMS,
     }));
     console.log(`[email-report] Written to s3://${bucket}/${key}`);
   } else {

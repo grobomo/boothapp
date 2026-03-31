@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Hackathon26 encryption resources for NIST CSF 2.0 compliance (PR.DS-10).
+  KMS CMK with automatic key rotation and S3 bucket policies denying unencrypted PUTs.
+
+Parameters:
+  InstanceRoleName:
+    Type: String
+    Default: hackathon26-instance-role
+    Description: IAM role name granted Decrypt and GenerateDataKey permissions
+
+Resources:
+  HackathonKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Hackathon26 customer-managed key for data encryption at rest
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: hackathon26-key-policy
+        Statement:
+          - Sid: RootAccountFullAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: InstanceRoleDecryptAndGenerate
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:role/${InstanceRoleName}'
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: '*'
+      Tags:
+        - Key: Project
+          Value: hackathon26
+        - Key: NIST-Control
+          Value: PR.DS-10
+
+  HackathonKMSAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/hackathon26-cmk
+      TargetKeyId: !Ref HackathonKMSKey
+
+  SessionsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: boothapp-sessions-752266476357
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyUnencryptedPut
+            Effect: Deny
+            Principal: '*'
+            Action: s3:PutObject
+            Resource: arn:aws:s3:::boothapp-sessions-752266476357/*
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: aws:kms
+          - Sid: DenyWrongKMSKey
+            Effect: Deny
+            Principal: '*'
+            Action: s3:PutObject
+            Resource: arn:aws:s3:::boothapp-sessions-752266476357/*
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption-aws-kms-key-id: !GetAtt HackathonKMSKey.Arn
+
+  StateBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: hackathon26-state-752266476357
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyUnencryptedPut
+            Effect: Deny
+            Principal: '*'
+            Action: s3:PutObject
+            Resource: arn:aws:s3:::hackathon26-state-752266476357/*
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: aws:kms
+          - Sid: DenyWrongKMSKey
+            Effect: Deny
+            Principal: '*'
+            Action: s3:PutObject
+            Resource: arn:aws:s3:::hackathon26-state-752266476357/*
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption-aws-kms-key-id: !GetAtt HackathonKMSKey.Arn
+
+Outputs:
+  KMSKeyArn:
+    Description: ARN of the Hackathon26 KMS customer-managed key
+    Value: !GetAtt HackathonKMSKey.Arn
+    Export:
+      Name: hackathon26-kms-key-arn
