@@ -1,0 +1,29 @@
+{
+  "actions": [
+    {
+      "title": "Vision One Free Trial",
+      "url": "https://www.trendmicro.com/en_us/business/products/one-platform.html",
+      "description": "Start a 30-day free trial of Vision One XDR with full feature access."
+    },
+    {
+      "title": "Cloud Security Best Practices Guide",
+      "url": "https://www.trendmicro.com/en_us/business/capabilities/solutions-for/cloud.html",
+      "description": "Download our reference architecture for securing multi-cloud environments."
+    },
+    {
+      "title": "Zero Trust Secure Access Datasheet",
+      "url": "https://www.trendmicro.com/en_us/business/products/network/zero-trust-secure-access.html",
+      "description": "Technical overview of ZTSA capabilities and deployment options."
+    }
+  ],
+  "next_steps": [
+    "Review the Vision One trial dashboard and connect your first data source",
+    "Share the cloud security guide with your infrastructure team",
+    "Schedule a technical deep-dive with our solutions architect"
+  ],
+  "suggested_times": [
+    "Tuesday, April 8 at 10:00 AM ET",
+    "Wednesday, April 9 at 2:00 PM ET",
+    "Thursday, April 10 at 11:00 AM ET"
+  ]
+}
