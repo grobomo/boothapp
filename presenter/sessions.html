@@ -50,6 +50,77 @@
         }
         .header a:hover { color: var(--text); }
 
+        .header-right { margin-left: auto; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-primary {
+            background: var(--red);
+            color: #fff;
+        }
+        .btn-primary:hover:not(:disabled) { background: var(--red-dark); }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .toolbar input[type="text"],
+        .toolbar select,
+        .toolbar input[type="date"] {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        .toolbar input[type="text"]:focus,
+        .toolbar select:focus,
+        .toolbar input[type="date"]:focus {
+            outline: none;
+            border-color: var(--red);
+        }
+
+        .toolbar input[type="text"] { width: 260px; }
+        .toolbar select { min-width: 140px; }
+        .toolbar input[type="date"] { width: 140px; }
+
+        .toolbar label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-right: -0.4rem;
+        }
+
+        .date-range-group {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .date-range-group .custom-dates {
+            display: none;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .date-range-group .custom-dates.visible { display: flex; }
+
         .status-bar {
             display: flex;
             gap: 1.5rem;
@@ -68,6 +139,16 @@
             padding: 1rem;
             margin-bottom: 1.5rem;
             color: #FF6B6B;
+        }
+
+        #success-msg {
+            display: none;
+            background: rgba(0, 230, 118, 0.15);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: var(--success);
         }
 
         table {
@@ -116,6 +197,7 @@
         .badge-complete { background: rgba(0,230,118,0.15); color: var(--success); }
         .badge-active   { background: rgba(68,138,255,0.15); color: #448AFF; }
         .badge-pending  { background: rgba(255,171,0,0.15);  color: var(--amber); }
+        .badge-failed   { background: rgba(215,25,32,0.15);  color: #FF6B6B; }
         .badge-unknown  { background: rgba(107,115,133,0.15); color: var(--text-dim); }
 
         .analysis-yes { color: var(--success); }
@@ -139,49 +221,137 @@
             padding: 3rem;
             color: var(--text-dim);
         }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+        }
+
+        .pagination button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 0.4rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        .pagination button:hover:not(:disabled) {
+            border-color: var(--red);
+            background: var(--surface2);
+        }
+        .pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .pagination button.active {
+            background: var(--red);
+            border-color: var(--red);
+            color: #fff;
+        }
+
+        .pagination .page-info {
+            color: var(--text-dim);
+            padding: 0 0.5rem;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Sessions</h1>
         <a href="/demo.html">&larr; Back to Dashboard</a>
+        <div class="header-right">
+            <button class="btn btn-primary" id="quick-create-btn" onclick="quickCreate()">+ Quick Create</button>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <input type="text" id="search-input" placeholder="Search by name, company, or session ID..." oninput="applyFilters()">
+
+        <label for="status-filter">Status:</label>
+        <select id="status-filter" onchange="applyFilters()">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="complete">Completed</option>
+            <option value="failed">Failed</option>
+        </select>
+
+        <div class="date-range-group">
+            <label for="date-range">Date:</label>
+            <select id="date-range" onchange="onDateRangeChange()">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="custom">Custom</option>
+            </select>
+            <div class="custom-dates" id="custom-dates">
+                <input type="date" id="date-from" onchange="applyFilters()">
+                <span style="color:var(--text-dim)">to</span>
+                <input type="date" id="date-to" onchange="applyFilters()">
+            </div>
+        </div>
+
+        <label for="sort-select">Sort:</label>
+        <select id="sort-select" onchange="applyFilters()">
+            <option value="newest">Newest First</option>
+            <option value="score">Highest Score</option>
+            <option value="duration">Longest Duration</option>
+        </select>
     </div>
 
     <div class="status-bar">
         <span>Total: <span class="count" id="total-count">--</span></span>
+        <span>Showing: <span class="count" id="showing-count">--</span></span>
         <span>With Analysis: <span class="count" id="analysis-count">--</span></span>
     </div>
 
     <div id="error-msg"></div>
+    <div id="success-msg"></div>
 
     <table>
         <thead>
             <tr>
                 <th>Session ID</th>
                 <th>Visitor</th>
+                <th>Company</th>
                 <th>Status</th>
+                <th>Score</th>
+                <th>Duration</th>
                 <th>Created</th>
                 <th>Analysis</th>
                 <th>Summary</th>
             </tr>
         </thead>
         <tbody id="sessions-body">
-            <tr><td colspan="6" class="loading">Loading sessions...</td></tr>
+            <tr><td colspan="9" class="loading">Loading sessions...</td></tr>
         </tbody>
     </table>
 
+    <div class="pagination" id="pagination"></div>
+
     <script>
+        var allSessions = [];
+        var filteredSessions = [];
+        var PAGE_SIZE = 20;
+        var currentPage = 1;
+
         function statusBadge(status) {
             var cls = 'badge-unknown';
             if (status === 'complete') cls = 'badge-complete';
             else if (status === 'active') cls = 'badge-active';
             else if (status === 'pending') cls = 'badge-pending';
+            else if (status === 'failed') cls = 'badge-failed';
             return '<span class="badge ' + cls + '">' + escHtml(status) + '</span>';
         }
 
         function escHtml(str) {
             if (!str) return '';
-            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
         function formatDate(iso) {
@@ -190,51 +360,229 @@
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         }
 
+        function formatDuration(seconds) {
+            if (!seconds && seconds !== 0) return '--';
+            var s = Math.round(seconds);
+            if (s < 60) return s + 's';
+            var m = Math.floor(s / 60);
+            var rem = s % 60;
+            return m + 'm ' + rem + 's';
+        }
+
+        function onDateRangeChange() {
+            var val = document.getElementById('date-range').value;
+            var custom = document.getElementById('custom-dates');
+            if (val === 'custom') {
+                custom.classList.add('visible');
+            } else {
+                custom.classList.remove('visible');
+            }
+            applyFilters();
+        }
+
+        function getDateRange() {
+            var val = document.getElementById('date-range').value;
+            if (val === 'all') return null;
+
+            var now = new Date();
+            var start, end;
+
+            if (val === 'today') {
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                end = new Date(start);
+                end.setDate(end.getDate() + 1);
+            } else if (val === 'week') {
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                var day = start.getDay();
+                start.setDate(start.getDate() - day);
+                end = new Date(start);
+                end.setDate(end.getDate() + 7);
+            } else if (val === 'custom') {
+                var from = document.getElementById('date-from').value;
+                var to = document.getElementById('date-to').value;
+                if (!from && !to) return null;
+                start = from ? new Date(from + 'T00:00:00') : null;
+                end = to ? new Date(to + 'T23:59:59') : null;
+            }
+            return { start: start, end: end };
+        }
+
+        function applyFilters() {
+            var query = document.getElementById('search-input').value.toLowerCase().trim();
+            var statusFilter = document.getElementById('status-filter').value;
+            var sortBy = document.getElementById('sort-select').value;
+            var dateRange = getDateRange();
+
+            filteredSessions = allSessions.filter(function(s) {
+                if (query) {
+                    var haystack = [
+                        s.session_id || '',
+                        s.visitor_name || '',
+                        s.company || ''
+                    ].join(' ').toLowerCase();
+                    if (haystack.indexOf(query) === -1) return false;
+                }
+
+                if (statusFilter !== 'all') {
+                    if ((s.status || 'unknown') !== statusFilter) return false;
+                }
+
+                if (dateRange) {
+                    var created = s.created_at ? new Date(s.created_at) : null;
+                    if (!created) return false;
+                    if (dateRange.start && created < dateRange.start) return false;
+                    if (dateRange.end && created > dateRange.end) return false;
+                }
+
+                return true;
+            });
+
+            filteredSessions.sort(function(a, b) {
+                if (sortBy === 'newest') {
+                    var da = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    var db = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    return db - da;
+                } else if (sortBy === 'score') {
+                    return (b.score || 0) - (a.score || 0);
+                } else if (sortBy === 'duration') {
+                    return (b.duration || 0) - (a.duration || 0);
+                }
+                return 0;
+            });
+
+            currentPage = 1;
+            renderPage();
+        }
+
+        function renderPage() {
+            var totalPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            var startIdx = (currentPage - 1) * PAGE_SIZE;
+            var pageItems = filteredSessions.slice(startIdx, startIdx + PAGE_SIZE);
+
+            document.getElementById('showing-count').textContent = filteredSessions.length;
+
+            var tbody = document.getElementById('sessions-body');
+
+            if (filteredSessions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty">No sessions match your filters</td></tr>';
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = pageItems.map(function(s) {
+                var analysisCell = s.has_analysis
+                    ? '<span class="analysis-yes">Yes</span>'
+                    : '<span class="analysis-no">No</span>';
+                var summaryCell = s.summary_link
+                    ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
+                    : '--';
+                return '<tr>' +
+                    '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
+                    '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
+                    '<td>' + (escHtml(s.company) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
+                    '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
+                    '<td>' + (s.score != null ? escHtml(String(s.score)) : '--') + '</td>' +
+                    '<td>' + formatDuration(s.duration) + '</td>' +
+                    '<td>' + formatDate(s.created_at) + '</td>' +
+                    '<td>' + analysisCell + '</td>' +
+                    '<td>' + summaryCell + '</td>' +
+                    '</tr>';
+            }).join('');
+
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            var pag = document.getElementById('pagination');
+            if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+            var html = '';
+            html += '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="goToPage(' + (currentPage - 1) + ')">Prev</button>';
+
+            var startPage = Math.max(1, currentPage - 2);
+            var endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+            for (var i = startPage; i <= endPage; i++) {
+                html += '<button class="' + (i === currentPage ? 'active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+            }
+
+            html += '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="goToPage(' + (currentPage + 1) + ')">Next</button>';
+            html += '<span class="page-info">Page ' + currentPage + ' of ' + totalPages + '</span>';
+
+            pag.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderPage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showMessage(id, text, duration) {
+            var el = document.getElementById(id);
+            el.textContent = text;
+            el.style.display = 'block';
+            if (duration) {
+                setTimeout(function() { el.style.display = 'none'; }, duration);
+            }
+        }
+
+        async function quickCreate() {
+            var btn = document.getElementById('quick-create-btn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            var names = ['Alex Chen', 'Maria Garcia', 'James Wilson', 'Sarah Kim', 'David Park'];
+            var companies = ['Acme Corp', 'TechStart Inc', 'GlobalSec Ltd', 'NetOps GmbH', 'CloudFirst IO'];
+
+            var payload = {
+                visitor_name: names[Math.floor(Math.random() * names.length)],
+                company: companies[Math.floor(Math.random() * companies.length)],
+                source: 'quick-create'
+            };
+
+            try {
+                var resp = await fetch('/api/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var data = await resp.json();
+                showMessage('success-msg', 'Session created: ' + (data.session_id || 'OK'), 4000);
+                await loadSessions();
+            } catch (err) {
+                showMessage('error-msg', 'Failed to create session: ' + err.message, 5000);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '+ Quick Create';
+            }
+        }
+
         async function loadSessions() {
             try {
                 var resp = await fetch('/api/sessions');
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 var data = await resp.json();
-                var sessions = data.sessions || [];
+                allSessions = data.sessions || [];
 
-                document.getElementById('total-count').textContent = sessions.length;
+                document.getElementById('total-count').textContent = allSessions.length;
                 document.getElementById('analysis-count').textContent =
-                    sessions.filter(function(s) { return s.has_analysis; }).length;
+                    allSessions.filter(function(s) { return s.has_analysis; }).length;
 
-                var tbody = document.getElementById('sessions-body');
-
-                if (sessions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty">No sessions found</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = sessions.map(function(s) {
-                    var analysisCell = s.has_analysis
-                        ? '<span class="analysis-yes">Yes</span>'
-                        : '<span class="analysis-no">No</span>';
-                    var summaryCell = s.summary_link
-                        ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
-                        : '--';
-                    return '<tr>' +
-                        '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
-                        '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
-                        '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
-                        '<td>' + formatDate(s.created_at) + '</td>' +
-                        '<td>' + analysisCell + '</td>' +
-                        '<td>' + summaryCell + '</td>' +
-                        '</tr>';
-                }).join('');
+                applyFilters();
             } catch (err) {
-                var errEl = document.getElementById('error-msg');
-                errEl.style.display = 'block';
-                errEl.textContent = 'Failed to load sessions: ' + err.message;
+                document.getElementById('error-msg').style.display = 'block';
+                document.getElementById('error-msg').textContent = 'Failed to load sessions: ' + err.message;
                 document.getElementById('sessions-body').innerHTML =
-                    '<tr><td colspan="6" class="empty">Could not load sessions</td></tr>';
+                    '<tr><td colspan="9" class="empty">Could not load sessions</td></tr>';
             }
         }
 
         loadSessions();
-        // Auto-refresh every 30 seconds
         setInterval(loadSessions, 30000);
     </script>
 </body>
