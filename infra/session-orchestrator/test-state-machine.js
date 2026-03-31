@@ -37,6 +37,7 @@ tp.claimTenant = async () => null;
 const {
   createSession, endSession, getSession,
   transitionState, getSessionState,
+  validateSessionId,
   VALID_STATES, TRANSITIONS,
 } = require('./orchestrator');
 
@@ -234,6 +235,73 @@ function eq(a, b) {
     const state = await getSessionState(session_id);
     const endedTransition = state.history.find(h => h.to === 'ended');
     eq(endedTransition.context, undefined);
+  });
+
+  // ── Session ID Validation ────────────────────────────────────────────
+
+  console.log('\n=== Session ID Validation ===');
+
+  await test('validateSessionId accepts valid uppercase alphanumeric', () => {
+    validateSessionId('ABC123');
+  });
+
+  await test('validateSessionId rejects empty string', async () => {
+    try { validateSessionId(''); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId rejects null', async () => {
+    try { validateSessionId(null); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId rejects undefined', async () => {
+    try { validateSessionId(undefined); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId rejects lowercase', async () => {
+    try { validateSessionId('abc123'); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId rejects special characters', async () => {
+    try { validateSessionId('AB-12'); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId rejects path traversal', async () => {
+    try { validateSessionId('../etc/passwd'); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId rejects string > 20 chars', async () => {
+    try { validateSessionId('A'.repeat(21)); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('validateSessionId accepts 20-char string', () => {
+    validateSessionId('A'.repeat(20));
+  });
+
+  await test('getSession rejects invalid session_id before S3 call', async () => {
+    try { await getSession('bad!id'); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('endSession rejects invalid session_id', async () => {
+    try { await endSession(''); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('transitionState rejects invalid session_id', async () => {
+    try { await transitionState('../hack', 'ended'); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
+  });
+
+  await test('getSessionState rejects invalid session_id', async () => {
+    try { await getSessionState(null); throw new Error('should have thrown'); }
+    catch (err) { eq(err.statusCode, 400); }
   });
 
   // ── Results ─────────────────────────────────────────────────────────

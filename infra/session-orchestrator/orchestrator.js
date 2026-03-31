@@ -21,6 +21,19 @@
 const { putObject, getObject, objectExists, deleteObject } = require('./s3');
 const { claimTenant } = require('./tenant-pool');
 
+// ── Input validation ───────────────────────────────────────────────────────
+
+const SESSION_ID_RE = /^[A-Z0-9]{1,20}$/;
+
+function validateSessionId(session_id) {
+  if (!session_id || typeof session_id !== 'string' || !SESSION_ID_RE.test(session_id)) {
+    throw Object.assign(
+      new Error(`Invalid session_id: must be 1-20 uppercase alphanumeric characters`),
+      { statusCode: 400 }
+    );
+  }
+}
+
 // ── State machine definition ───────────────────────────────────────────────
 
 const VALID_STATES = ['active', 'recording', 'ended', 'processing', 'analyzed', 'reviewed', 'sent'];
@@ -45,6 +58,7 @@ const TRANSITIONS = {
  * @returns {{ session_id, previous_state, state, transitioned_at }}
  */
 async function transitionState(session_id, target_state, context = {}) {
+  validateSessionId(session_id);
   if (!VALID_STATES.includes(target_state)) {
     throw Object.assign(
       new Error(`Invalid state: ${target_state}. Valid: ${VALID_STATES.join(', ')}`),
@@ -100,6 +114,7 @@ async function transitionState(session_id, target_state, context = {}) {
  * Get the full state document for a session (current state + transition history).
  */
 async function getSessionState(session_id) {
+  validateSessionId(session_id);
   // Verify session exists
   const metadata = await getSession(session_id);
 
@@ -197,6 +212,7 @@ async function createSession({ visitor_name, badge_photo, demo_pc, se_name, audi
  * @param {boolean} [opts.upload_complete] — true if PC already uploaded
  */
 async function endSession(session_id, opts = {}) {
+  validateSessionId(session_id);
   const metadata = await getSession(session_id); // throws 404 if missing
 
   if (['ended', 'processing', 'analyzed', 'reviewed', 'sent'].includes(metadata.status)) {
@@ -251,6 +267,7 @@ async function endSession(session_id, opts = {}) {
  * Get current session state (metadata + derived command flags).
  */
 async function getSession(session_id) {
+  validateSessionId(session_id);
   let metadata;
   try {
     metadata = await getObject(`sessions/${session_id}/metadata.json`);
@@ -273,5 +290,6 @@ async function getSession(session_id) {
 module.exports = {
   createSession, endSession, getSession,
   transitionState, getSessionState,
+  validateSessionId,
   VALID_STATES, TRANSITIONS,
 };
