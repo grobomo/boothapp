@@ -24,6 +24,18 @@ Rules:
 
 FACTUAL_EXTRACTION_PROMPT = """Analyze this Vision One demo session and extract factual information.
 
+Vision One modules -- use these exact names when identifying products demonstrated:
+- Endpoint Security (endpoint protection, EDR, server & workload protection)
+- Email Security (email threat detection, BEC protection, phishing prevention)
+- Network Security (network detection, IDS/IPS, lateral movement detection)
+- Cloud Security (container security, cloud workload protection, CSPM)
+- XDR (cross-layer detection & response, correlated alerts, investigation workbench)
+- Risk Insights (risk scoring, vulnerability assessment, risk index)
+- Workbench (alert triage, investigation tools, response actions, case management)
+- Threat Intelligence (threat reports, IoC sweeping, campaign tracking)
+- Zero Trust (Zero Trust Secure Access, device posture, identity risk)
+- Attack Surface Risk Management (ASRM, internet-facing asset discovery, CVE prioritization)
+
 Session timeline (transcript + click events):
 {timeline_json}
 
@@ -32,7 +44,7 @@ Session metadata:
 
 Return a JSON object with exactly these fields:
 {{
-  "products_demonstrated": ["list of Vision One products/modules actually demonstrated"],
+  "products_demonstrated": ["list of Vision One modules actually demonstrated -- use the exact module names listed above"],
   "features_demonstrated": [
     {{"feature": "feature name", "timestamp_rel": "MM:SS", "evidence": "specific transcript or click evidence"}}
   ],
@@ -57,18 +69,29 @@ SE name: {se_name}
 Factual analysis from Pass 1:
 {factual_json}
 
+When crafting follow-up actions, reference specific Vision One capabilities the visitor should explore next:
+- If they saw Endpoint Security, suggest exploring EDR investigation or Server & Workload Protection policies
+- If they saw XDR, suggest a Workbench deep-dive with correlated alerts across email + endpoint + network
+- If they saw Risk Insights, suggest reviewing their Attack Surface Risk Management dashboard and CVE prioritization
+- If they saw Email Security, suggest configuring BEC detection rules or reviewing quarantine policies
+- If they saw Network Security, suggest enabling lateral movement detection or reviewing IDS/IPS rule tuning
+- If they saw Cloud Security, suggest a container image scanning demo or CSPM compliance check
+- If they saw Threat Intelligence, suggest scheduling an IoC sweep against their environment
+- If they saw Zero Trust, suggest a Zero Trust Secure Access policy walkthrough with device posture checks
+- For any module, suggest how XDR ties it together with cross-layer visibility in the Workbench
+
 Return a JSON object with exactly these fields (use these EXACT field names):
 {{
   "session_score": 7,
   "executive_summary": "Two sentences for a sales manager. Lead with the key takeaway, then the recommended action.",
   "key_interests": [
-    {{"topic": "specific topic", "confidence": "high|medium|low", "evidence": "specific quote or action from session"}}
+    {{"topic": "specific Vision One module or feature", "confidence": "high|medium|low", "evidence": "specific quote or action from session"}}
   ],
   "follow_up_actions": [
-    "specific actionable follow-up item 1",
-    "specific actionable follow-up item 2"
+    "specific actionable follow-up referencing a Vision One feature by name",
+    "specific actionable follow-up referencing a Vision One feature by name"
   ],
-  "sdr_notes": "concise paragraph with key facts: visitor background, main interests, concerns, competing products, urgency signals"
+  "sdr_notes": "concise paragraph with key facts: visitor background, main interests mapped to Vision One modules, concerns, competing products, urgency signals"
 }}
 
 IMPORTANT: Use exactly the field names shown above. "key_interests" (not "visitor_interests"), "follow_up_actions" (not "recommended_follow_up")."""
