@@ -476,6 +476,148 @@
         }
 
         /* ============================================================
+           SKELETON LOADING
+           ============================================================ */
+        @keyframes shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface2) 25%, #1c2030 37%, var(--surface2) 63%);
+            background-size: 800px 100%;
+            animation: shimmer 1.8s ease-in-out infinite;
+            border-radius: 8px;
+        }
+
+        .skeleton-card-value {
+            width: 120px;
+            height: 56px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+        }
+
+        .skeleton-card-label {
+            width: 140px;
+            height: 14px;
+        }
+
+        .skeleton-feed-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 28px;
+            border-bottom: 1px solid rgba(255,255,255,.03);
+        }
+
+        .skeleton-feed-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        .skeleton-feed-lines {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .skeleton-feed-line {
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        .skeleton-feed-line--long  { width: 85%; }
+        .skeleton-feed-line--short { width: 50%; }
+        .skeleton-feed-line--xs    { width: 60px; height: 10px; }
+
+        .skeleton-ring {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+        }
+
+        .skeleton-legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .skeleton-legend-bar {
+            height: 13px;
+            flex: 1;
+            border-radius: 4px;
+        }
+
+        .skeleton-product-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .skeleton-product-rank {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+        }
+
+        .skeleton-product-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .skeleton-product-name {
+            width: 70%;
+            height: 13px;
+            border-radius: 4px;
+        }
+
+        .skeleton-product-bar {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .skeleton-product-count {
+            width: 20px;
+            height: 12px;
+            border-radius: 4px;
+        }
+
+        /* Hide real content until loaded */
+        .card-value.is-loading,
+        .card-label.is-loading { visibility: hidden; }
+
+        /* Fade-in transition when skeletons removed */
+        .loaded .card-value,
+        .loaded .card-label,
+        .loaded .feed-item,
+        .loaded .product-item,
+        .loaded .ring-chart,
+        .loaded .ring-legend {
+            animation: fadeInContent .4s ease;
+        }
+
+        @keyframes fadeInContent {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================================
            RESPONSIVE
            ============================================================ */
         @media (max-width: 1100px) {
@@ -523,22 +665,34 @@
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="#D71920"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
             </div>
-            <div class="card-value" id="activeSessions">0</div>
-            <div class="card-label">Active Sessions</div>
+            <div class="card-value is-loading" id="activeSessions">0</div>
+            <div class="card-label is-loading">Active Sessions</div>
+            <div class="skeleton-placeholder">
+                <div class="skeleton skeleton-card-value"></div>
+                <div class="skeleton skeleton-card-label"></div>
+            </div>
         </div>
         <div class="card card--demos">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="#448AFF"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
             </div>
-            <div class="card-value" id="totalDemos">0</div>
-            <div class="card-label">Total Demos</div>
+            <div class="card-value is-loading" id="totalDemos">0</div>
+            <div class="card-label is-loading">Total Demos</div>
+            <div class="skeleton-placeholder">
+                <div class="skeleton skeleton-card-value"></div>
+                <div class="skeleton skeleton-card-label"></div>
+            </div>
         </div>
         <div class="card card--reports">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="#00E676"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
-            <div class="card-value" id="reportsGenerated">0</div>
-            <div class="card-label">Reports Generated</div>
+            <div class="card-value is-loading" id="reportsGenerated">0</div>
+            <div class="card-label is-loading">Reports Generated</div>
+            <div class="skeleton-placeholder">
+                <div class="skeleton skeleton-card-value"></div>
+                <div class="skeleton skeleton-card-label"></div>
+            </div>
         </div>
     </div>
 
@@ -554,7 +708,14 @@
                 </div>
                 <div class="feed-refresh" id="refreshTimer">Refreshing in 5s</div>
             </div>
-            <ul class="feed-list" id="feedList"></ul>
+            <ul class="feed-list" id="feedList">
+                <!-- Skeleton feed items (removed on first render) -->
+                <li class="skeleton-feed-item skeleton-placeholder"><span class="skeleton skeleton-feed-dot"></span><div class="skeleton-feed-lines"><div class="skeleton skeleton-feed-line skeleton-feed-line--long"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--short"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--xs"></div></div></li>
+                <li class="skeleton-feed-item skeleton-placeholder"><span class="skeleton skeleton-feed-dot"></span><div class="skeleton-feed-lines"><div class="skeleton skeleton-feed-line skeleton-feed-line--long"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--short"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--xs"></div></div></li>
+                <li class="skeleton-feed-item skeleton-placeholder"><span class="skeleton skeleton-feed-dot"></span><div class="skeleton-feed-lines"><div class="skeleton skeleton-feed-line skeleton-feed-line--long"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--short"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--xs"></div></div></li>
+                <li class="skeleton-feed-item skeleton-placeholder"><span class="skeleton skeleton-feed-dot"></span><div class="skeleton-feed-lines"><div class="skeleton skeleton-feed-line skeleton-feed-line--long"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--short"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--xs"></div></div></li>
+                <li class="skeleton-feed-item skeleton-placeholder"><span class="skeleton skeleton-feed-dot"></span><div class="skeleton-feed-lines"><div class="skeleton skeleton-feed-line skeleton-feed-line--long"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--short"></div><div class="skeleton skeleton-feed-line skeleton-feed-line--xs"></div></div></li>
+            </ul>
         </section>
 
         <!-- Side Panel -->
@@ -566,7 +727,13 @@
                     <svg viewBox="0 0 24 24" fill="var(--text-dim)"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2 0v9h9c-.47-4.68-4.32-8.53-9-9zm0 11v9c4.68-.47 8.53-4.32 9-9h-9z"/></svg>
                     Pipeline
                 </div>
-                <div class="ring-chart">
+                <div class="skeleton-placeholder" id="ringChartSkeleton">
+                    <div class="skeleton skeleton-ring"></div>
+                    <div class="skeleton-legend-row"><div class="skeleton skeleton-legend-dot"></div><div class="skeleton skeleton-legend-bar"></div></div>
+                    <div class="skeleton-legend-row"><div class="skeleton skeleton-legend-dot"></div><div class="skeleton skeleton-legend-bar"></div></div>
+                    <div class="skeleton-legend-row"><div class="skeleton skeleton-legend-dot"></div><div class="skeleton skeleton-legend-bar"></div></div>
+                </div>
+                <div class="ring-chart" style="display:none">
                     <svg viewBox="0 0 160 160" id="ringChart">
                         <circle cx="80" cy="80" r="60" fill="none" stroke="var(--surface2)" stroke-width="14"/>
                         <circle cx="80" cy="80" r="60" fill="none" stroke="var(--red)" stroke-width="14"
@@ -584,7 +751,7 @@
                         <div class="ring-sub">Total</div>
                     </div>
                 </div>
-                <div class="ring-legend">
+                <div class="ring-legend" style="display:none">
                     <div class="ring-legend-item">
                         <span class="ring-legend-dot" style="background:var(--red)"></span>
                         Sessions <span id="legendSessions" style="margin-left:auto;font-weight:700;color:var(--text)">0</span>
@@ -606,7 +773,14 @@
                     <svg viewBox="0 0 24 24" fill="var(--text-dim)"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
                     Top Products
                 </div>
-                <div class="product-list" id="productList"></div>
+                <div class="product-list" id="productList">
+                    <!-- Skeleton product rows -->
+                    <div class="skeleton-product-row skeleton-placeholder"><div class="skeleton skeleton-product-rank"></div><div class="skeleton-product-info"><div class="skeleton skeleton-product-name"></div><div class="skeleton skeleton-product-bar"></div></div><div class="skeleton skeleton-product-count"></div></div>
+                    <div class="skeleton-product-row skeleton-placeholder"><div class="skeleton skeleton-product-rank"></div><div class="skeleton-product-info"><div class="skeleton skeleton-product-name" style="width:55%"></div><div class="skeleton skeleton-product-bar"></div></div><div class="skeleton skeleton-product-count"></div></div>
+                    <div class="skeleton-product-row skeleton-placeholder"><div class="skeleton skeleton-product-rank"></div><div class="skeleton-product-info"><div class="skeleton skeleton-product-name" style="width:60%"></div><div class="skeleton skeleton-product-bar"></div></div><div class="skeleton skeleton-product-count"></div></div>
+                    <div class="skeleton-product-row skeleton-placeholder"><div class="skeleton skeleton-product-rank"></div><div class="skeleton-product-info"><div class="skeleton skeleton-product-name" style="width:45%"></div><div class="skeleton skeleton-product-bar"></div></div><div class="skeleton skeleton-product-count"></div></div>
+                    <div class="skeleton-product-row skeleton-placeholder"><div class="skeleton skeleton-product-rank"></div><div class="skeleton-product-info"><div class="skeleton skeleton-product-name" style="width:50%"></div><div class="skeleton skeleton-product-bar"></div></div><div class="skeleton skeleton-product-count"></div></div>
+                </div>
             </div>
 
         </div>
@@ -873,7 +1047,32 @@
         document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 
+    var firstRender = true;
+
+    function removeSkeletons() {
+        var placeholders = document.querySelectorAll('.skeleton-placeholder');
+        for (var i = 0; i < placeholders.length; i++) {
+            placeholders[i].parentNode.removeChild(placeholders[i]);
+        }
+        // Show hidden real elements
+        var loadingEls = document.querySelectorAll('.is-loading');
+        for (var i = 0; i < loadingEls.length; i++) {
+            loadingEls[i].classList.remove('is-loading');
+        }
+        // Show ring chart and legend
+        var ringChart = document.querySelector('.ring-chart');
+        var ringLegend = document.querySelector('.ring-legend');
+        if (ringChart) ringChart.style.display = '';
+        if (ringLegend) ringLegend.style.display = '';
+        // Add loaded class for fade-in
+        document.querySelector('.container').classList.add('loaded');
+    }
+
     function renderAll() {
+        if (firstRender) {
+            firstRender = false;
+            removeSkeletons();
+        }
         renderCards();
         renderRingChart();
         renderProducts();
@@ -938,10 +1137,13 @@
         state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
     });
 
-    renderAll();
+    // Show skeleton loading state briefly before first render
     renderClock();
     setInterval(renderClock, 1000);
-    setInterval(tickCountdown, 1000);
+    setTimeout(function () {
+        renderAll();
+        setInterval(tickCountdown, 1000);
+    }, 1200);
 
 })();
 </script>
