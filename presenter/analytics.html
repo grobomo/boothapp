@@ -288,6 +288,89 @@
     margin-left: auto;
   }
 
+  /* -- Word cloud -- */
+  .wordcloud-canvas {
+    width: 100%;
+    height: 280px;
+    display: block;
+  }
+
+  /* -- Conversion indicators -- */
+  .conversion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .conv-card {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .conv-card .conv-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: monospace;
+  }
+  .conv-card .conv-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #8b949e;
+    margin-top: 0.3rem;
+  }
+
+  .action-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .action-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #21262d;
+    font-size: 0.85rem;
+  }
+  .action-list li:last-child { border-bottom: none; }
+  .action-count {
+    background: #58a6ff22;
+    color: #58a6ff;
+    font-family: monospace;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    min-width: 28px;
+    text-align: center;
+  }
+
+  /* -- Auto-update indicator -- */
+  .auto-update-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: #3fb950;
+    background: #3fb95015;
+    border: 1px solid #3fb95033;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+  }
+  .auto-update-badge .pulse {
+    width: 6px;
+    height: 6px;
+    background: #3fb950;
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
   @media (max-width: 768px) {
     body { padding: 1rem; }
     .charts-grid { grid-template-columns: 1fr; }
@@ -302,6 +385,7 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 <header>
   <h1>Session Analytics</h1>
   <div class="header-right">
+    <span class="auto-update-badge" id="auto-update-badge"><span class="pulse"></span> Live</span>
     <a href="sessions.html">Sessions</a>
     <a href="admin.html">Admin</a>
     <a href="index.html">Home</a>
@@ -379,6 +463,39 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
     </div>
   </div>
 
+  <!-- Word cloud + Conversion indicators -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h2>Common Visitor Interests</h2>
+      <canvas id="wordcloud-canvas" class="wordcloud-canvas"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>Conversion Indicators</h2>
+      <div class="conversion-grid">
+        <div class="conv-card">
+          <div class="conv-value green" id="conv-feedback-rate">--</div>
+          <div class="conv-label">Feedback Rate</div>
+        </div>
+        <div class="conv-card">
+          <div class="conv-value blue" id="conv-consent-rate">--</div>
+          <div class="conv-label">Contact Consent</div>
+        </div>
+        <div class="conv-card">
+          <div class="conv-value orange" id="conv-avg-rating">--</div>
+          <div class="conv-label">Avg Rating</div>
+        </div>
+        <div class="conv-card">
+          <div class="conv-value" style="color:#a371f7;" id="conv-high-interest">--</div>
+          <div class="conv-label">High Interest</div>
+        </div>
+      </div>
+      <h2 style="margin-top:0.5rem;">Top Follow-Up Actions</h2>
+      <ul class="action-list" id="followup-actions-list">
+        <li style="color:#484f58;">Loading...</li>
+      </ul>
+    </div>
+  </div>
+
   <!-- Avg scores -->
   <div class="charts-grid">
     <div class="chart-card">
@@ -425,11 +542,14 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
   AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
   var s3 = new AWS.S3({ params: { Bucket: BUCKET } });
 
-  var allSessions = []; // [{metadata, summary}]
+  var AUTO_UPDATE_INTERVAL = 30000; // 30 seconds
+  var allSessions = []; // [{metadata, summary, feedback}]
   var activeRange = "all";
   var chartSessionsDay = null;
   var chartPeakHours = null;
   var chartProducts = null;
+  var autoUpdateTimer = null;
+  var isInitialLoad = true;
 
   // ── S3 data loading ───────────────────────────────────────────────────────
 
@@ -473,13 +593,13 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
     var pending = total;
     prefixes.forEach(function (prefix) {
       var sessionId = prefix.replace("sessions/", "").replace(/\/$/, "");
-      var session = { id: sessionId, metadata: null, summary: null };
+      var session = { id: sessionId, metadata: null, summary: null, feedback: null };
 
-      var metaDone = false;
-      var summaryDone = false;
+      var filesDone = 0;
+      var filesExpected = 3; // metadata, summary, feedback
 
       function checkDone() {
-        if (metaDone && summaryDone) {
+        if (filesDone >= filesExpected) {
           allSessions.push(session);
           loaded++;
           progressEl.textContent = "Loading sessions: " + loaded + " / " + total;
@@ -489,6 +609,7 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
             progressEl.classList.add("hidden");
             document.getElementById("dashboard").classList.remove("hidden");
             renderDashboard();
+            scheduleAutoUpdate();
           }
         }
       }
@@ -497,7 +618,7 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
         if (!err && data.Body) {
           try { session.metadata = JSON.parse(data.Body.toString()); } catch (e) {}
         }
-        metaDone = true;
+        filesDone++;
         checkDone();
       });
 
@@ -505,7 +626,15 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
         if (!err && data.Body) {
           try { session.summary = JSON.parse(data.Body.toString()); } catch (e) {}
         }
-        summaryDone = true;
+        filesDone++;
+        checkDone();
+      });
+
+      s3.getObject({ Key: prefix + "feedback.json" }, function (err, data) {
+        if (!err && data.Body) {
+          try { session.feedback = JSON.parse(data.Body.toString()); } catch (e) {}
+        }
+        filesDone++;
         checkDone();
       });
     });
@@ -551,6 +680,8 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
     renderSessionsByDay(sessions);
     renderPeakHours(sessions);
     renderProducts(sessions);
+    renderWordCloud(sessions);
+    renderConversionIndicators(sessions);
     renderScores(sessions);
     renderCompanies(sessions);
   }
@@ -826,6 +957,240 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
       html += "</tr>";
     });
     tbody.innerHTML = html;
+  }
+
+  // ── Word cloud (canvas-based) ─────────────────────────────────────────────
+
+  function renderWordCloud(sessions) {
+    var canvas = document.getElementById("wordcloud-canvas");
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    // Collect interest topics from key_interests
+    var topicMap = {};
+    sessions.forEach(function (s) {
+      if (!s.summary || !Array.isArray(s.summary.key_interests)) return;
+      s.summary.key_interests.forEach(function (ki) {
+        var topic = (ki.topic || "").trim().toLowerCase();
+        if (!topic) return;
+        var weight = ki.confidence === "high" ? 3 : ki.confidence === "medium" ? 2 : 1;
+        topicMap[topic] = (topicMap[topic] || 0) + weight;
+      });
+    });
+
+    // Also include products_interested from feedback
+    sessions.forEach(function (s) {
+      if (!s.feedback || !Array.isArray(s.feedback.products_interested)) return;
+      s.feedback.products_interested.forEach(function (p) {
+        var topic = p.trim().toLowerCase();
+        if (topic) topicMap[topic] = (topicMap[topic] || 0) + 2;
+      });
+    });
+
+    var entries = Object.keys(topicMap).map(function (k) {
+      return { text: k, count: topicMap[k] };
+    }).sort(function (a, b) { return b.count - a.count; }).slice(0, 40);
+
+    if (entries.length === 0) {
+      ctx.fillStyle = "#484f58";
+      ctx.font = "14px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("No interest data yet", rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    var maxCount = entries[0].count;
+    var minCount = entries[entries.length - 1].count;
+    var colors = ["#58a6ff", "#3fb950", "#f78166", "#a371f7", "#f0883e", "#79c0ff", "#56d364", "#d2a8ff"];
+    var cw = rect.width;
+    var ch = rect.height;
+
+    // Simple spiral placement
+    var placed = [];
+    entries.forEach(function (entry, idx) {
+      var ratio = maxCount === minCount ? 1 : (entry.count - minCount) / (maxCount - minCount);
+      var fontSize = Math.round(12 + ratio * 28);
+      ctx.font = "600 " + fontSize + "px -apple-system, BlinkMacSystemFont, sans-serif";
+      var metrics = ctx.measureText(entry.text);
+      var tw = metrics.width;
+      var th = fontSize;
+
+      // Spiral search for non-overlapping position
+      var px = 0, py = 0, found = false;
+      for (var t = 0; t < 600 && !found; t++) {
+        var angle = t * 0.15;
+        var radius = 3 + t * 0.8;
+        px = cw / 2 + Math.cos(angle) * radius - tw / 2;
+        py = ch / 2 + Math.sin(angle) * radius + th / 4;
+
+        if (px < 2 || py < th || px + tw > cw - 2 || py > ch - 2) continue;
+
+        var overlap = false;
+        for (var j = 0; j < placed.length; j++) {
+          var p = placed[j];
+          if (px < p.x + p.w + 4 && px + tw + 4 > p.x && py - th < p.y && py > p.y - p.h) {
+            overlap = true;
+            break;
+          }
+        }
+        if (!overlap) found = true;
+      }
+
+      if (found) {
+        ctx.fillStyle = colors[idx % colors.length];
+        ctx.globalAlpha = 0.7 + ratio * 0.3;
+        ctx.fillText(entry.text, px, py);
+        ctx.globalAlpha = 1;
+        placed.push({ x: px, y: py, w: tw, h: th });
+      }
+    });
+  }
+
+  // ── Conversion indicators ───────────────────────────────────────────────
+
+  function renderConversionIndicators(sessions) {
+    var totalSessions = sessions.length;
+    var feedbackCount = 0;
+    var consentCount = 0;
+    var ratings = [];
+    var highInterestCount = 0;
+    var actionMap = {};
+
+    sessions.forEach(function (s) {
+      // Feedback-based metrics
+      if (s.feedback) {
+        feedbackCount++;
+        if (s.feedback.consent_to_contact) consentCount++;
+        if (typeof s.feedback.rating === "number") ratings.push(s.feedback.rating);
+      }
+
+      // High interest = session_score >= 7 AND has key_interests with high confidence
+      if (s.summary) {
+        var hasHighConf = false;
+        if (Array.isArray(s.summary.key_interests)) {
+          for (var i = 0; i < s.summary.key_interests.length; i++) {
+            if (s.summary.key_interests[i].confidence === "high") { hasHighConf = true; break; }
+          }
+        }
+        if (hasHighConf && s.summary.session_score >= HIGH_ENGAGEMENT_THRESHOLD) highInterestCount++;
+
+        // Aggregate follow-up actions
+        if (Array.isArray(s.summary.follow_up_actions)) {
+          s.summary.follow_up_actions.forEach(function (action) {
+            var normalized = normalizeAction(action);
+            if (normalized) actionMap[normalized] = (actionMap[normalized] || 0) + 1;
+          });
+        }
+      }
+    });
+
+    // Render KPI cards
+    var feedbackRate = totalSessions > 0 ? Math.round((feedbackCount / totalSessions) * 100) : 0;
+    document.getElementById("conv-feedback-rate").textContent = feedbackRate + "%";
+
+    var consentRate = feedbackCount > 0 ? Math.round((consentCount / feedbackCount) * 100) : 0;
+    document.getElementById("conv-consent-rate").textContent = consentRate + "%";
+
+    if (ratings.length > 0) {
+      var avgRating = ratings.reduce(function (a, b) { return a + b; }, 0) / ratings.length;
+      document.getElementById("conv-avg-rating").textContent = avgRating.toFixed(1) + "/5";
+    } else {
+      document.getElementById("conv-avg-rating").textContent = "--";
+    }
+
+    document.getElementById("conv-high-interest").textContent = highInterestCount;
+
+    // Render top follow-up actions
+    var sortedActions = Object.keys(actionMap).sort(function (a, b) {
+      return actionMap[b] - actionMap[a];
+    }).slice(0, 8);
+
+    var listEl = document.getElementById("followup-actions-list");
+    if (sortedActions.length === 0) {
+      listEl.innerHTML = '<li style="color:#484f58;">No follow-up data</li>';
+      return;
+    }
+
+    var html = "";
+    sortedActions.forEach(function (action) {
+      html += '<li><span class="action-count">' + actionMap[action] + '</span>' + esc(action) + '</li>';
+    });
+    listEl.innerHTML = html;
+  }
+
+  function normalizeAction(action) {
+    var text = action.trim();
+    if (!text) return null;
+    // Capitalize first letter, truncate
+    return text.charAt(0).toUpperCase() + text.slice(1).substring(0, 80);
+  }
+
+  // ── Auto-update ─────────────────────────────────────────────────────────
+
+  function scheduleAutoUpdate() {
+    if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
+    autoUpdateTimer = setTimeout(function () {
+      refreshData();
+    }, AUTO_UPDATE_INTERVAL);
+  }
+
+  function refreshData() {
+    allSessions = [];
+    isInitialLoad = false;
+    var allKeys = [];
+    function listAll(token) {
+      var params = { Prefix: "sessions/", Delimiter: "/", MaxKeys: 1000 };
+      if (token) params.ContinuationToken = token;
+      s3.listObjectsV2(params, function (err, data) {
+        if (err) { scheduleAutoUpdate(); return; }
+        var prefixes = (data.CommonPrefixes || []).map(function (p) { return p.Prefix; });
+        allKeys = allKeys.concat(prefixes);
+        if (data.IsTruncated) {
+          listAll(data.NextContinuationToken);
+        } else {
+          silentFetchAll(allKeys);
+        }
+      });
+    }
+    listAll(null);
+  }
+
+  function silentFetchAll(prefixes) {
+    var total = prefixes.length;
+    if (total === 0) { renderDashboard(); scheduleAutoUpdate(); return; }
+    var pending = total;
+    prefixes.forEach(function (prefix) {
+      var sessionId = prefix.replace("sessions/", "").replace(/\/$/, "");
+      var session = { id: sessionId, metadata: null, summary: null, feedback: null };
+      var filesDone = 0;
+      function check() {
+        if (filesDone >= 3) {
+          allSessions.push(session);
+          pending--;
+          if (pending === 0) {
+            renderDashboard();
+            scheduleAutoUpdate();
+          }
+        }
+      }
+      s3.getObject({ Key: prefix + "metadata.json" }, function (err, data) {
+        if (!err && data.Body) { try { session.metadata = JSON.parse(data.Body.toString()); } catch (e) {} }
+        filesDone++; check();
+      });
+      s3.getObject({ Key: prefix + "output/summary.json" }, function (err, data) {
+        if (!err && data.Body) { try { session.summary = JSON.parse(data.Body.toString()); } catch (e) {} }
+        filesDone++; check();
+      });
+      s3.getObject({ Key: prefix + "feedback.json" }, function (err, data) {
+        if (!err && data.Body) { try { session.feedback = JSON.parse(data.Body.toString()); } catch (e) {} }
+        filesDone++; check();
+      });
+    });
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
