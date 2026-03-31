@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import base64
 import re
 import time
@@ -73,8 +74,19 @@ class SessionAnalyzer:
     def analyze(self) -> dict:
         self._load_inputs()
         timeline_text, screenshot_map = self._build_timeline_context()
-        factual = self._pass1_factual_extraction(timeline_text, screenshot_map)
-        recommendations = self._pass2_recommendations(factual)
+
+        try:
+            factual = self._pass1_factual_extraction(timeline_text, screenshot_map)
+        except Exception as e:
+            logger.error("Bedrock/LLM error in factual pass: %s", e)
+            return self._build_fallback_result(str(e))
+
+        try:
+            recommendations = self._pass2_recommendations(factual)
+        except Exception as e:
+            logger.error("Bedrock/LLM error in recommendations pass: %s", e)
+            return self._build_fallback_result(str(e))
+
         summary = self._build_summary_json(factual, recommendations)
         validate_summary_or_raise(summary)
         follow_up = self._build_follow_up_json(recommendations)
@@ -84,6 +96,32 @@ class SessionAnalyzer:
             "follow_up": follow_up,
             "html": html,
         }
+
+    def _build_fallback_result(self, error_msg: str) -> dict:
+        session_id = self._metadata.get("session_id", "unknown")
+        visitor_name = self._metadata.get("visitor_name", "Unknown Visitor")
+        summary = {
+            "session_id": session_id,
+            "visitor_name": visitor_name,
+            "demo_duration_seconds": 0,
+            "session_score": 0,
+            "executive_summary": f"AI analysis unavailable: {error_msg}",
+            "products_demonstrated": [],
+            "key_interests": [],
+            "follow_up_actions": ["Review session recording manually"],
+            "key_moments": [],
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "fallback": True,
+            "fallback_reason": error_msg,
+        }
+        follow_up = {
+            "session_id": session_id,
+            "visitor_email": self._metadata.get("visitor_email", ""),
+            "priority": "medium",
+            "tags": ["fallback"],
+            "sdr_notes": f"AI analysis failed: {error_msg}. Please review session manually.",
+        }
+        return {"summary": summary, "follow_up": follow_up, "html": ""}
 
     def _get_s3_client(self):
         if self._s3_client is None:

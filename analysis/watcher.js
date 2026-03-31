@@ -28,9 +28,11 @@ const http = require('http');
 const { listSessions, isSessionComplete, isAlreadyClaimed, writeMarker } = require('./lib/s3');
 const { triggerPipeline } = require('./lib/pipeline');
 const { sendNotification } = require('./lib/notify');
+const { withRetry } = require('./lib/retry');
 const { spawn } = require('child_process');
 const path = require('path');
 const health = require('./watcher-health');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // --test flag: run a dry notification with sample data and exit
 if (process.argv.includes('--test')) {
@@ -67,7 +69,9 @@ const startTime = Date.now();
 let sessionsProcessed = 0;
 
 const BUCKET = process.env.S3_BUCKET;
+const REGION = process.env.AWS_REGION || 'us-east-1';
 const POLL_INTERVAL_MS = (parseInt(process.env.POLL_INTERVAL_SECONDS, 10) || 30) * 1000;
+const PIPELINE_MAX_RETRIES = 2;
 
 // In-memory set of sessions already dispatched this process run.
 // S3 marker (output/.analysis-claimed) handles cross-restart deduplication.
@@ -131,18 +135,47 @@ async function pollOnce() {
       sessionsProcessed++;
       health.recordProcessed(sessionId);
 
-      // Trigger pipeline (fire-and-forget — errors are logged, not fatal)
-      triggerPipeline(sessionId, BUCKET)
+      // Trigger pipeline with retry (up to 2 attempts). On final failure,
+      // write error.json to S3 so downstream consumers know what happened.
+      withRetry(`pipeline:${sessionId}`, () => triggerPipeline(sessionId, BUCKET), {
+        maxRetries: PIPELINE_MAX_RETRIES,
+        baseDelayMs: 2000,
+        onRetry: (err, attempt, delay) => {
+          log(`  ${sessionId}: pipeline attempt ${attempt}/${PIPELINE_MAX_RETRIES} failed (${err.message}), retrying in ${delay}ms...`);
+        },
+      })
         .then((result) => log(`  ${sessionId}: pipeline finished — ${result.status}`))
         .catch((err) => {
           health.recordFailed(sessionId);
-          log(`  ${sessionId}: pipeline ERROR — ${err.message}`);
+          log(`  ${sessionId}: pipeline FAILED after ${PIPELINE_MAX_RETRIES} attempts — ${err.message}`);
+          writeErrorJson(sessionId, err).catch((writeErr) => {
+            log(`  ${sessionId}: could not write error.json — ${writeErr.message}`);
+          });
         });
 
     } catch (err) {
       log(`  ${sessionId}: ERROR checking session — ${err.message}`);
     }
   }));
+}
+
+async function writeErrorJson(sessionId, err) {
+  const key = `sessions/${sessionId}/output/error.json`;
+  const payload = {
+    session_id: sessionId,
+    error: err.message,
+    stack: err.stack || null,
+    timestamp: new Date().toISOString(),
+    source: 'watcher',
+  };
+  const client = new S3Client({ region: REGION });
+  await client.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: JSON.stringify(payload, null, 2),
+    ContentType: 'application/json',
+  }));
+  log(`  ${sessionId}: wrote error.json to S3`);
 }
 
 function runTranscriber(sessionId) {

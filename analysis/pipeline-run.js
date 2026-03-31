@@ -13,8 +13,8 @@
 //
 // Error handling:
 //   - Each step wrapped in try-catch
-//   - S3/Bedrock calls retry with exponential backoff (3 attempts)
-//   - 120s total pipeline timeout
+//   - S3/Bedrock calls retry with exponential backoff (3 attempts, shared retry.js)
+//   - 5 min timeout per stage, 120s total pipeline timeout
 //   - Errors collected and written to output/errors.json
 //   - Fallback summary.json on analysis failure
 
@@ -26,6 +26,7 @@ const path = require('path');
 const { correlate } = require('./lib/correlator');
 const { getJson, listObjects } = require('./lib/s3');
 const { sendNotification } = require('./lib/notify');
+const { withRetry } = require('./lib/retry');
 const {
   S3Client,
   PutObjectCommand,
@@ -40,6 +41,7 @@ if (!sessionId || !bucket) {
 
 const REGION = process.env.AWS_REGION || 'us-east-1';
 const PIPELINE_TIMEOUT_MS = 120_000;
+const STAGE_TIMEOUT_MS = 300_000; // 5 minutes per stage
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 
@@ -47,30 +49,20 @@ function log(msg) {
   console.log(`[pipeline:${sessionId}] ${new Date().toISOString()} ${msg}`);
 }
 
-// --- Retry with exponential backoff ---
-async function withRetry(label, fn) {
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (attempt === MAX_RETRIES) {
-        log(`${label}: failed after ${MAX_RETRIES} attempts — ${err.message}`);
-        throw err;
-      }
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+// --- Retry wrapper using shared retry utility ---
+function retryOp(label, fn) {
+  return withRetry(label, fn, {
+    maxRetries: MAX_RETRIES,
+    baseDelayMs: BASE_DELAY_MS,
+    onRetry: (err, attempt, delay) => {
       log(`${label}: attempt ${attempt}/${MAX_RETRIES} failed (${err.message}), retrying in ${delay}ms...`);
-      await sleep(delay);
-    }
-  }
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+    },
+  });
 }
 
 // --- S3 write with retry ---
 async function putJson(key, data) {
-  await withRetry(`S3 PUT ${key}`, async () => {
+  await retryOp(`S3 PUT ${key}`, async () => {
     const client = new S3Client({ region: REGION });
     await client.send(new PutObjectCommand({
       Bucket: bucket,
@@ -117,7 +109,7 @@ async function run() {
   try {
     checkTimeout('fetch');
     log('Fetching metadata, clicks, transcript, screenshots from S3...');
-    [metadata, clicks, transcript] = await withRetry('S3 fetch session data', () =>
+    [metadata, clicks, transcript] = await retryOp('S3 fetch session data', () =>
       Promise.all([
         getJson(bucket, `sessions/${sessionId}/metadata.json`),
         getJson(bucket, `sessions/${sessionId}/clicks/clicks.json`),
@@ -182,11 +174,9 @@ async function run() {
     log('Starting Claude analysis (analyze.py)...');
     const analyzeScript = path.join(__dirname, 'analyze.py');
     const sessionS3Path = `s3://${bucket}/sessions/${sessionId}`;
-    const remainingMs = PIPELINE_TIMEOUT_MS - (Date.now() - startTime);
-    const analyzeTimeout = Math.min(Math.max(remainingMs, 5000), 300_000);
     execFileSync('python3', [analyzeScript, sessionS3Path], {
       stdio: 'inherit',
-      timeout: analyzeTimeout,
+      timeout: STAGE_TIMEOUT_MS,
     });
     log('Claude analysis complete — summary.json and follow-up.json written to S3');
     analysisSucceeded = true;
@@ -220,11 +210,9 @@ async function run() {
     log('Rendering HTML report (render-report.js)...');
     const renderScript = path.join(__dirname, 'render-report.js');
     const sessionS3Path = `s3://${bucket}/sessions/${sessionId}`;
-    const remainingMs = PIPELINE_TIMEOUT_MS - (Date.now() - startTime);
-    const renderTimeout = Math.min(Math.max(remainingMs, 5000), 60_000);
     execFileSync('node', [renderScript, sessionS3Path], {
       stdio: 'inherit',
-      timeout: renderTimeout,
+      timeout: STAGE_TIMEOUT_MS,
     });
     log('HTML report complete — summary.html written to S3');
   } catch (err) {
@@ -238,7 +226,7 @@ async function run() {
   try {
     execFileSync('node', [emailScript, sessionS3Path], {
       stdio: 'inherit',
-      timeout: 60_000,
+      timeout: STAGE_TIMEOUT_MS,
     });
     log('Email report complete — email-ready.html written to S3');
   } catch (err) {
