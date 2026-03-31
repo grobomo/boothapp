@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const { runPipeline } = require('./lib/pipeline');
 const { classifyError } = require('./lib/errors');
@@ -12,6 +13,7 @@ const { writeErrorJson } = require('./lib/error-writer');
 // sessions/<id>/output/error.json so the dashboard can display them.
 // ---------------------------------------------------------------------------
 
+const HEALTH_PORT = parseInt(process.env.HEALTH_PORT, 10) || 8080;
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS, 10) || 5000;
 const SESSIONS_DIR = process.env.SESSIONS_DIR || path.join(__dirname, '..', 'sessions');
 
@@ -95,6 +97,35 @@ async function processSession(sessionId, clients, config) {
 }
 
 /**
+ * Create an HTTP health-check server.
+ * GET /health returns JSON with watcher status.
+ */
+function createHealthServer(startedAt, port) {
+  const listenPort = port || HEALTH_PORT;
+  const server = http.createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/health') {
+      const body = JSON.stringify({
+        status: 'ok',
+        uptime: Math.floor((Date.now() - startedAt) / 1000),
+        pendingSessions: getPendingSessions().length,
+        pollIntervalMs: POLL_INTERVAL_MS,
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(body);
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  });
+
+  server.listen(listenPort, () => {
+    log(`health endpoint listening on :${listenPort}/health`);
+  });
+
+  return server;
+}
+
+/**
  * Main poll loop.
  */
 async function poll(clients, config) {
@@ -131,6 +162,9 @@ function start(configOverrides = {}) {
 
   log(`started (poll=${POLL_INTERVAL_MS}ms, bucket=${config.bucket}, model=${config.modelId})`);
 
+  const startedAt = Date.now();
+  const healthServer = createHealthServer(startedAt);
+
   const interval = setInterval(() => {
     poll(clients, config).catch((err) => {
       log(`unexpected poll error: ${err.message}`);
@@ -143,7 +177,11 @@ function start(configOverrides = {}) {
   });
 
   return {
-    stop: () => clearInterval(interval),
+    stop: () => {
+      clearInterval(interval);
+      healthServer.close();
+    },
+    healthServer,
   };
 }
 
@@ -152,4 +190,4 @@ if (require.main === module) {
   start();
 }
 
-module.exports = { start, processSession, getPendingSessions };
+module.exports = { start, processSession, getPendingSessions, createHealthServer };
