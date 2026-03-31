@@ -123,6 +123,19 @@
       if (e.target.tagName === 'A') ul.classList.remove('open');
     });
 
+    // Error indicator badge (populated by error-boundary.js)
+    var errorBadge = document.createElement('div');
+    errorBadge.id = 'ba-error-indicator';
+    errorBadge.title = 'No errors';
+    errorBadge.style.display = 'none';
+    errorBadge.addEventListener('click', function() {
+      var errs = window.__boothappErrors || [];
+      if (errs.length === 0) return;
+      var last = errs[errs.length - 1];
+      alert('Latest error:\n\n' + last.message + '\n\nPage: ' + last.page + '\nTime: ' + last.timestamp);
+    });
+
+    right.appendChild(errorBadge);
     right.appendChild(healthDot);
     right.appendChild(hamburger);
 

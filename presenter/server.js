@@ -100,6 +100,37 @@ app.get('/api/pages', (req, res) => {
   res.json({ pages: htmlFiles });
 });
 
+// --- JSON body parser (for /api/errors) ---
+app.use(express.json({ limit: '16kb' }));
+
+// --- Client error logging endpoint ---
+const clientErrors = [];
+const MAX_CLIENT_ERRORS = 200;
+
+app.post('/api/errors', (req, res) => {
+  const { message, stack, page, timestamp, userAgent } = req.body || {};
+  if (!message) return res.status(400).json({ error: 'message required' });
+
+  const entry = {
+    message: String(message).slice(0, 500),
+    stack: String(stack || '').slice(0, 2000),
+    page: String(page || '').slice(0, 500),
+    timestamp: timestamp || new Date().toISOString(),
+    userAgent: String(userAgent || '').slice(0, 300),
+    ip: req.ip
+  };
+
+  clientErrors.push(entry);
+  if (clientErrors.length > MAX_CLIENT_ERRORS) clientErrors.shift();
+
+  console.error(`[client-error] ${entry.page} — ${entry.message}`);
+  res.json({ logged: true, count: clientErrors.length });
+});
+
+app.get('/api/errors', (req, res) => {
+  res.json({ errors: clientErrors, count: clientErrors.length });
+});
+
 // --- Batch analysis API ---
 const { createRouter: batchAnalyzeRouter } = require('./lib/batch-analyze');
 app.use(batchAnalyzeRouter({ bucket: S3_BUCKET }));
