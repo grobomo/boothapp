@@ -35,6 +35,19 @@ def parse_args():
 
 
 def resolve_output_dir(session_dir: str, output_dir: str) -> str:
+    """Determine the output directory for analysis results.
+
+    If an explicit output_dir is provided, it is returned as-is.
+    Otherwise, an ``output/`` subdirectory under session_dir is used.
+    Both local paths and s3:// URIs are supported.
+
+    Args:
+        session_dir: Local path or s3:// URI of the session to analyze.
+        output_dir: Explicit output path, or None to auto-derive.
+
+    Returns:
+        Resolved output directory path (local or s3:// URI).
+    """
     if output_dir:
         return output_dir
     if session_dir.startswith("s3://"):
@@ -43,6 +56,16 @@ def resolve_output_dir(session_dir: str, output_dir: str) -> str:
 
 
 def write_output(output_dir: str, results: dict):
+    """Write analysis results (summary.json, follow-up.json, summary.html) to disk or S3.
+
+    For S3 destinations, uploads JSON files via boto3. For local paths, creates
+    the output directory if needed and writes JSON files plus an optional HTML
+    report when ``results["html"]`` is present.
+
+    Args:
+        output_dir: Local path or s3:// URI where output files are written.
+        results: Dict with ``summary``, ``follow_up``, and optional ``html`` keys.
+    """
     if output_dir.startswith("s3://"):
         import boto3
         prefix = output_dir.replace("s3://", "")
@@ -67,6 +90,15 @@ def write_output(output_dir: str, results: dict):
 
 
 def print_summary(results: dict):
+    """Print a human-readable session summary to stdout.
+
+    Displays session metadata (ID, visitor, duration), products shown,
+    top visitor interests with confidence scores, and recommended
+    follow-up actions with priority level.
+
+    Args:
+        results: Analysis results dict containing ``summary`` and ``follow_up`` keys.
+    """
     summary = results["summary"]
     print(f"\nSession: {summary.get('session_id')} — {summary.get('visitor_name')}")
     print(f"Duration: {summary.get('demo_duration_minutes')} minutes")
