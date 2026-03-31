@@ -1,0 +1,37 @@
+[
+  {
+    "timestamp": 1711900920000,
+    "url": "https://www.trendmicro.com/en_us/business/products/xdr.html",
+    "element": "a.nav-link",
+    "x": 340,
+    "y": 52
+  },
+  {
+    "timestamp": 1711900935000,
+    "url": "https://www.trendmicro.com/en_us/business/products/xdr.html",
+    "element": "button.cta-demo",
+    "x": 612,
+    "y": 380
+  },
+  {
+    "timestamp": 1711900980000,
+    "url": "https://www.trendmicro.com/en_us/business/products/network-security.html",
+    "element": "div.product-card",
+    "x": 450,
+    "y": 290
+  },
+  {
+    "timestamp": 1711901040000,
+    "url": "https://www.trendmicro.com/en_us/business/products/zero-trust.html",
+    "element": "a.feature-link",
+    "x": 280,
+    "y": 410
+  },
+  {
+    "timestamp": 1711901100000,
+    "url": "https://www.trendmicro.com/en_us/business/products/cloud-security.html",
+    "element": "button.request-trial",
+    "x": 520,
+    "y": 350
+  }
+]
