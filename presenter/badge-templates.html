@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Badge Template Editor</title>
+    <style>
+        /* ============================================================
+           RESET & BASE (matches demo.html design system)
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --red-light: #FF4D52;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============================================================
+           LAYOUT
+           ============================================================ */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--red-light), var(--red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* ============================================================
+           TOOLBAR
+           ============================================================ */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .toolbar label {
+            color: var(--text-dim);
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .toolbar select,
+        .toolbar input[type="text"] {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .toolbar select:focus,
+        .toolbar input[type="text"]:focus {
+            border-color: var(--red);
+        }
+
+        .toolbar select { min-width: 180px; }
+        .toolbar input[type="text"] { min-width: 200px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .btn:hover { border-color: var(--red); background: rgba(215, 25, 32, .08); }
+        .btn--primary { background: var(--red); border-color: var(--red); color: #fff; }
+        .btn--primary:hover { background: var(--red-dark); }
+        .btn--danger { border-color: #c62828; color: #ef5350; }
+        .btn--danger:hover { background: rgba(198, 40, 40, .15); }
+
+        .spacer { flex: 1; }
+
+        .file-input { display: none; }
+
+        /* ============================================================
+           MAIN GRID: CANVAS + SIDEBAR
+           ============================================================ */
+        .editor {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* ============================================================
+           CANVAS AREA
+           ============================================================ */
+        .canvas-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            position: relative;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .canvas-wrap.empty {
+            flex-direction: column;
+            gap: 12px;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: 2px dashed var(--border);
+        }
+
+        .canvas-wrap.empty:hover { border-color: var(--red); }
+
+        .canvas-wrap .drop-icon {
+            font-size: 2.5rem;
+            opacity: 0.4;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            border-radius: 6px;
+            cursor: crosshair;
+        }
+
+        /* ============================================================
+           SIDEBAR: REGIONS LIST
+           ============================================================ */
+        .sidebar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .sidebar h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .region-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .region-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: border-color .2s;
+        }
+
+        .region-card:hover { border-color: var(--blue); }
+
+        .region-card .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .region-card select {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+        }
+
+        .region-card .btn-remove {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: color .2s;
+        }
+
+        .region-card .btn-remove:hover { color: #ef5350; }
+
+        .no-regions {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 24px 0;
+        }
+
+        /* ============================================================
+           STATUS BAR
+           ============================================================ */
+        .status {
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .status .dot.saved { background: var(--success); }
+
+        /* ============================================================
+           TOAST
+           ============================================================ */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            background: var(--surface);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            color: var(--success);
+            font-size: 0.85rem;
+            font-weight: 600;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all .3s ease;
+            z-index: 100;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 768px) {
+            .editor { grid-template-columns: 1fr; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .container { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Badge Template Editor</h1>
+            <p>Define OCR extraction regions on conference badge photos</p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <label for="tpl-select">Template</label>
+            <select id="tpl-select">
+                <option value="">-- new template --</option>
+            </select>
+
+            <input type="text" id="tpl-name" placeholder="e.g. RSA 2026">
+
+            <button class="btn btn--primary" id="btn-save">Save</button>
+            <button class="btn btn--danger" id="btn-delete">Delete</button>
+
+            <span class="spacer"></span>
+
+            <button class="btn" id="btn-upload">Upload Badge Image</button>
+            <input type="file" id="file-input" class="file-input" accept="image/*">
+        </div>
+
+        <!-- Editor grid -->
+        <div class="editor">
+            <div class="canvas-wrap empty" id="canvas-wrap">
+                <div class="drop-icon">[+]</div>
+                <span>Click or drag an image here</span>
+                <canvas id="canvas" width="800" height="600" style="display:none"></canvas>
+            </div>
+
+            <div class="sidebar">
+                <h3>Regions</h3>
+                <div class="region-list" id="region-list">
+                    <div class="no-regions" id="no-regions">Draw rectangles on the badge to define regions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="status" id="status">
+            <span class="dot" id="status-dot"></span>
+            <span id="status-text">No template loaded</span>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        // ============================================================
+        // Constants
+        // ============================================================
+        var STORAGE_KEY = 'boothapp_badge_templates';
+        var REGION_COLORS = {
+            name:    '#448AFF',
+            title:   '#FFAB00',
+            company: '#00E676'
+        };
+        var LABEL_OPTIONS = ['name', 'title', 'company'];
+
+        // ============================================================
+        // State
+        // ============================================================
+        var state = {
+            image: null,          // HTMLImageElement
+            imageDataURL: null,   // base64 for storage
+            regions: [],          // [{x, y, w, h, label}] in normalized 0-1 coords
+            drawing: false,
+            startX: 0,
+            startY: 0,
+            currentTemplate: '',  // name of loaded template
+            dirty: false
+        };
+
+        // ============================================================
+        // DOM refs
+        // ============================================================
+        var canvas      = document.getElementById('canvas');
+        var ctx         = canvas.getContext('2d');
+        var canvasWrap  = document.getElementById('canvas-wrap');
+        var fileInput   = document.getElementById('file-input');
+        var btnUpload   = document.getElementById('btn-upload');
+        var btnSave     = document.getElementById('btn-save');
+        var btnDelete   = document.getElementById('btn-delete');
+        var tplSelect   = document.getElementById('tpl-select');
+        var tplName     = document.getElementById('tpl-name');
+        var regionList  = document.getElementById('region-list');
+        var noRegions   = document.getElementById('no-regions');
+        var statusDot   = document.getElementById('status-dot');
+        var statusText  = document.getElementById('status-text');
+        var toastEl     = document.getElementById('toast');
+
+        // ============================================================
+        // LocalStorage helpers
+        // ============================================================
+        function loadTemplates() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveTemplates(templates) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+        }
+
+        // ============================================================
+        // Template dropdown
+        // ============================================================
+        function refreshDropdown(selectName) {
+            var templates = loadTemplates();
+            var names = Object.keys(templates).sort();
+
+            tplSelect.innerHTML = '<option value="">-- new template --</option>';
+            names.forEach(function (name) {
+                var opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                tplSelect.appendChild(opt);
+            });
+
+            if (selectName) {
+                tplSelect.value = selectName;
+            }
+        }
+
+        // ============================================================
+        // Load a template
+        // ============================================================
+        function loadTemplate(name) {
+            var templates = loadTemplates();
+            var tpl = templates[name];
+            if (!tpl) return;
+
+            state.currentTemplate = name;
+            state.regions = tpl.regions.map(function (r) {
+                return { x: r.x, y: r.y, w: r.w, h: r.h, label: r.label };
+            });
+            state.dirty = false;
+            tplName.value = name;
+
+            if (tpl.image) {
+                var img = new Image();
+                img.onload = function () {
+                    state.image = img;
+                    state.imageDataURL = tpl.image;
+                    showCanvas();
+                    render();
+                    renderRegionList();
+                    updateStatus();
+                };
+                img.src = tpl.image;
+            } else {
+                state.image = null;
+                state.imageDataURL = null;
+                hideCanvas();
+                renderRegionList();
+                updateStatus();
+            }
+        }
+
+        // ============================================================
+        // Canvas show/hide
+        // ============================================================
+        function showCanvas() {
+            canvasWrap.classList.remove('empty');
+            canvas.style.display = 'block';
+            var children = canvasWrap.querySelectorAll('.drop-icon, span:not(canvas)');
+            children.forEach(function (el) { el.style.display = 'none'; });
+            fitCanvas();
+        }
+
+        function hideCanvas() {
+            canvasWrap.classList.add('empty');
+            canvas.style.display = 'none';
+            var children = canvasWrap.querySelectorAll('.drop-icon, span:not(canvas)');
+            children.forEach(function (el) { el.style.display = ''; });
+        }
+
+        function fitCanvas() {
+            if (!state.image) return;
+            var maxW = canvasWrap.clientWidth - 32;
+            var maxH = 600;
+            var scale = Math.min(maxW / state.image.width, maxH / state.image.height, 1);
+            canvas.width  = Math.round(state.image.width * scale);
+            canvas.height = Math.round(state.image.height * scale);
+        }
+
+        // ============================================================
+        // Render canvas
+        // ============================================================
+        function render(tempRect) {
+            if (!state.image) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(state.image, 0, 0, canvas.width, canvas.height);
+
+            // Draw saved regions
+            state.regions.forEach(function (r) {
+                drawRegion(r);
+            });
+
+            // Draw in-progress rectangle
+            if (tempRect) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 3]);
+                ctx.strokeRect(tempRect.x, tempRect.y, tempRect.w, tempRect.h);
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawRegion(r) {
+            var px = r.x * canvas.width;
+            var py = r.y * canvas.height;
+            var pw = r.w * canvas.width;
+            var ph = r.h * canvas.height;
+            var color = REGION_COLORS[r.label] || '#fff';
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px, py, pw, ph);
+
+            // Semi-transparent fill
+            ctx.fillStyle = color.replace(')', ', 0.08)').replace('rgb', 'rgba');
+            // For hex colors, convert
+            var rgba = hexToRgba(color, 0.1);
+            ctx.fillStyle = rgba;
+            ctx.fillRect(px, py, pw, ph);
+
+            // Label
+            ctx.fillStyle = color;
+            ctx.font = 'bold 12px sans-serif';
+            var labelText = r.label.toUpperCase();
+            var textW = ctx.measureText(labelText).width;
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(px, py - 18, textW + 8, 18);
+            ctx.fillStyle = color;
+            ctx.fillText(labelText, px + 4, py - 5);
+        }
+
+        function hexToRgba(hex, alpha) {
+            hex = hex.replace('#', '');
+            var r = parseInt(hex.substring(0, 2), 16);
+            var g = parseInt(hex.substring(2, 4), 16);
+            var b = parseInt(hex.substring(4, 6), 16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+        }
+
+        // ============================================================
+        // Mouse/touch drawing
+        // ============================================================
+        function getCanvasPos(e) {
+            var rect = canvas.getBoundingClientRect();
+            var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        canvas.addEventListener('mousedown', onDrawStart);
+        canvas.addEventListener('mousemove', onDrawMove);
+        canvas.addEventListener('mouseup',   onDrawEnd);
+        canvas.addEventListener('touchstart', function (e) { e.preventDefault(); onDrawStart(e); });
+        canvas.addEventListener('touchmove',  function (e) { e.preventDefault(); onDrawMove(e); });
+        canvas.addEventListener('touchend',   function (e) { e.preventDefault(); onDrawEnd(e); });
+
+        function onDrawStart(e) {
+            if (!state.image) return;
+            var pos = getCanvasPos(e);
+            state.drawing = true;
+            state.startX = pos.x;
+            state.startY = pos.y;
+        }
+
+        function onDrawMove(e) {
+            if (!state.drawing) return;
+            var pos = getCanvasPos(e);
+            var x = Math.min(state.startX, pos.x);
+            var y = Math.min(state.startY, pos.y);
+            var w = Math.abs(pos.x - state.startX);
+            var h = Math.abs(pos.y - state.startY);
+            render({ x: x, y: y, w: w, h: h });
+        }
+
+        function onDrawEnd(e) {
+            if (!state.drawing) return;
+            state.drawing = false;
+
+            var pos;
+            if (e.changedTouches) {
+                pos = { x: e.changedTouches[0].clientX - canvas.getBoundingClientRect().left,
+                        y: e.changedTouches[0].clientY - canvas.getBoundingClientRect().top };
+            } else {
+                pos = getCanvasPos(e);
+            }
+
+            var x = Math.min(state.startX, pos.x);
+            var y = Math.min(state.startY, pos.y);
+            var w = Math.abs(pos.x - state.startX);
+            var h = Math.abs(pos.y - state.startY);
+
+            // Ignore tiny accidental clicks
+            if (w < 10 || h < 10) {
+                render();
+                return;
+            }
+
+            // Normalize to 0-1
+            var region = {
+                x: x / canvas.width,
+                y: y / canvas.height,
+                w: w / canvas.width,
+                h: h / canvas.height,
+                label: pickNextLabel()
+            };
+
+            state.regions.push(region);
+            state.dirty = true;
+            render();
+            renderRegionList();
+            updateStatus();
+        }
+
+        function pickNextLabel() {
+            var used = {};
+            state.regions.forEach(function (r) { used[r.label] = true; });
+            for (var i = 0; i < LABEL_OPTIONS.length; i++) {
+                if (!used[LABEL_OPTIONS[i]]) return LABEL_OPTIONS[i];
+            }
+            return LABEL_OPTIONS[0];
+        }
+
+        // ============================================================
+        // Region list sidebar
+        // ============================================================
+        function renderRegionList() {
+            regionList.innerHTML = '';
+
+            if (state.regions.length === 0) {
+                var empty = document.createElement('div');
+                empty.className = 'no-regions';
+                empty.textContent = 'Draw rectangles on the badge to define regions';
+                regionList.appendChild(empty);
+                return;
+            }
+
+            state.regions.forEach(function (r, idx) {
+                var card = document.createElement('div');
+                card.className = 'region-card';
+
+                var dot = document.createElement('span');
+                dot.className = 'color-dot';
+                dot.style.background = REGION_COLORS[r.label] || '#fff';
+
+                var sel = document.createElement('select');
+                LABEL_OPTIONS.forEach(function (opt) {
+                    var o = document.createElement('option');
+                    o.value = opt;
+                    o.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+                    if (opt === r.label) o.selected = true;
+                    sel.appendChild(o);
+                });
+
+                sel.addEventListener('change', function () {
+                    state.regions[idx].label = this.value;
+                    dot.style.background = REGION_COLORS[this.value] || '#fff';
+                    state.dirty = true;
+                    render();
+                    updateStatus();
+                });
+
+                var btnRm = document.createElement('button');
+                btnRm.className = 'btn-remove';
+                btnRm.textContent = 'x';
+                btnRm.title = 'Remove region';
+                btnRm.addEventListener('click', function () {
+                    state.regions.splice(idx, 1);
+                    state.dirty = true;
+                    render();
+                    renderRegionList();
+                    updateStatus();
+                });
+
+                card.appendChild(dot);
+                card.appendChild(sel);
+                card.appendChild(btnRm);
+                regionList.appendChild(card);
+            });
+        }
+
+        // ============================================================
+        // Image upload
+        // ============================================================
+        btnUpload.addEventListener('click', function () { fileInput.click(); });
+
+        canvasWrap.addEventListener('click', function (e) {
+            if (canvasWrap.classList.contains('empty') && e.target !== canvas) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            loadImageFile(file);
+        });
+
+        // Drag and drop
+        canvasWrap.addEventListener('dragover', function (e) { e.preventDefault(); });
+        canvasWrap.addEventListener('drop', function (e) {
+            e.preventDefault();
+            var file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                loadImageFile(file);
+            }
+        });
+
+        function loadImageFile(file) {
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var img = new Image();
+                img.onload = function () {
+                    state.image = img;
+                    state.imageDataURL = ev.target.result;
+                    state.dirty = true;
+                    showCanvas();
+                    render();
+                    updateStatus();
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ============================================================
+        // Save template
+        // ============================================================
+        btnSave.addEventListener('click', function () {
+            var name = tplName.value.trim();
+            if (!name) {
+                toast('Enter a template name first', true);
+                tplName.focus();
+                return;
+            }
+
+            var templates = loadTemplates();
+            templates[name] = {
+                name: name,
+                image: state.imageDataURL || null,
+                regions: state.regions.map(function (r) {
+                    return { x: r.x, y: r.y, w: r.w, h: r.h, label: r.label };
+                }),
+                updatedAt: new Date().toISOString()
+            };
+
+            saveTemplates(templates);
+            state.currentTemplate = name;
+            state.dirty = false;
+            refreshDropdown(name);
+            updateStatus();
+            toast('Template "' + name + '" saved');
+        });
+
+        // ============================================================
+        // Delete template
+        // ============================================================
+        btnDelete.addEventListener('click', function () {
+            var name = tplSelect.value;
+            if (!name) return;
+
+            if (!confirm('Delete template "' + name + '"?')) return;
+
+            var templates = loadTemplates();
+            delete templates[name];
+            saveTemplates(templates);
+
+            state.currentTemplate = '';
+            state.regions = [];
+            state.image = null;
+            state.imageDataURL = null;
+            state.dirty = false;
+            tplName.value = '';
+
+            hideCanvas();
+            refreshDropdown();
+            renderRegionList();
+            updateStatus();
+            toast('Template deleted');
+        });
+
+        // ============================================================
+        // Template selector
+        // ============================================================
+        tplSelect.addEventListener('change', function () {
+            var name = this.value;
+            if (!name) {
+                // New template
+                state.currentTemplate = '';
+                state.regions = [];
+                state.image = null;
+                state.imageDataURL = null;
+                state.dirty = false;
+                tplName.value = '';
+                hideCanvas();
+                renderRegionList();
+                updateStatus();
+                return;
+            }
+            loadTemplate(name);
+        });
+
+        // ============================================================
+        // Status bar
+        // ============================================================
+        function updateStatus() {
+            var parts = [];
+            if (state.currentTemplate) {
+                parts.push('Template: ' + state.currentTemplate);
+            } else {
+                parts.push('New template');
+            }
+            parts.push(state.regions.length + ' region(s)');
+            if (state.dirty) parts.push('(unsaved)');
+
+            statusText.textContent = parts.join('  |  ');
+            statusDot.className = 'dot' + (state.dirty ? '' : ' saved');
+        }
+
+        // ============================================================
+        // Toast notification
+        // ============================================================
+        function toast(msg, isError) {
+            toastEl.textContent = msg;
+            toastEl.style.borderColor = isError ? '#ef5350' : 'var(--success)';
+            toastEl.style.color = isError ? '#ef5350' : 'var(--success)';
+            toastEl.classList.add('show');
+            clearTimeout(toastEl._timer);
+            toastEl._timer = setTimeout(function () {
+                toastEl.classList.remove('show');
+            }, 2500);
+        }
+
+        // ============================================================
+        // Window resize
+        // ============================================================
+        window.addEventListener('resize', function () {
+            if (state.image) {
+                fitCanvas();
+                render();
+            }
+        });
+
+        // ============================================================
+        // Public API for OCR integration
+        // ============================================================
+        window.BadgeTemplates = {
+            /** Get all saved templates */
+            getAll: function () {
+                return loadTemplates();
+            },
+            /** Get a specific template by name */
+            get: function (name) {
+                return loadTemplates()[name] || null;
+            },
+            /** Get region coords for a template, scaled to given image dimensions */
+            getRegions: function (templateName, imgWidth, imgHeight) {
+                var tpl = loadTemplates()[templateName];
+                if (!tpl) return null;
+                return tpl.regions.map(function (r) {
+                    return {
+                        label: r.label,
+                        x: Math.round(r.x * imgWidth),
+                        y: Math.round(r.y * imgHeight),
+                        w: Math.round(r.w * imgWidth),
+                        h: Math.round(r.h * imgHeight)
+                    };
+                });
+            }
+        };
+
+        // ============================================================
+        // Init
+        // ============================================================
+        refreshDropdown();
+        updateStatus();
+
+    })();
+    </script>
+</body>
+</html>
