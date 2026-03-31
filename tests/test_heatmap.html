@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Heatmap Unit Tests</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+        #results div { margin: 4px 0; }
+        #canvas-test { position: absolute; left: -9999px; }
+    </style>
+</head>
+<body>
+<h2>BoothHeatmap Tests</h2>
+<div id="results"></div>
+<div id="canvas-test"></div>
+
+<script src="../presenter/components/heatmap.js"></script>
+<script>
+(function () {
+    var results = document.getElementById('results');
+    var passed = 0, failed = 0;
+
+    function assert(name, condition) {
+        var div = document.createElement('div');
+        if (condition) {
+            div.className = 'pass';
+            div.textContent = '[PASS] ' + name;
+            passed++;
+        } else {
+            div.className = 'fail';
+            div.textContent = '[FAIL] ' + name;
+            failed++;
+        }
+        results.appendChild(div);
+    }
+
+    // Test 1: Constructor
+    var container = document.getElementById('canvas-test');
+    var hm = new BoothHeatmap(container, { width: 400, height: 300 });
+    assert('Constructor creates instance', hm instanceof BoothHeatmap);
+    assert('Container has canvases', container.querySelectorAll('canvas').length === 2);
+    assert('Legend element exists', container.querySelector('.heatmap-legend') !== null);
+
+    // Test 2: Set clicks
+    var clicks = [
+        { x: 100, y: 100, timestamp: 1000, element: 'button', url: 'http://a.com' },
+        { x: 150, y: 120, timestamp: 2000, element: 'link', url: 'http://b.com' },
+        { x: 100, y: 105, timestamp: 3000, element: 'button', url: 'http://a.com' }
+    ];
+    hm.setClicks(clicks);
+    assert('setClicks stores data', hm._clicks.length === 3);
+
+    // Test 3: Render without error
+    var renderOK = true;
+    try { hm.render(); } catch (e) { renderOK = false; }
+    assert('render() completes without error', renderOK);
+
+    // Test 4: Toggle
+    assert('Starts visible', hm.isVisible() === true);
+    hm.toggle();
+    assert('Toggle hides', hm.isVisible() === false);
+    hm.toggle();
+    assert('Toggle shows', hm.isVisible() === true);
+    hm.toggle(false);
+    assert('Force hide', hm.isVisible() === false);
+    hm.toggle(true);
+    assert('Force show', hm.isVisible() === true);
+
+    // Test 5: Aggregate mode
+    hm.addSession([{ x: 50, y: 50, timestamp: 100 }]);
+    hm.addSession([{ x: 200, y: 200, timestamp: 200 }]);
+    hm.setMode('aggregate');
+    assert('Mode set to aggregate', hm._mode === 'aggregate');
+    var aggClicks = hm._aggregateClicks();
+    assert('Aggregate combines sessions', aggClicks.length === 2);
+
+    hm.setMode('single');
+    assert('Mode set back to single', hm._mode === 'single');
+
+    // Test 6: Render aggregate without error
+    hm.setMode('aggregate');
+    var aggRenderOK = true;
+    try { hm.render(); } catch (e) { aggRenderOK = false; }
+    assert('Aggregate render() completes', aggRenderOK);
+
+    // Test 7: Resize
+    hm.resize(800, 600);
+    assert('Resize updates width', hm.width === 800);
+    assert('Resize updates height', hm.height === 600);
+
+    // Test 8: Density computation
+    hm.setClicks([
+        { x: 10, y: 10, timestamp: 1 },
+        { x: 11, y: 11, timestamp: 2 },
+        { x: 11, y: 12, timestamp: 3 },
+        { x: 500, y: 500, timestamp: 4 }
+    ]);
+    var maxD = hm._computeMaxDensity(hm._clicks);
+    assert('Max density >= 1', maxD >= 1);
+    assert('Max density reflects clustering', maxD >= 3); // 3 clicks near (10,10)
+
+    // Test 9: Clear sessions
+    hm.clearSessions();
+    assert('clearSessions empties array', hm._allSessions.length === 0);
+
+    // Test 10: Legend renders
+    hm.render();
+    var legend = container.querySelector('.heatmap-legend');
+    assert('Legend shows click count', legend.innerHTML.indexOf('Total clicks') !== -1);
+
+    // Summary
+    var summary = document.createElement('div');
+    summary.style.marginTop = '16px';
+    summary.style.fontWeight = 'bold';
+    summary.textContent = passed + ' passed, ' + failed + ' failed';
+    summary.style.color = failed === 0 ? '#0f0' : '#f00';
+    results.appendChild(summary);
+})();
+</script>
+</body>
+</html>
