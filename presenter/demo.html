@@ -518,7 +518,7 @@
     </header>
 
     <!-- ============ STATUS CARDS ============ -->
-    <div class="cards">
+    <div class="cards" id="cardsSection" data-skeleton="true" data-skeleton-type="cards">
         <div class="card card--sessions">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="#D71920"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
@@ -554,14 +554,14 @@
                 </div>
                 <div class="feed-refresh" id="refreshTimer">Refreshing in 5s</div>
             </div>
-            <ul class="feed-list" id="feedList"></ul>
+            <ul class="feed-list" id="feedList" data-skeleton="true" data-skeleton-type="feed"></ul>
         </section>
 
         <!-- Side Panel -->
         <div class="side-panel">
 
             <!-- Conversion Ring Chart -->
-            <div class="panel-box">
+            <div class="panel-box" id="chartSection" data-skeleton="true" data-skeleton-type="chart">
                 <div class="panel-box-title">
                     <svg viewBox="0 0 24 24" fill="var(--text-dim)"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2 0v9h9c-.47-4.68-4.32-8.53-9-9zm0 11v9c4.68-.47 8.53-4.32 9-9h-9z"/></svg>
                     Pipeline
@@ -606,7 +606,7 @@
                     <svg viewBox="0 0 24 24" fill="var(--text-dim)"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
                     Top Products
                 </div>
-                <div class="product-list" id="productList"></div>
+                <div class="product-list" id="productList" data-skeleton="true" data-skeleton-type="products"></div>
             </div>
 
         </div>
@@ -621,6 +621,7 @@
 
 </div>
 
+<script src="components/skeleton.js"></script>
 <script>
 (function () {
     'use strict';
@@ -881,17 +882,44 @@
     }
 
     // ------------------------------------------------------------------
+    // SKELETON LOADERS
+    // ------------------------------------------------------------------
+    var skeletons = {
+        cards:    new SkeletonLoader('#cardsSection',   { type: 'cards', onRetry: function () { fetchData(); } }),
+        feed:     new SkeletonLoader('#feedList',       { type: 'feed',  onRetry: function () { fetchData(); } }),
+        chart:    new SkeletonLoader('#chartSection',   { type: 'chart', onRetry: function () { fetchData(); } }),
+        products: new SkeletonLoader('#productList',    { type: 'products', onRetry: function () { fetchData(); } })
+    };
+
+    function showAllSkeletons() {
+        Object.keys(skeletons).forEach(function (k) { skeletons[k].show(); });
+    }
+
+    function hideAllSkeletons() {
+        Object.keys(skeletons).forEach(function (k) { skeletons[k].hide(); });
+    }
+
+    function showAllErrors(msg) {
+        Object.keys(skeletons).forEach(function (k) { skeletons[k].showError(msg); });
+    }
+
+    // ------------------------------------------------------------------
     // DATA FETCH (with mock fallback)
     // ------------------------------------------------------------------
     function fetchData() {
         if (!API_URL) {
             generateMockState();
             renderAll();
+            hideAllSkeletons();
             return;
         }
 
+        showAllSkeletons();
         fetch(API_URL + '/status')
-            .then(function (r) { return r.json(); })
+            .then(function (r) {
+                if (!r.ok) throw new Error('Server returned ' + r.status);
+                return r.json();
+            })
             .then(function (data) {
                 if (data.activeSessions  !== undefined) state.activeSessions  = data.activeSessions;
                 if (data.totalDemos      !== undefined) state.totalDemos      = data.totalDemos;
@@ -902,10 +930,10 @@
                     });
                 }
                 renderAll();
+                hideAllSkeletons();
             })
-            .catch(function () {
-                generateMockState();
-                renderAll();
+            .catch(function (err) {
+                showAllErrors(err.message || 'Failed to load data');
             });
     }
 
@@ -924,24 +952,31 @@
     // ------------------------------------------------------------------
     // BOOT
     // ------------------------------------------------------------------
-    for (var i = 0; i < 8; i++) {
-        var ev = generateMockEvent();
-        ev.ts = Date.now() - (i * 15000);
-        state.events.push(ev);
-    }
-    state.activeSessions   = 3;
-    state.totalDemos       = 14;
-    state.reportsGenerated = 9;
-
-    // Seed product counts
-    PRODUCTS.forEach(function (p, i) {
-        state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
-    });
-
-    renderAll();
+    // Show skeleton placeholders immediately
+    showAllSkeletons();
     renderClock();
     setInterval(renderClock, 1000);
-    setInterval(tickCountdown, 1000);
+
+    // Simulate initial data load (skeleton visible for 1.2s on first load)
+    setTimeout(function () {
+        for (var i = 0; i < 8; i++) {
+            var ev = generateMockEvent();
+            ev.ts = Date.now() - (i * 15000);
+            state.events.push(ev);
+        }
+        state.activeSessions   = 3;
+        state.totalDemos       = 14;
+        state.reportsGenerated = 9;
+
+        // Seed product counts
+        PRODUCTS.forEach(function (p, i) {
+            state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
+        });
+
+        renderAll();
+        hideAllSkeletons();
+        setInterval(tickCountdown, 1000);
+    }, 1200);
 
 })();
 </script>
