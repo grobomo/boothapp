@@ -24,5 +24,8 @@ android/local.properties
 fleet-hierarchy.json
 test-fleet-hierarchy.json
 
+# Packager local session output
+packager/sessions/
+
 # Generated reports
 presenter/batch-report.html
