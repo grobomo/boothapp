@@ -455,6 +455,34 @@
       font-weight: 600;
     }
 
+    /* ── Queue Warning ── */
+
+    .queue-warning {
+      padding: 6px 20px;
+      background: #1c1a0e;
+      border-top: 1px solid #3d3a1a;
+      border-bottom: 1px solid #3d3a1a;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #eab308;
+    }
+
+    .queue-warning.visible {
+      display: flex;
+    }
+
+    .queue-warning-icon {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+    }
+
+    .queue-warning-text {
+      flex: 1;
+    }
+
     /* ── Complete check icon ── */
     .check-icon {
       display: none;
@@ -509,6 +537,16 @@
   <div class="s3-status-bar">
     <div class="s3-dot disconnected" id="s3Dot"></div>
     <span class="s3-status-text disconnected" id="s3StatusText">S3 Not Configured</span>
+  </div>
+
+  <!-- Queue Warning (shown when uploads are queued) -->
+  <div class="queue-warning" id="queueWarning">
+    <svg class="queue-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="queue-warning-text" id="queueWarningText">1 upload queued for retry</span>
   </div>
 
   <!-- Demo Buttons (hidden until S3 configured) -->
