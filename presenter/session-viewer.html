@@ -38,6 +38,9 @@
     color: var(--text);
     line-height: 1.6;
     min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(88, 166, 255, 0.04), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(188, 140, 255, 0.03), transparent);
   }
 
   /* ── Loading / Error ─────────────────────────────────── */
@@ -153,9 +156,11 @@
                 border-color 0.25s ease;
   }
   .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(88, 166, 255, 0.1);
-    border-color: #3d444d;
+    transform: translateY(-3px) scale(1.003);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(88, 166, 255, 0.15),
+                0 0 40px -10px rgba(88, 166, 255, 0.08);
+    border-color: rgba(88, 166, 255, 0.2);
   }
   .card.animate-in {
     animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
@@ -268,8 +273,10 @@
 
   /* ── Top bar ───────────────────────────────────────────── */
   .topbar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: rgba(22, 27, 34, 0.85);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border-bottom: 1px solid rgba(48, 54, 61, 0.6);
     padding: 12px 24px;
     display: flex;
     align-items: center;
@@ -278,6 +285,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
+    box-shadow: 0 1px 12px rgba(0, 0, 0, 0.2);
   }
   .topbar-left {
     display: flex;
@@ -953,6 +961,128 @@
   #app.demo-transition {
     transition: opacity 0.6s ease;
   }
+
+  /* ── Skeleton-to-App Crossfade ────────────────────── */
+  #loading {
+    transition: opacity 0.4s ease, filter 0.4s ease;
+  }
+  #loading.fade-out {
+    opacity: 0;
+    filter: blur(4px);
+    pointer-events: none;
+  }
+  #app {
+    animation: appReveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes appReveal {
+    from { opacity: 0; transform: translateY(8px); filter: blur(2px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+
+  /* ── Interests Table Row Hover ────────────────────── */
+  .interests-tbl td {
+    transition: background 0.15s ease;
+  }
+  .interests-tbl tbody tr:hover td {
+    background: rgba(88, 166, 255, 0.04);
+  }
+
+  /* ── Actions List Item Hover ──────────────────────── */
+  .actions-list li {
+    transition: background 0.15s ease, padding-left 0.15s ease;
+    border-radius: 4px;
+    padding-left: 4px;
+    margin-left: -4px;
+  }
+  .actions-list li:hover {
+    background: rgba(88, 166, 255, 0.04);
+    padding-left: 8px;
+  }
+
+  /* ── Moment Item Hover ────────────────────────────── */
+  .moment-item {
+    transition: background 0.15s ease, padding-left 0.15s ease;
+    border-radius: 4px;
+    padding: 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+  .moment-item:hover {
+    background: rgba(210, 153, 34, 0.06);
+  }
+
+  /* ── Button Press Effect ──────────────────────────── */
+  .event-feed-toggle:active,
+  .feed-filter-btn:active,
+  .feed-close:active {
+    transform: scale(0.96);
+  }
+
+  /* ── Feed Item Slide-in ───────────────────────────── */
+  @keyframes feedSlideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .feed-item.feed-animate {
+    animation: feedSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  /* ── Session ID Glow ──────────────────────────────── */
+  .topbar-left .session-id {
+    text-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+  }
+
+  /* ── Card Header Separator Gradient ───────────────── */
+  .card-header {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  }
+
+  /* ── Visitor Avatar Ring Pulse ─────────────────────── */
+  @keyframes avatarPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(88, 166, 255, 0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(88, 166, 255, 0); }
+  }
+  .visitor-avatar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .visitor-avatar:hover {
+    transform: scale(1.08);
+    animation: avatarPulse 1.5s ease-in-out;
+  }
+
+  /* ── Score Badge Shimmer ──────────────────────────── */
+  .score-badge .score-value {
+    position: relative;
+  }
+  .score-badge:hover .score-value {
+    text-shadow: 0 0 16px currentColor;
+  }
+
+  /* ── Chip Bounce on Hover ─────────────────────────── */
+  .chip {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+  }
+  .chip:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  }
+
+  /* ── Feed Panel Slide with Shadow ─────────────────── */
+  .event-feed {
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  }
+  .event-feed.open {
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.4);
+  }
+
+  /* ── Feed Count Badge Bounce ──────────────────────── */
+  .feed-count {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .feed-count.bump {
+    transform: scale(1.3);
+  }
 </style>
 </head>
 <body>
@@ -1197,9 +1327,18 @@ if (!BoothAuth.requireAwsCreds()) {
   }
 
   function show(screen) {
-    loadingEl.style.display = screen === "loading" ? "block" : "none";
-    errorEl.style.display   = screen === "error"   ? "flex" : "none";
-    appEl.style.display     = screen === "app"     ? "block" : "none";
+    if (screen === "app" && loadingEl.style.display !== "none") {
+      // Crossfade: skeleton fades out, then app fades in
+      loadingEl.classList.add("fade-out");
+      setTimeout(function () {
+        loadingEl.style.display = "none";
+        appEl.style.display = "block";
+      }, 400);
+    } else {
+      loadingEl.style.display = screen === "loading" ? "block" : "none";
+      appEl.style.display     = screen === "app"     ? "block" : "none";
+    }
+    errorEl.style.display = screen === "error" ? "flex" : "none";
   }
 
   function showError(msg) {
@@ -2292,6 +2431,12 @@ if (!BoothAuth.requireAwsCreds()) {
         html = '<div style="padding:24px 16px;color:var(--text3);text-align:center;font-size:13px">No events match filter</div>';
       }
       feedScroll.innerHTML = html;
+      // Stagger feed item entrance
+      var feedItems = feedScroll.querySelectorAll(".feed-item");
+      for (var fi = 0; fi < feedItems.length; fi++) {
+        feedItems[fi].style.animationDelay = (fi * 0.03) + "s";
+        feedItems[fi].classList.add("feed-animate");
+      }
       // Auto-scroll to bottom
       feedScroll.scrollTop = feedScroll.scrollHeight;
     }
@@ -2303,6 +2448,9 @@ if (!BoothAuth.requireAwsCreds()) {
       var isOpen = feedPanel.classList.toggle("open");
       feedToggle.classList.toggle("active", isOpen);
       document.body.classList.toggle("feed-open", isOpen);
+      // Bump the count badge
+      feedCountEl.classList.add("bump");
+      setTimeout(function () { feedCountEl.classList.remove("bump"); }, 300);
     });
 
     feedClose.addEventListener("click", function () {
