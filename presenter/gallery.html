@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="components/error-boundary.js"></script>
-<script src="components/nav.js"></script>
-<title>BoothApp -- Screenshot Gallery</title>
-<link rel="stylesheet" href="styles/mobile.css">
+<title>BoothApp -- Demo Results Gallery</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --bg: #0d1117;
     --surface: #161b22;
+    --surface-hover: #1c2333;
     --border: #30363d;
     --text: #e6edf3;
     --text-muted: #8b949e;
+    --text-dim: #484f58;
     --accent: #58a6ff;
-    --red: #f85149;
     --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
   }
 
   body {
@@ -26,58 +26,106 @@
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    padding: 0;
   }
 
-  .header {
+  /* -- Header -- */
+  .page-header {
+    padding: 1.2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.8rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
+
+  .page-header h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
   .header-left {
     display: flex;
     align-items: center;
     gap: 1rem;
   }
+
   .header-left a {
     color: var(--text-muted);
     text-decoration: none;
     font-size: 0.85rem;
   }
   .header-left a:hover { color: var(--accent); }
-  .header h1 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--accent);
-  }
-  .session-label {
-    font-family: monospace;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    background: var(--bg);
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    border: 1px solid var(--border);
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.82rem;
+    color: var(--text-dim);
   }
 
+  .refresh-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .session-count-badge {
+    color: var(--text-muted);
+  }
+
+  .auto-refresh-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--green);
+    font-size: 0.8rem;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* -- Setup screen -- */
   .setup {
-    max-width: 400px;
+    max-width: 440px;
     margin: 8rem auto;
     text-align: center;
+    padding: 0 1rem;
   }
+
   .setup h2 {
     font-size: 1.3rem;
     color: var(--text-muted);
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
   }
+
+  .setup p {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+  }
+
   .setup input {
     width: 100%;
-    font-size: 1rem;
+    font-size: 0.95rem;
     padding: 0.6rem 0.9rem;
     border-radius: 8px;
     border: 1px solid var(--border);
@@ -86,7 +134,8 @@
     font-family: monospace;
     margin-bottom: 0.8rem;
   }
-  .setup input:focus { outline: 2px solid var(--accent); }
+  .setup input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+
   .setup button {
     font-size: 1rem;
     padding: 0.6rem 2rem;
@@ -99,56 +148,205 @@
   }
   .setup button:hover { background: #2ea043; }
 
-  #gallery-container { flex: 1; }
+  .setup .hint {
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+
+  /* -- Gallery grid -- */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .gallery-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .gallery-card:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
+  }
+
+  .card-id {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    background: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .card-date {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .card-metrics {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: var(--accent);
+  }
+
+  .metric-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    margin-top: 0.15rem;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-status {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--green);
+    background: rgba(63, 185, 80, 0.15);
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+  }
+
+  .card-arrow {
+    color: var(--text-dim);
+    font-size: 1.1rem;
+  }
+  .gallery-card:hover .card-arrow { color: var(--accent); }
+
+  /* -- Empty state -- */
+  .gallery-empty {
+    text-align: center;
+    padding: 6rem 2rem;
+  }
+
+  .empty-icon {
+    font-family: monospace;
+    font-size: 2.5rem;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+
+  .empty-text {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-hint {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
 
   .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="header">
+<div class="page-header">
   <div class="header-left">
     <a href="sessions.html">&larr; Sessions</a>
-    <h1>Screenshot Gallery</h1>
-    <span class="session-label hidden" id="sid-label"></span>
+    <h1>Demo Results Gallery</h1>
+    <span class="session-count-badge" id="session-count"></span>
+  </div>
+  <div class="header-right">
+    <div class="auto-refresh-indicator">
+      <span class="pulse-dot"></span>
+      <span>Auto-refresh 30s</span>
+    </div>
+    <span class="refresh-badge" id="last-update">--:--:--</span>
   </div>
 </div>
 
 <div id="setup" class="setup">
-  <h2>Screenshot Gallery</h2>
-  <input id="session-input" type="text" placeholder="Enter session ID (e.g. A726594)">
-  <button id="load-btn">Load Screenshots</button>
+  <h2>Demo Results Gallery</h2>
+  <p>View completed demo session results from S3</p>
+  <input id="manifest-input" type="text" placeholder="S3 sessions.json URL">
+  <button id="load-btn">Load Sessions</button>
+  <div class="hint">Enter the public URL to your sessions.json manifest file</div>
 </div>
 
-<div id="gallery-container"></div>
+<div id="gallery-grid"></div>
 
-<script src="components/gallery.js"></script>
+<script src="lib/gallery.js"></script>
 <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
-  var sid = params.get('session');
+  var manifestUrl = params.get('manifest') || params.get('url') || '';
+  var baseUrl = params.get('base') || '';
 
-  if (sid) {
-    loadGallery(sid);
+  if (manifestUrl) {
+    startGallery(manifestUrl, baseUrl);
   }
 
   document.getElementById('load-btn').addEventListener('click', function () {
-    var val = document.getElementById('session-input').value.trim();
-    if (val) loadGallery(val);
+    var val = document.getElementById('manifest-input').value.trim();
+    if (val) startGallery(val, '');
   });
 
-  document.getElementById('session-input').addEventListener('keydown', function (e) {
+  document.getElementById('manifest-input').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       var val = this.value.trim();
-      if (val) loadGallery(val);
+      if (val) startGallery(val, '');
     }
   });
 
-  function loadGallery(sid) {
+  function startGallery(url, base) {
     document.getElementById('setup').classList.add('hidden');
-    document.getElementById('sid-label').textContent = sid;
-    document.getElementById('sid-label').classList.remove('hidden');
-    BoothGallery.init('gallery-container', sid);
+    ResultsGallery.init({
+      manifestUrl: url,
+      baseUrl: base,
+      containerId: 'gallery-grid',
+      countId: 'session-count',
+      lastUpdateId: 'last-update'
+    });
   }
 })();
 </script>
