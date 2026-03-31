@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="components/error-boundary.js"></script>
 <script src="components/nav.js"></script>
+<script src="components/accessibility.js"></script>
 <script src="components/annotator-overlay.js"></script>
 <title>BoothApp — Session Viewer</title>
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
 <script src="auth.js"></script>
 <link rel="stylesheet" href="styles/mobile.css">
+<link rel="stylesheet" href="styles/accessibility.css">
 <link rel="stylesheet" href="styles/quality-badges.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,7 +23,7 @@
     --border: #30363d;
     --text: #e6edf3;
     --text2: #8b949e;
-    --text3: #484f58;
+    --text3: #7d8590;
     --accent: #58a6ff;
     --accent-dim: #1f6feb;
     --green: #3fb950;
@@ -317,6 +319,55 @@
     text-decoration: none;
   }
   .topbar-right a:hover { color: var(--accent); }
+
+  /* ── Export Dropdown ─────────────────────────────────────── */
+  .export-dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  .export-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .export-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .export-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 150;
+    min-width: 180px;
+    padding: 4px;
+  }
+  .export-menu.open { display: block; }
+  .export-menu-item {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    font-family: inherit;
+  }
+  .export-menu-item:hover {
+    background: var(--surface2);
+    color: var(--accent);
+  }
 
   /* ── Layout ────────────────────────────────────────────── */
   .layout {
@@ -1404,6 +1455,14 @@ if (!BoothAuth.requireAwsCreds()) {
       <a href="#" id="link-compare">Compare</a>
       <a href="#" id="link-prep">Meeting Prep</a>
       <a href="#" id="link-print" style="cursor:pointer">Print Report</a>
+      <div class="export-dropdown" id="export-dropdown">
+        <button class="export-toggle" id="export-toggle">[v] Export</button>
+        <div class="export-menu" id="export-menu">
+          <button class="export-menu-item" data-format="html">[&lt;/&gt;] HTML (Offline)</button>
+          <button class="export-menu-item" data-format="pdf">[P] PDF (Print)</button>
+          <button class="export-menu-item" data-format="csv">[,] CSV (Data)</button>
+        </div>
+      </div>
       <button class="event-feed-toggle" id="feed-toggle">[&gt;] Feed <span class="feed-count" id="feed-count">0</span></button>
       <span class="shortcut-hint" style="color:var(--text3);font-size:0.75rem;cursor:pointer" onclick="window.BoothShortcuts&&window.BoothShortcuts.toggle()" title="Keyboard shortcuts"><kbd style="padding:1px 5px;border:1px solid var(--border);border-radius:3px;font-size:0.7rem">?</kbd> shortcuts</span>
       <span id="auth-user" style="font-family:monospace"></span>
@@ -3131,6 +3190,33 @@ if (!BoothAuth.requireAwsCreds()) {
     }
   }
 
+})();
+</script>
+<script src="lib/session-export.js"></script>
+<script>
+(function() {
+  var toggle = document.getElementById("export-toggle");
+  var menu = document.getElementById("export-menu");
+  if (!toggle || !menu) return;
+
+  toggle.addEventListener("click", function(e) {
+    e.stopPropagation();
+    menu.classList.toggle("open");
+  });
+
+  document.addEventListener("click", function() {
+    menu.classList.remove("open");
+  });
+
+  menu.addEventListener("click", function(e) {
+    var btn = e.target.closest("[data-format]");
+    if (!btn) return;
+    var fmt = btn.getAttribute("data-format");
+    menu.classList.remove("open");
+    if (fmt === "html") SessionExport.exportHTML();
+    else if (fmt === "pdf") SessionExport.exportPDF();
+    else if (fmt === "csv") SessionExport.exportCSV();
+  });
 })();
 </script>
 <script src="components/walkthrough.js"></script>
