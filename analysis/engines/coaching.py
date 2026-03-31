@@ -185,7 +185,11 @@ def _extract_questions_and_answers(transcript_text: str) -> list[dict]:
         if s.endswith("?"):
             answer_parts = []
             j = i + 1
-            while j < len(sentences) and not sentences[j].strip().endswith("?"):
+            # Cap at 3 sentences to avoid mixing in other speakers' content
+            max_answer_sentences = 3
+            while (j < len(sentences)
+                   and not sentences[j].strip().endswith("?")
+                   and len(answer_parts) < max_answer_sentences):
                 answer_parts.append(sentences[j].strip())
                 j += 1
             answer = " ".join(answer_parts)

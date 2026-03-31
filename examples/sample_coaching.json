@@ -1,0 +1,118 @@
+{
+  "questions_answered_well": [
+    {
+      "question": "Can you tell me about your XDR platform?",
+      "answer_excerpt": "Great question, let me show you how Vision One correlates alerts across endpoints, email, and network into a single incident view. For example, if a phishing email leads to a malware download on an en...",
+      "strength": "Demonstrated product knowledge with specific examples"
+    },
+    {
+      "question": "How does container protection work in your cloud security offering?",
+      "answer_excerpt": "Let me demonstrate our runtime protection for Kubernetes. Here is how we monitor container behavior in real time and detect anomalies. In your case with EKS, we would deploy as a DaemonSet.",
+      "strength": "Demonstrated product knowledge with specific examples"
+    },
+    {
+      "question": "Can we run a proof of concept by end of Q2?",
+      "answer_excerpt": "Absolutely. In your case we would start with XDR and cloud security since those are your top priorities. Let me demonstrate the POC process.",
+      "strength": "Demonstrated product knowledge with specific examples"
+    }
+  ],
+  "questions_to_improve": [
+    {
+      "question": "What about zero trust for our remote workforce?",
+      "answer_excerpt": "I am not sure about the exact ZTNA pricing model, I will have to check with our team on that. We are currently comparing you against Palo Alto and Zscaler for ZTNA. That is a good question, let me fin...",
+      "suggestion": "Consider preparing a more concrete answer with product-specific examples or a live demonstration."
+    }
+  ],
+  "missed_product_areas": [
+    {
+      "product": "Endpoint Security",
+      "category": "endpoint",
+      "evidence": [
+        "endpoint",
+        "malware"
+      ],
+      "suggestion": "Visitor interest in endpoint, malware suggests Endpoint Security would have been relevant to show."
+    },
+    {
+      "product": "Network Security",
+      "category": "network",
+      "evidence": [
+        "network",
+        "lateral movement"
+      ],
+      "suggestion": "Visitor interest in network, lateral movement suggests Network Security would have been relevant to show."
+    },
+    {
+      "product": "Managed XDR",
+      "category": "service",
+      "evidence": [
+        "managed"
+      ],
+      "suggestion": "Visitor interest in managed suggests Managed XDR would have been relevant to show."
+    }
+  ],
+  "missed_buying_signals": [
+    {
+      "signal": "Budget discussion",
+      "description": "Visitor mentioned budget or funding -- indicates active buying cycle",
+      "evidence": [
+        "fiscal",
+        "budget"
+      ],
+      "recommendation": "Follow up on the budget discussion signal detected in the conversation."
+    },
+    {
+      "signal": "Competitive evaluation",
+      "description": "Visitor is comparing vendors -- opportunity to differentiate",
+      "evidence": [
+        "competitive",
+        "comparing"
+      ],
+      "recommendation": "Follow up on the competitive evaluation signal detected in the conversation."
+    },
+    {
+      "signal": "POC readiness",
+      "description": "Visitor wants to test the product -- strong purchase intent",
+      "evidence": [
+        "poc",
+        "proof of concept"
+      ],
+      "recommendation": "Follow up on the poc readiness signal detected in the conversation."
+    },
+    {
+      "signal": "Decision-maker involvement",
+      "description": "Visitor referenced authority or decision chain",
+      "evidence": [
+        "ciso",
+        "approve"
+      ],
+      "recommendation": "Follow up on the decision-maker involvement signal detected in the conversation."
+    },
+    {
+      "signal": "Active pain",
+      "description": "Visitor described a current security problem -- urgency driver",
+      "evidence": [
+        "incident"
+      ],
+      "recommendation": "Follow up on the active pain signal detected in the conversation."
+    },
+    {
+      "signal": "Compliance driver",
+      "description": "Visitor has compliance requirements driving the purchase",
+      "evidence": [
+        "sox",
+        "audit",
+        "compliance"
+      ],
+      "recommendation": "Follow up on the compliance driver signal detected in the conversation."
+    }
+  ],
+  "summary": {
+    "total_questions_analyzed": 4,
+    "strong_answers": 3,
+    "weak_answers": 1,
+    "missed_product_count": 3,
+    "missed_signal_count": 6,
+    "overall_rating": "strong"
+  }
+}
