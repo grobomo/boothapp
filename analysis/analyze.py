@@ -6,6 +6,7 @@ import sys
 
 from engines.analyzer import SessionAnalyzer
 from engines.email_template import render_follow_up_email
+from engines.product_detector import detect_products
 
 
 def parse_args():
@@ -67,6 +68,10 @@ def write_output(output_dir: str, results: dict):
         output_dir: Local path or s3:// URI where output files are written.
         results: Dict with ``summary``, ``follow_up``, and optional ``html`` keys.
     """
+    json_files = [("summary.json", results["summary"]), ("follow-up.json", results["follow_up"])]
+    if results.get("products"):
+        json_files.append(("products.json", results["products"]))
+
     html_files = []
     if results.get("html"):
         html_files.append(("summary.html", results["html"]))
@@ -78,7 +83,7 @@ def write_output(output_dir: str, results: dict):
         prefix = output_dir.replace("s3://", "")
         bucket, _, key_prefix = prefix.partition("/")
         s3 = boto3.client("s3")
-        for filename, data in [("summary.json", results["summary"]), ("follow-up.json", results["follow_up"])]:
+        for filename, data in json_files:
             key = f"{key_prefix}/{filename}".lstrip("/")
             s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(data, indent=2), ContentType="application/json")
             print(f"  Wrote s3://{bucket}/{key}")
@@ -88,7 +93,7 @@ def write_output(output_dir: str, results: dict):
             print(f"  Wrote s3://{bucket}/{key}")
     else:
         os.makedirs(output_dir, exist_ok=True)
-        for filename, data in [("summary.json", results["summary"]), ("follow-up.json", results["follow_up"])]:
+        for filename, data in json_files:
             path = os.path.join(output_dir, filename)
             with open(path, "w") as f:
                 json.dump(data, f, indent=2)
@@ -146,6 +151,26 @@ def main():
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)
         return 1
+
+    # Run product detection from clicks data (no LLM needed)
+    try:
+        clicks_data = {}
+        if args.session_dir.startswith("s3://"):
+            import boto3
+            prefix = args.session_dir.replace("s3://", "")
+            bucket, _, key_prefix = prefix.partition("/")
+            s3 = boto3.client("s3")
+            resp = s3.get_object(Bucket=bucket, Key=f"{key_prefix}/clicks/clicks.json")
+            clicks_data = json.loads(resp["Body"].read())
+        else:
+            clicks_path = os.path.join(args.session_dir, "clicks", "clicks.json")
+            if os.path.exists(clicks_path):
+                with open(clicks_path) as f:
+                    clicks_data = json.load(f)
+        if clicks_data:
+            results["products"] = detect_products(clicks_data)
+    except Exception as e:
+        print(f"Warning: product detection failed: {e}", file=sys.stderr)
 
     # Generate follow-up email template from analysis results
     try:
