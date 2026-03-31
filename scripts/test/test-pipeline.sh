@@ -193,6 +193,28 @@ aws s3api get-object \
   "$SUMMARY_FILE" >/dev/null 2>&1 || die "Failed to download summary.json"
 SUMMARY=$(cat "$SUMMARY_FILE")
 
+# Check if this is a fallback (non-AI) summary
+IS_FALLBACK=$(echo "$SUMMARY" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print('yes' if d.get('fallback') else 'no')
+" 2>/dev/null || echo "unknown")
+
+if [ "$IS_FALLBACK" = "yes" ]; then
+  printf '\033[33m  WARN\033[0m summary.json is a fallback (AI analysis unavailable)\n'
+fi
+
+# Validate session_id matches what we uploaded
+SUMMARY_SID=$(echo "$SUMMARY" | python3 -c "
+import sys, json
+print(json.load(sys.stdin).get('session_id', ''))
+" 2>/dev/null || true)
+
+if [ "$SUMMARY_SID" != "$SESSION_ID" ]; then
+  die "session_id mismatch: expected '${SESSION_ID}', got '${SUMMARY_SID}'"
+fi
+green "session_id matches"
+
 # Validate visitor_name exists and is non-empty
 VISITOR_NAME=$(echo "$SUMMARY" | python3 -c "
 import sys, json
