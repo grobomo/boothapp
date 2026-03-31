@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Sessions</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-dark:  #A8131A;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--red), #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .header a:hover { color: var(--text); }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            flex: 1;
+        }
+
+        .status-bar .count { color: var(--text); font-weight: 600; }
+
+        .btn-compare {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.2rem;
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-compare:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-compare.visible { display: inline-flex; }
+        .btn-compare .badge-count {
+            background: rgba(255,255,255,0.25);
+            padding: 0.1rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        #error-msg {
+            display: none;
+            background: rgba(215, 25, 32, 0.15);
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #FF6B6B;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        thead th {
+            background: var(--surface2);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: var(--surface2); }
+
+        .session-id {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-complete { background: rgba(0,230,118,0.15); color: var(--success); }
+        .badge-active   { background: rgba(68,138,255,0.15); color: #448AFF; }
+        .badge-pending  { background: rgba(255,171,0,0.15);  color: var(--amber); }
+        .badge-unknown  { background: rgba(107,115,133,0.15); color: var(--text-dim); }
+
+        .analysis-yes { color: var(--success); }
+        .analysis-no  { color: var(--text-dim); }
+
+        .summary-link {
+            color: var(--red);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .summary-link:hover { text-decoration: underline; }
+
+        .loading, .empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-dim);
+        }
+
+        /* Checkbox styling */
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--red);
+            cursor: pointer;
+        }
+
+        .row-selected { background: rgba(215, 25, 32, 0.08); }
+        .row-selected:hover { background: rgba(215, 25, 32, 0.12); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Sessions</h1>
+        <a href="/demo.html">&larr; Back to Dashboard</a>
+    </div>
+
+    <div class="toolbar">
+        <div class="status-bar">
+            <span>Total: <span class="count" id="total-count">--</span></span>
+            <span>With Analysis: <span class="count" id="analysis-count">--</span></span>
+        </div>
+        <button class="btn-compare" id="btn-compare" onclick="openComparison()">
+            Compare <span class="badge-count" id="compare-count">0</span>
+        </button>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:40px;"></th>
+                <th>Session ID</th>
+                <th>Visitor</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Analysis</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody id="sessions-body">
+            <tr><td colspan="7" class="loading">Loading sessions...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        var selectedSessions = new Set();
+
+        function statusBadge(status) {
+            var cls = 'badge-unknown';
+            if (status === 'complete') cls = 'badge-complete';
+            else if (status === 'active') cls = 'badge-active';
+            else if (status === 'pending') cls = 'badge-pending';
+            return '<span class="badge ' + cls + '">' + escHtml(status) + '</span>';
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '--';
+            var d = new Date(iso);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        }
+
+        function toggleSession(sessionId) {
+            if (selectedSessions.has(sessionId)) {
+                selectedSessions.delete(sessionId);
+            } else {
+                selectedSessions.add(sessionId);
+            }
+            updateCompareButton();
+            updateRowHighlights();
+        }
+
+        function updateCompareButton() {
+            var btn = document.getElementById('btn-compare');
+            var countEl = document.getElementById('compare-count');
+            var n = selectedSessions.size;
+            countEl.textContent = n;
+            if (n >= 2) {
+                btn.classList.add('visible');
+            } else {
+                btn.classList.remove('visible');
+            }
+        }
+
+        function updateRowHighlights() {
+            var rows = document.querySelectorAll('tbody tr[data-session-id]');
+            rows.forEach(function(row) {
+                var sid = row.getAttribute('data-session-id');
+                var cb = row.querySelector('input[type="checkbox"]');
+                if (selectedSessions.has(sid)) {
+                    row.classList.add('row-selected');
+                    if (cb) cb.checked = true;
+                } else {
+                    row.classList.remove('row-selected');
+                    if (cb) cb.checked = false;
+                }
+            });
+        }
+
+        function openComparison() {
+            if (selectedSessions.size < 2) return;
+            var ids = Array.from(selectedSessions).join(',');
+            window.location.href = '/compare.html?sessions=' + encodeURIComponent(ids);
+        }
+
+        async function loadSessions() {
+            try {
+                var resp = await fetch('/api/sessions');
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var data = await resp.json();
+                var sessions = data.sessions || [];
+
+                document.getElementById('total-count').textContent = sessions.length;
+                document.getElementById('analysis-count').textContent =
+                    sessions.filter(function(s) { return s.has_analysis; }).length;
+
+                var tbody = document.getElementById('sessions-body');
+
+                if (sessions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty">No sessions found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = sessions.map(function(s) {
+                    var checked = selectedSessions.has(s.session_id) ? ' checked' : '';
+                    var selectedClass = selectedSessions.has(s.session_id) ? ' class="row-selected"' : '';
+                    var analysisCell = s.has_analysis
+                        ? '<span class="analysis-yes">Yes</span>'
+                        : '<span class="analysis-no">No</span>';
+                    var summaryCell = s.summary_link
+                        ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
+                        : '--';
+                    return '<tr data-session-id="' + escHtml(s.session_id) + '"' + selectedClass + '>' +
+                        '<td><input type="checkbox"' + checked + ' onchange="toggleSession(\'' + escHtml(s.session_id) + '\')"></td>' +
+                        '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
+                        '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
+                        '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
+                        '<td>' + formatDate(s.created_at) + '</td>' +
+                        '<td>' + analysisCell + '</td>' +
+                        '<td>' + summaryCell + '</td>' +
+                        '</tr>';
+                }).join('');
+            } catch (err) {
+                var errEl = document.getElementById('error-msg');
+                errEl.style.display = 'block';
+                errEl.textContent = 'Failed to load sessions: ' + err.message;
+                document.getElementById('sessions-body').innerHTML =
+                    '<tr><td colspan="7" class="empty">Could not load sessions</td></tr>';
+            }
+        }
+
+        loadSessions();
+        setInterval(loadSessions, 30000);
+    </script>
+</body>
+</html>
