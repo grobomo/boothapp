@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoothApp — Worker Status</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  header {
+    max-width: 1100px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #58a6ff;
+    letter-spacing: 0.02em;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: #484f58;
+  }
+
+  .refresh-badge {
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    font-family: monospace;
+  }
+
+  .nav-link {
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  .nav-link:hover { text-decoration: underline; }
+
+  .task-count {
+    color: #8b949e;
+  }
+
+  /* -- Summary cards -- */
+  .summary {
+    max-width: 1100px;
+    margin: 0 auto 2rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  .summary-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1.2rem;
+    text-align: center;
+  }
+
+  .summary-card .label {
+    font-size: 0.8rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.4rem;
+  }
+
+  .summary-card .value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    font-family: monospace;
+  }
+
+  .summary-card .value.active   { color: #3fb950; }
+  .summary-card .value.pending  { color: #d29922; }
+  .summary-card .value.done     { color: #8b949e; }
+  .summary-card .value.blocked  { color: #f85149; }
+
+  /* -- Task table -- */
+  .table-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    color: #8b949e;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid #30363d;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #21262d;
+    vertical-align: top;
+  }
+
+  tbody tr:hover {
+    background: #161b22;
+  }
+
+  /* -- Status badges -- */
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .badge.in_progress { background: #238636; color: #fff; }
+  .badge.pending     { background: #9e6a03; color: #fff; }
+  .badge.completed   { background: #21262d; color: #8b949e; }
+  .badge.blocked     { background: #da3633; color: #fff; }
+  .badge.failed      { background: #da3633; color: #fff; }
+  .badge.cancelled   { background: #21262d; color: #484f58; }
+
+  .worker-id {
+    font-family: monospace;
+    color: #58a6ff;
+    font-size: 0.85rem;
+  }
+
+  .worker-id.none {
+    color: #484f58;
+    font-style: italic;
+  }
+
+  .task-id {
+    font-family: monospace;
+    color: #e6edf3;
+    font-weight: 600;
+  }
+
+  .substep-progress {
+    font-size: 0.8rem;
+    color: #8b949e;
+    margin-top: 0.3rem;
+  }
+
+  .substep-current {
+    color: #3fb950;
+    font-weight: 500;
+  }
+
+  .pr-link {
+    color: #58a6ff;
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+  .pr-link:hover { text-decoration: underline; }
+
+  .workstream-tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #1f2937;
+    color: #9ca3af;
+    border: 1px solid #30363d;
+  }
+
+  .workstream-tag.analysis  { color: #a78bfa; border-color: #a78bfa44; }
+  .workstream-tag.audio     { color: #f472b6; border-color: #f472b644; }
+  .workstream-tag.extension { color: #60a5fa; border-color: #60a5fa44; }
+  .workstream-tag.infra     { color: #fbbf24; border-color: #fbbf2444; }
+
+  .error-banner {
+    background: #f8514922;
+    border: 1px solid #f85149;
+    color: #f85149;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    margin: 0 auto 1.5rem;
+    max-width: 1100px;
+    text-align: center;
+    display: none;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #484f58;
+    font-size: 1.1rem;
+  }
+
+  /* -- Responsive -- */
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    thead th, tbody td { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+  }
+
+  @media (max-width: 480px) {
+    .summary { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .summary-card { padding: 0.8rem; }
+    .summary-card .value { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Setup: GitHub token for private repo -->
+<div id="setup" class="hidden" style="max-width:440px;margin:6rem auto;text-align:center">
+  <h1 style="font-size:1.8rem;color:#58a6ff;margin-bottom:0.5rem">Worker Status</h1>
+  <p style="color:#8b949e;margin-bottom:1.5rem">Enter a GitHub token to access task files from the private repo.</p>
+  <input id="token-input" type="password" placeholder="ghp_..." style="width:100%;font-size:1rem;padding:0.6rem 0.9rem;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#e6edf3;font-family:monospace;margin-bottom:0.8rem">
+  <br>
+  <button id="save-token" style="margin-top:0.5rem;font-size:1.1rem;padding:0.6rem 2rem;border-radius:8px;border:none;background:#238636;color:#fff;cursor:pointer;font-weight:600">Connect</button>
+  <p style="font-size:0.75rem;color:#484f58;margin-top:0.8rem">Token stored in localStorage only. Needs <code>repo</code> scope.</p>
+</div>
+
+<div id="dashboard" class="hidden">
+<header>
+  <div>
+    <h1>Worker Status</h1>
+  </div>
+  <div class="header-right">
+    <span class="task-count" id="task-count"></span>
+    <span class="refresh-badge" id="refresh-badge">--</span>
+    <a class="nav-link" href="sessions.html">Sessions</a>
+    <a href="#" id="logout-link" style="color:#484f58;text-decoration:none;font-size:0.8rem">[logout]</a>
+  </div>
+</header>
+
+<div class="error-banner" id="error-banner"></div>
+
+<div class="summary" id="summary">
+  <div class="summary-card">
+    <div class="label">Active</div>
+    <div class="value active" id="count-active">-</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">Pending</div>
+    <div class="value pending" id="count-pending">-</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">Completed</div>
+    <div class="value done" id="count-done">-</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">Blocked</div>
+    <div class="value blocked" id="count-blocked">-</div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table id="task-table">
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Workstream</th>
+        <th>Status</th>
+        <th>Worker</th>
+        <th>Progress</th>
+        <th>Current Step</th>
+        <th>PR</th>
+      </tr>
+    </thead>
+    <tbody id="task-body">
+      <tr><td colspan="7" class="empty-state">Loading tasks...</td></tr>
+    </tbody>
+  </table>
+</div>
+</div><!-- /dashboard -->
+
+<script>
+(function () {
+  var OWNER = "altarr";
+  var REPO = "boothapp";
+  var TASK_DIR = ".claude-tasks";
+  var REFRESH_MS = 30000;
+  var API_BASE = "https://api.github.com";
+  var LS_TOKEN_KEY = "boothapp_gh_token";
+
+  var setupEl       = document.getElementById("setup");
+  var dashboardEl   = document.getElementById("dashboard");
+  var errorBanner   = document.getElementById("error-banner");
+  var taskBody      = document.getElementById("task-body");
+  var taskCount     = document.getElementById("task-count");
+  var refreshBadge  = document.getElementById("refresh-badge");
+  var countActive   = document.getElementById("count-active");
+  var countPending  = document.getElementById("count-pending");
+  var countDone     = document.getElementById("count-done");
+  var countBlocked  = document.getElementById("count-blocked");
+  var tokenInput    = document.getElementById("token-input");
+  var saveTokenBtn  = document.getElementById("save-token");
+  var logoutLink    = document.getElementById("logout-link");
+
+  var ghToken = "";
+  var refreshTimer = null;
+
+  function loadToken() {
+    ghToken = localStorage.getItem(LS_TOKEN_KEY) || "";
+    return !!ghToken;
+  }
+
+  function saveToken(t) {
+    ghToken = t;
+    localStorage.setItem(LS_TOKEN_KEY, t);
+  }
+
+  function clearToken() {
+    ghToken = "";
+    localStorage.removeItem(LS_TOKEN_KEY);
+  }
+
+  if (loadToken()) {
+    showDashboard();
+  } else {
+    setupEl.classList.remove("hidden");
+  }
+
+  saveTokenBtn.addEventListener("click", function () {
+    var t = tokenInput.value.trim();
+    if (!t) return;
+    saveToken(t);
+    showDashboard();
+  });
+
+  tokenInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") saveTokenBtn.click();
+  });
+
+  logoutLink.addEventListener("click", function (e) {
+    e.preventDefault();
+    clearToken();
+    dashboardEl.classList.add("hidden");
+    setupEl.classList.remove("hidden");
+    tokenInput.value = "";
+    if (refreshTimer) clearInterval(refreshTimer);
+  });
+
+  function showDashboard() {
+    setupEl.classList.add("hidden");
+    dashboardEl.classList.remove("hidden");
+    poll();
+    refreshTimer = setInterval(poll, REFRESH_MS);
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = "block";
+  }
+  function clearError() {
+    errorBanner.style.display = "none";
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function ghHeaders() {
+    var h = { "Accept": "application/vnd.github.v3+json" };
+    if (ghToken) h["Authorization"] = "token " + ghToken;
+    return h;
+  }
+
+  // Fetch task file list from GitHub API, then fetch each file's content
+  function fetchTasks(cb) {
+    var url = API_BASE + "/repos/" + OWNER + "/" + REPO + "/contents/" + TASK_DIR;
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    var headers = ghHeaders();
+    for (var k in headers) xhr.setRequestHeader(k, headers[k]);
+    xhr.onload = function () {
+      if (xhr.status === 401 || xhr.status === 403) {
+        clearToken();
+        dashboardEl.classList.add("hidden");
+        setupEl.classList.remove("hidden");
+        if (refreshTimer) clearInterval(refreshTimer);
+        return;
+      }
+      if (xhr.status !== 200) {
+        cb("GitHub API error: " + xhr.status);
+        return;
+      }
+      var files;
+      try { files = JSON.parse(xhr.responseText); } catch (e) { cb("Parse error"); return; }
+
+      var jsonFiles = files.filter(function (f) { return f.name.endsWith(".json"); });
+      if (jsonFiles.length === 0) { cb(null, []); return; }
+
+      var tasks = [];
+      var done = 0;
+
+      jsonFiles.forEach(function (f) {
+        var xhr2 = new XMLHttpRequest();
+        // Use API endpoint with token instead of download_url (which may not work for private repos)
+        xhr2.open("GET", f.url, true);
+        var h2 = ghHeaders();
+        h2["Accept"] = "application/vnd.github.v3.raw";
+        for (var k2 in h2) xhr2.setRequestHeader(k2, h2[k2]);
+        xhr2.onload = function () {
+          if (xhr2.status === 200) {
+            try { tasks.push(JSON.parse(xhr2.responseText)); } catch (e) { /* skip bad json */ }
+          }
+          done++;
+          if (done === jsonFiles.length) cb(null, tasks);
+        };
+        xhr2.onerror = function () {
+          done++;
+          if (done === jsonFiles.length) cb(null, tasks);
+        };
+        xhr2.send();
+      });
+    };
+    xhr.onerror = function () { cb("Network error"); };
+    xhr.send();
+  }
+
+  function getActiveSubstep(task) {
+    if (!task.substeps || !task.substeps.length) return null;
+    for (var i = 0; i < task.substeps.length; i++) {
+      if (task.substeps[i].status === "in_progress") return task.substeps[i];
+    }
+    // If none in_progress, find first pending
+    for (var j = 0; j < task.substeps.length; j++) {
+      if (task.substeps[j].status === "pending") return task.substeps[j];
+    }
+    return null;
+  }
+
+  function getActivePR(task) {
+    if (!task.substeps || !task.substeps.length) return null;
+    // Find the most recent substep with a PR
+    for (var i = task.substeps.length - 1; i >= 0; i--) {
+      if (task.substeps[i].pr) return task.substeps[i].pr;
+    }
+    return null;
+  }
+
+  function substepProgress(task) {
+    if (!task.substeps || !task.substeps.length) return "";
+    var completed = 0;
+    for (var i = 0; i < task.substeps.length; i++) {
+      if (task.substeps[i].status === "completed") completed++;
+    }
+    return completed + "/" + task.substeps.length;
+  }
+
+  function renderPR(pr) {
+    if (!pr) return '<span style="color:#484f58">--</span>';
+    // PR can be a number or a URL string
+    var prNum = typeof pr === "number" ? pr : pr;
+    var url = "https://github.com/" + OWNER + "/" + REPO + "/pull/" + prNum;
+    if (typeof pr === "string" && pr.startsWith("http")) {
+      url = pr;
+      var m = pr.match(/\/pull\/(\d+)/);
+      prNum = m ? "#" + m[1] : pr;
+    } else {
+      prNum = "#" + prNum;
+    }
+    return '<a class="pr-link" href="' + esc(url) + '" target="_blank">' + esc(String(prNum)) + '</a>';
+  }
+
+  // Sort: in_progress first, then pending, then blocked, then completed, then rest
+  var statusOrder = { in_progress: 0, pending: 1, blocked: 2, completed: 3, failed: 4, cancelled: 5 };
+
+  function render(tasks) {
+    // Sort
+    tasks.sort(function (a, b) {
+      var sa = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 9;
+      var sb = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 9;
+      if (sa !== sb) return sa - sb;
+      return (a.id || "").localeCompare(b.id || "");
+    });
+
+    // Summary counts
+    var counts = { in_progress: 0, pending: 0, completed: 0, blocked: 0 };
+    tasks.forEach(function (t) {
+      if (t.status === "in_progress") counts.in_progress++;
+      else if (t.status === "pending") counts.pending++;
+      else if (t.status === "completed") counts.completed++;
+      else if (t.status === "blocked") counts.blocked++;
+    });
+
+    countActive.textContent = counts.in_progress;
+    countPending.textContent = counts.pending;
+    countDone.textContent = counts.completed;
+    countBlocked.textContent = counts.blocked;
+    taskCount.textContent = tasks.length + " tasks";
+
+    if (tasks.length === 0) {
+      taskBody.innerHTML = '<tr><td colspan="7" class="empty-state">No task files found</td></tr>';
+      return;
+    }
+
+    var html = "";
+    tasks.forEach(function (t) {
+      var activeStep = getActiveSubstep(t);
+      var activePR = getActivePR(t);
+      var progress = substepProgress(t);
+      var ws = t.workstream || "";
+
+      html += "<tr>";
+      html += '<td><span class="task-id">' + esc(t.id || "--") + "</span><br>"
+            + '<span style="color:#8b949e;font-size:0.8rem">' + esc(t.title || "") + "</span></td>";
+      html += '<td><span class="workstream-tag ' + esc(ws) + '">' + esc(ws || "--") + "</span></td>";
+      html += '<td><span class="badge ' + esc(t.status || "") + '">' + esc(t.status || "--") + "</span></td>";
+      html += "<td>"
+            + (t.assigned_worker
+                ? '<span class="worker-id">' + esc(t.assigned_worker) + "</span>"
+                : '<span class="worker-id none">unassigned</span>')
+            + "</td>";
+      html += '<td><span class="substep-progress">' + esc(progress || "--") + "</span></td>";
+      html += "<td>"
+            + (activeStep
+                ? '<span class="substep-current">' + esc(activeStep.title || activeStep.id) + "</span>"
+                : '<span style="color:#484f58">--</span>')
+            + "</td>";
+      // Show PRs: prefer open PRs from GitHub API, fall back to task file substep PRs
+      var prHtml = "";
+      if (t._openPRs && t._openPRs.length > 0) {
+        t._openPRs.forEach(function (pr) {
+          prHtml += '<a class="pr-link" href="' + esc(pr.html_url) + '" target="_blank">#' + pr.number + '</a> ';
+        });
+      } else {
+        prHtml = renderPR(activePR);
+      }
+      html += "<td>" + prHtml + "</td>";
+      html += "</tr>";
+    });
+
+    taskBody.innerHTML = html;
+  }
+
+  // Also fetch open PRs to correlate with worker branches
+  function fetchOpenPRs(cb) {
+    var url = API_BASE + "/repos/" + OWNER + "/" + REPO + "/pulls?state=open&per_page=100";
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    var headers = ghHeaders();
+    for (var k in headers) xhr.setRequestHeader(k, headers[k]);
+    xhr.onload = function () {
+      if (xhr.status !== 200) { cb(null, []); return; }
+      try { cb(null, JSON.parse(xhr.responseText)); } catch (e) { cb(null, []); }
+    };
+    xhr.onerror = function () { cb(null, []); };
+    xhr.send();
+  }
+
+  function poll() {
+    fetchTasks(function (err, tasks) {
+      if (err) {
+        showError(String(err));
+        return;
+      }
+      clearError();
+
+      // Fetch open PRs and correlate with tasks by branch name
+      fetchOpenPRs(function (prErr, prs) {
+        // Build a map of branch prefix -> PR for matching
+        var prByBranch = {};
+        (prs || []).forEach(function (pr) {
+          var branch = pr.head && pr.head.ref ? pr.head.ref : "";
+          prByBranch[branch] = pr;
+          // Also index by task id prefix (e.g. "feature/ana-01" matches task "ana-01-...")
+          var parts = branch.split("/");
+          if (parts.length >= 2) {
+            prByBranch[parts.slice(1).join("/")] = pr;
+          }
+        });
+
+        // Attach open PRs to tasks
+        tasks.forEach(function (t) {
+          if (!t._openPRs) t._openPRs = [];
+          (prs || []).forEach(function (pr) {
+            var branch = pr.head && pr.head.ref ? pr.head.ref : "";
+            // Match if branch contains the task id
+            if (branch.indexOf(t.id) !== -1) {
+              t._openPRs.push(pr);
+            }
+          });
+        });
+
+        render(tasks);
+        refreshBadge.textContent = new Date().toLocaleTimeString();
+      });
+    });
+  }
+
+  // Initial poll handled by showDashboard()
+})();
+</script>
+</body>
+</html>
