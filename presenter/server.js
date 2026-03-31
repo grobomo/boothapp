@@ -100,6 +100,10 @@ app.get('/api/pages', (req, res) => {
   res.json({ pages: htmlFiles });
 });
 
+// --- Teams-to-GitHub-Issues webhook (before JSON parser so raw body is available for HMAC) ---
+const { createRouter: teamsWebhookRouter } = require('./lib/teams-webhook');
+app.use(teamsWebhookRouter());
+
 // --- JSON body parser (for /api/errors) ---
 app.use(express.json({ limit: '16kb' }));
 
