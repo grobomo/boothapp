@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Viewer - BoothApp</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --red: #D71920; --bg: #06080C; --surface: #0E1118; --surface2: #151920;
+      --border: #1E2330; --text: #F0F2F5; --text-dim: #6B7385;
+      --success: #00E676; --amber: #FFAB00;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', -apple-system, sans-serif; min-height: 100vh; }
+    .header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+    .header a { color: var(--text-dim); text-decoration: none; font-size: 1.2rem; }
+    .header a:hover { color: var(--text); }
+    .header h1 { font-size: 1.5rem; }
+    .container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .section h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--red); }
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+    .meta-item { background: var(--bg); padding: 0.75rem; border-radius: 6px; }
+    .meta-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .meta-value { font-size: 1rem; margin-top: 0.25rem; }
+    .text-block { background: var(--bg); padding: 1rem; border-radius: 6px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; }
+    .clicks-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .clicks-table th, .clicks-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    .clicks-table th { color: var(--text-dim); font-weight: 600; }
+    .screenshots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .screenshot-thumb { border-radius: 6px; overflow: hidden; background: var(--bg); }
+    .screenshot-thumb img { width: 100%; display: block; cursor: pointer; }
+    .screenshot-thumb .name { padding: 0.5rem; font-size: 0.75rem; color: var(--text-dim); }
+    .btn-end { background: #7f1d1d; color: #fca5a5; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .btn-end:hover { background: #991b1b; }
+    .loading { color: var(--text-dim); }
+    .actions { margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="/sessions">&larr;</a>
+    <h1 id="title">Session</h1>
+  </div>
+  <div class="container">
+    <div class="actions" id="actions"></div>
+    <div id="content"><div class="loading">Loading session data...</div></div>
+  </div>
+  <script>
+    var sessionId = window.location.pathname.split('/').pop();
+    document.getElementById('title').textContent = 'Session ' + sessionId.slice(0, 8);
+
+    function escHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function loadSession() {
+      var container = document.getElementById('content');
+      try {
+        var [sessionRes, screenshotsRes] = await Promise.all([
+          fetch('/api/session/' + sessionId),
+          fetch('/api/session/' + sessionId + '/screenshots'),
+        ]);
+        var session = await sessionRes.json();
+        var screenshots = await screenshotsRes.json();
+
+        if (session.error) { container.innerHTML = '<p>' + escHtml(session.error) + '</p>'; return; }
+
+        var m = session.metadata || {};
+        if (!m.endedAt && !m.ended_at) {
+          document.getElementById('actions').innerHTML = '<button class="btn-end" id="endBtn">End Session</button>';
+          document.getElementById('endBtn').addEventListener('click', async function() {
+            await fetch('/api/session/' + sessionId + '/end', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: '{}',
+            });
+            location.reload();
+          });
+        }
+
+        var html = '';
+
+        // Metadata
+        html += '<div class="section"><h2>Metadata</h2><div class="meta-grid">';
+        var startTime = m.startedAt || m.started_at || m.created_at;
+        var endTime = m.endedAt || m.ended_at;
+        var fields = {
+          'Session ID': session.id,
+          'Visitor': m.visitorName || m.visitor_name || '-',
+          'Started': startTime ? new Date(startTime).toLocaleString() : '-',
+          'Ended': endTime ? new Date(endTime).toLocaleString() : 'Active',
+          'Status': m.status || (endTime ? 'ended' : 'active'),
+        };
+        for (var k in fields) {
+          html += '<div class="meta-item"><div class="meta-label">' + escHtml(k) + '</div><div class="meta-value">' + escHtml(String(fields[k])) + '</div></div>';
+        }
+        html += '</div></div>';
+
+        // Transcript
+        if (session.transcript) {
+          var tText = typeof session.transcript === 'string' ? session.transcript : JSON.stringify(session.transcript, null, 2);
+          html += '<div class="section"><h2>Transcript</h2><div class="text-block">' + escHtml(tText) + '</div></div>';
+        }
+
+        // Analysis
+        if (session.analysis) {
+          var aText = typeof session.analysis === 'string' ? session.analysis : JSON.stringify(session.analysis, null, 2);
+          html += '<div class="section"><h2>AI Analysis</h2><div class="text-block">' + escHtml(aText) + '</div></div>';
+        }
+
+        // Clicks
+        if (session.clicks && Array.isArray(session.clicks) && session.clicks.length > 0) {
+          html += '<div class="section"><h2>Click Events (' + session.clicks.length + ')</h2>';
+          html += '<div style="max-height:400px;overflow-y:auto"><table class="clicks-table"><thead><tr><th>#</th><th>Time</th><th>Element</th><th>URL</th></tr></thead><tbody>';
+          session.clicks.slice(0, 100).forEach(function(c, i) {
+            html += '<tr><td>' + (i + 1) + '</td><td>' + escHtml(c.timestamp || '-') + '</td><td>' + escHtml(c.element || c.selector || '-') + '</td><td>' + escHtml(c.url || '-') + '</td></tr>';
+          });
+          html += '</tbody></table></div></div>';
+        }
+
+        // Screenshots
+        if (screenshots.screenshots && screenshots.screenshots.length > 0) {
+          html += '<div class="section"><h2>Screenshots (' + screenshots.screenshots.length + ')</h2><div class="screenshots-grid">';
+          screenshots.screenshots.forEach(function(s) {
+            html += '<div class="screenshot-thumb"><img src="' + escHtml(s.url) + '" alt="' + escHtml(s.filename) + '" onclick="window.open(this.src)"><div class="name">' + escHtml(s.filename) + '</div></div>';
+          });
+          html += '</div></div>';
+        }
+
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = '<p>Error: ' + escHtml(err.message) + '</p>';
+      }
+    }
+
+    loadSession();
+  </script>
+</body>
+</html>

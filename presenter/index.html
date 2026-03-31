@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoothApp Presenter</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --red: #D71920; --bg: #06080C; --surface: #0E1118;
+      --border: #1E2330; --text: #F0F2F5; --text-dim: #6B7385;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .container { text-align: center; max-width: 600px; padding: 2rem; }
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--red), #FF6B6B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    p { color: var(--text-dim); margin-bottom: 2rem; font-size: 1.1rem; }
+    .actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    a.btn, button.btn { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1rem; cursor: pointer; border: none; transition: transform 0.15s, box-shadow 0.15s; }
+    a.btn:hover, button.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(215,25,32,0.3); }
+    .btn-primary { background: linear-gradient(135deg, var(--red), #FF6B6B); color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--red); border: 1px solid var(--red); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BoothApp</h1>
+    <p>AI-Powered Trade Show Demo Capture</p>
+    <div class="actions">
+      <a href="/sessions" class="btn btn-primary">View Sessions</a>
+      <button class="btn btn-secondary" id="newSession">New Session</button>
+    </div>
+  </div>
+  <script>
+    document.getElementById('newSession').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (data.sessionId) window.location.href = '/session/' + data.sessionId;
+        else alert('Session created: ' + JSON.stringify(data));
+      } catch (err) {
+        alert('Error creating session: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
