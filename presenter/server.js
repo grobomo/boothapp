@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const http = require('http');
-const { S3Client, ListObjectsV2Command, GetObjectCommand, DeleteObjectsCommand, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, ListObjectsV2Command, GetObjectCommand, DeleteObjectsCommand, PutObjectCommand, HeadObjectCommand, CopyObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 app.use(express.json());
@@ -50,6 +50,8 @@ app.get('/api/sessions', async (req, res) => {
                 session.visitor_name = meta.visitor_name || null;
                 session.status = meta.status || 'unknown';
                 session.created_at = meta.created_at || null;
+                session.archived = meta.archived || false;
+                session.archived_at = meta.archived_at || null;
             } catch {
                 // metadata.json missing or unreadable - continue with defaults
             }
@@ -245,6 +247,85 @@ app.post('/api/sessions', async (req, res) => {
         res.status(201).json({ sessionId, status: 'created' });
     } catch (err) {
         res.status(500).json({ error: 'Failed to create session', detail: err.message });
+    }
+});
+
+// Large file patterns to remove from active storage after archival
+const LARGE_FILE_PATTERNS = ['screenshots/', 'audio.webm', 'screen-recording.webm'];
+
+// POST /api/sessions/:id/archive - archive a single session to archive/ prefix
+app.post('/api/sessions/:id/archive', async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+        const prefix = `${sessionId}/`;
+
+        // List all objects in the session
+        const listCmd = new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix });
+        const listResult = await s3.send(listCmd);
+        const objects = listResult.Contents || [];
+
+        if (objects.length === 0) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        // 1. Copy all objects to archive/ prefix
+        const copied = [];
+        for (const obj of objects) {
+            const destKey = `archive/${obj.Key}`;
+            await s3.send(new CopyObjectCommand({
+                Bucket: BUCKET,
+                CopySource: `${BUCKET}/${obj.Key}`,
+                Key: destKey,
+            }));
+            copied.push(destKey);
+        }
+
+        // 2. Remove large files from active storage
+        const removed = [];
+        for (const obj of objects) {
+            const relPath = obj.Key.replace(prefix, '');
+            const isLarge = LARGE_FILE_PATTERNS.some(p => relPath.startsWith(p));
+            if (isLarge) {
+                await s3.send(new DeleteObjectsCommand({
+                    Bucket: BUCKET,
+                    Delete: { Objects: [{ Key: obj.Key }] },
+                }));
+                removed.push(obj.Key);
+            }
+        }
+
+        // 3. Update metadata to mark as archived
+        try {
+            const metaCmd = new GetObjectCommand({
+                Bucket: BUCKET,
+                Key: `${sessionId}/metadata.json`,
+            });
+            const metaResult = await s3.send(metaCmd);
+            const body = await metaResult.Body.transformToString();
+            const meta = JSON.parse(body);
+            meta.archived = true;
+            meta.archived_at = new Date().toISOString();
+            meta.archive_prefix = `archive/${sessionId}/`;
+
+            await s3.send(new PutObjectCommand({
+                Bucket: BUCKET,
+                Key: `${sessionId}/metadata.json`,
+                Body: JSON.stringify(meta, null, 2),
+                ContentType: 'application/json',
+            }));
+        } catch {
+            // metadata update failed, but archival still succeeded
+        }
+
+        res.json({
+            archived: true,
+            sessionId,
+            copiedToArchive: copied.length,
+            largeFilesRemoved: removed.length,
+            removedFiles: removed,
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to archive session', detail: err.message });
     }
 });
 

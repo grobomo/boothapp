@@ -170,6 +170,7 @@
         .badge-complete  { background: var(--green-dim); color: var(--green); }
         .badge-active    { background: var(--blue-dim); color: var(--blue); }
         .badge-pending   { background: var(--amber-dim); color: var(--amber); }
+        .badge-archived  { background: rgba(107,115,133,0.25); color: #9CA3AF; }
         .badge-unknown   { background: rgba(107,115,133,0.15); color: var(--text-dim); }
 
         /* ---- Buttons ---- */
@@ -363,6 +364,7 @@
                     <option value="complete">Complete</option>
                     <option value="active">Active</option>
                     <option value="pending">Pending</option>
+                    <option value="archived">Archived</option>
                     <option value="unknown">Unknown</option>
                 </select>
             </div>
@@ -555,7 +557,8 @@
             var statusFilter = document.getElementById('statusFilter').value;
 
             var filtered = sessions.filter(function(s) {
-                if (statusFilter && s.status !== statusFilter) return false;
+                if (statusFilter === 'archived' && !s.archived) return false;
+                if (statusFilter && statusFilter !== 'archived' && s.status !== statusFilter) return false;
                 if (search) {
                     var haystack = (s.session_id + ' ' + (s.visitor_name || '')).toLowerCase();
                     if (haystack.indexOf(search) === -1) return false;
@@ -589,6 +592,11 @@
                 } else {
                     actions += '<button class="btn btn-sm" onclick="retrySession(\'' + escAttr(s.session_id) + '\')">Re-analyze</button> ';
                 }
+                if (!s.archived) {
+                    actions += '<button class="btn btn-sm" style="border-color:var(--amber);color:var(--amber)" onclick="archiveSession(\'' + escAttr(s.session_id) + '\')">Archive</button> ';
+                } else {
+                    actions += '<span class="badge" style="background:var(--amber-dim);color:var(--amber)">Archived</span> ';
+                }
                 actions += '<button class="btn btn-sm btn-danger" onclick="deleteSession(\'' + escAttr(s.session_id) + '\')">Delete</button>';
 
                 return '<tr>'
@@ -614,6 +622,18 @@
                     fetchSessions();
                 })
                 .catch(function(err) { toast('Delete failed: ' + err.message, 'error'); });
+        }
+
+        function archiveSession(id) {
+            if (!confirm('Archive session ' + id + '? Large files (screenshots, audio) will be removed from active storage.')) return;
+            fetch('/api/sessions/' + encodeURIComponent(id) + '/archive', { method: 'POST' })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.error) throw new Error(data.error);
+                    toast('Session ' + id + ' archived (' + data.largeFilesRemoved + ' large files removed)', 'success');
+                    fetchSessions();
+                })
+                .catch(function(err) { toast('Archive failed: ' + err.message, 'error'); });
         }
 
         function retrySession(id) {

@@ -124,6 +124,14 @@ describe('admin endpoints', () => {
     assert.ok(res.body);
   });
 
+  it('POST /api/sessions/:id/archive returns error or 404 with fake bucket', async () => {
+    const res = await request('POST', '/api/sessions/nonexistent/archive');
+    assert.ok(res.status === 404 || res.status === 500, 'Expected 404 or 500, got ' + res.status);
+    if (res.body) {
+      assert.ok(res.body.error, 'Expected error field in response');
+    }
+  });
+
   it('admin.html is served as static file', async () => {
     const res = await new Promise((resolve, reject) => {
       http.get(`http://127.0.0.1:${TEST_PORT}/admin.html`, (resp) => {
