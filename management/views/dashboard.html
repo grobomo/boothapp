@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CaseyApp Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --card: #0a0a0a;
+      --border: #1a1a1a;
+      --text: #e5e5e5;
+      --text-dim: #888;
+      --red: #d71920;
+      --amber: #ff9500;
+      --green: #4caf50;
+      --blue: #2196f3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Work Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Nav */
+    .topbar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      background: linear-gradient(135deg, var(--red), var(--amber));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .topbar-nav { display: flex; gap: 4px; }
+    .topbar-nav button {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .topbar-nav button:hover { color: var(--text); background: var(--border); }
+    .topbar-nav button.active { color: var(--red); background: rgba(215,25,32,0.1); }
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .topbar-user .username { font-weight: 600; color: var(--text); }
+    .btn-logout {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+    /* Main */
+    .main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .card h3 {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th { color: var(--text-dim); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+    td { color: var(--text); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--red), var(--amber));
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #222; }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+    }
+    .btn-danger:hover { background: rgba(215,25,32,0.1); }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* Forms */
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-active { background: rgba(76,175,80,0.15); color: var(--green); }
+    .badge-ended { background: rgba(255,149,0,0.15); color: var(--amber); }
+    .badge-completed { background: rgba(33,150,243,0.15); color: var(--blue); }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      min-width: 400px;
+      max-width: 500px;
+    }
+    .modal h2 { margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* Confidence bar */
+    .confidence-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      width: 100px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    /* Login page */
+    .login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .login-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 380px;
+    }
+    .login-box h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--red), var(--amber));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .login-box .subtitle {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+    .login-box .error {
+      background: rgba(215,25,32,0.1);
+      border: 1px solid rgba(215,25,32,0.3);
+      color: var(--red);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    /* File upload */
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .file-drop:hover { border-color: var(--red); }
+    .file-drop input { display: none; }
+
+    /* Stats grid */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .stat-value { font-family: 'Inter', sans-serif; font-size: 28px; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 300;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+  </style>
+</head>
+<body>
+  <!-- Login -->
+  <div id="loginPage" class="login-page" style="display:none">
+    <div class="login-box">
+      <h1>CaseyApp</h1>
+      <p class="subtitle">Management Console</p>
+      <div id="loginError" class="error"></div>
+      <div id="passwordChangeNotice" style="display:none;margin-bottom:12px">
+        <div class="form-group">
+          <label>New Password (required on first login)</label>
+          <input type="password" id="newPassword" placeholder="Enter new password">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doChangePassword()">Change Password</button>
+      </div>
+      <div id="loginForm">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="loginUsername" placeholder="admin" autofocus>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="appShell" style="display:none">
+    <div class="topbar">
+      <div class="topbar-brand">CaseyApp</div>
+      <div class="topbar-nav">
+        <button data-page="dashboard" class="active">Dashboard</button>
+        <button data-page="events">Events</button>
+        <button data-page="sessions">Sessions</button>
+        <button data-page="contacts">Contacts</button>
+        <button data-page="users" id="navUsers">Users</button>
+      </div>
+      <div class="topbar-user">
+        <span class="username" id="currentUser">admin</span>
+        <button class="btn-logout" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <!-- Dashboard -->
+      <div id="pageDashboard" class="page active">
+        <div class="stats">
+          <div class="stat-card"><div class="stat-value" id="statEvents">0</div><div class="stat-label">Events</div></div>
+          <div class="stat-card"><div class="stat-value" id="statSessions">0</div><div class="stat-label">Sessions</div></div>
+          <div class="stat-card"><div class="stat-value" id="statContacts">0</div><div class="stat-label">Contacts</div></div>
+          <div class="stat-card"><div class="stat-value" id="statActivePc">0</div><div class="stat-label">Demo PCs</div></div>
+        </div>
+        <div class="card">
+          <h2>Active Event</h2>
+          <div id="activeEventInfo" style="color:var(--text-dim)">No active event</div>
+        </div>
+        <div class="card">
+          <h2>Recent Sessions</h2>
+          <table>
+            <thead><tr><th>ID</th><th>Visitor</th><th>Demo PC</th><th>Status</th><th>Started</th></tr></thead>
+            <tbody id="recentSessions"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Events -->
+      <div id="pageEvents" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-family:Inter;font-size:20px;font-weight:700">Events</h2>
+          <button class="btn btn-primary" onclick="showCreateEvent()">+ New Event</button>
+        </div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>Name</th><th>Date</th><th>Location</th><th>Active</th><th>Actions</th></tr></thead>
+            <tbody id="eventsList"></tbody>
+          </table>
+        </div>
+
+        <div id="eventDetail" style="display:none">
+          <div class="card">
+            <h2>Badge Training</h2>
+            <div class="file-drop" id="badgeDrop">
+              <p>Drop badge sample images here or click to upload</p>
+              <input type="file" accept="image/*" multiple id="badgeFileInput">
+            </div>
+            <div id="badgeSamples" style="margin-top:12px"></div>
+          </div>
+          <div class="card">
+            <h2>Badge Profile</h2>
+            <div id="badgeProfileEditor"></div>
+          </div>
+          <div class="card">
+            <h2>Demo PCs</h2>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <input type="text" id="newPcName" placeholder="PC name (e.g. booth-pc-1)" style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px">
+              <button class="btn btn-secondary" onclick="addDemoPc()">Add PC</button>
+            </div>
+            <table>
+              <thead><tr><th>Name</th><th>QR Code</th><th>Actions</th></tr></thead>
+              <tbody id="demoPcsList"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sessions -->
+      <div id="pageSessions" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-family:Inter;font-size:20px;font-weight:700">Sessions</h2>
+          <button class="btn btn-secondary" onclick="importSessions()">Import from S3</button>
+        </div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>ID</th><th>Visitor</th><th>Company</th><th>Demo PC</th><th>Screenshots</th><th>Audio</th><th>Status</th><th>Started</th></tr></thead>
+            <tbody id="sessionsList"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Contacts -->
+      <div id="pageContacts" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-family:Inter;font-size:20px;font-weight:700">Contacts</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="document.getElementById('csvInput').click()">Import CSV</button>
+            <button class="btn btn-primary" onclick="runMatching()">Run AI Matching</button>
+            <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="uploadCsv(this)">
+          </div>
+        </div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Title</th></tr></thead>
+            <tbody id="contactsList"></tbody>
+          </table>
+        </div>
+        <div class="card" id="matchResultsCard" style="display:none">
+          <h2>AI Match Results</h2>
+          <table>
+            <thead><tr><th>Visitor</th><th>Matched Contact</th><th>Confidence</th><th>Reasoning</th></tr></thead>
+            <tbody id="matchResults"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div id="pageUsers" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-family:Inter;font-size:20px;font-weight:700">Users</h2>
+          <button class="btn btn-primary" onclick="showCreateUser()">+ New User</button>
+        </div>
+        <div class="card" style="padding:0">
+          <table>
+            <thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+            <tbody id="usersList"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── State ──
+    var currentUser = null;
+    var activeEventId = null;
+    var selectedEventId = null;
+
+    // ── API ──
+    async function api(method, path, body) {
+      var opts = { method, credentials: 'include', headers: {} };
+      if (body && !(body instanceof FormData)) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      } else if (body instanceof FormData) {
+        opts.body = body;
+      }
+      var resp = await fetch('/api' + path, opts);
+      var data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    // ── Toast ──
+    function toast(msg, type) {
+      var el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast ' + (type || 'success') + ' show';
+      setTimeout(function() { el.className = 'toast'; }, 3000);
+    }
+
+    // ── Modal ──
+    function showModal(html) {
+      document.getElementById('modalContent').innerHTML = html;
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('open');
+    }
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    // ── Auth ──
+    async function checkAuth() {
+      try {
+        var data = await api('GET', '/auth/me');
+        currentUser = data;
+        document.getElementById('currentUser').textContent = data.username;
+        if (data.role !== 'admin') document.getElementById('navUsers').style.display = 'none';
+        if (data.force_password_change) {
+          document.getElementById('loginPage').style.display = 'flex';
+          document.getElementById('appShell').style.display = 'none';
+          document.getElementById('loginForm').style.display = 'none';
+          document.getElementById('passwordChangeNotice').style.display = 'block';
+          return;
+        }
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('appShell').style.display = 'block';
+        loadDashboard();
+      } catch (e) {
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('appShell').style.display = 'none';
+      }
+    }
+
+    async function doLogin() {
+      var username = document.getElementById('loginUsername').value;
+      var password = document.getElementById('loginPassword').value;
+      try {
+        var data = await api('POST', '/auth/login', { username, password });
+        if (data.force_password_change) {
+          document.getElementById('loginForm').style.display = 'none';
+          document.getElementById('passwordChangeNotice').style.display = 'block';
+          return;
+        }
+        checkAuth();
+      } catch (e) {
+        var el = document.getElementById('loginError');
+        el.textContent = e.message;
+        el.style.display = 'block';
+      }
+    }
+
+    async function doChangePassword() {
+      var pw = document.getElementById('newPassword').value;
+      if (pw.length < 4) { toast('Password must be at least 4 characters', 'error'); return; }
+      try {
+        await api('POST', '/auth/change-password', { new_password: pw });
+        toast('Password changed');
+        checkAuth();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function doLogout() {
+      await api('POST', '/auth/logout');
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('appShell').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('passwordChangeNotice').style.display = 'none';
+      document.getElementById('loginPassword').value = '';
+    }
+
+    // ── Navigation ──
+    document.querySelectorAll('.topbar-nav button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var page = this.dataset.page;
+        document.querySelectorAll('.topbar-nav button').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+        document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).classList.add('active');
+        if (page === 'events') loadEvents();
+        if (page === 'sessions') loadSessions();
+        if (page === 'contacts') loadContacts();
+        if (page === 'users') loadUsers();
+        if (page === 'dashboard') loadDashboard();
+      });
+    });
+
+    // ── Dashboard ──
+    async function loadDashboard() {
+      try {
+        var events = await api('GET', '/events');
+        var sessions = await api('GET', '/sessions');
+        document.getElementById('statEvents').textContent = events.events.length;
+        document.getElementById('statSessions').textContent = sessions.sessions.length;
+
+        var activeEvent = events.events.find(function(e) { return e.active; });
+        if (activeEvent) {
+          activeEventId = activeEvent.id;
+          document.getElementById('activeEventInfo').innerHTML =
+            '<span style="font-size:18px;font-weight:600;color:var(--text)">' + esc(activeEvent.name) + '</span>' +
+            (activeEvent.date ? ' &mdash; ' + esc(activeEvent.date) : '') +
+            (activeEvent.location ? ' &mdash; ' + esc(activeEvent.location) : '');
+        }
+
+        var recent = sessions.sessions.slice(0, 10);
+        document.getElementById('recentSessions').innerHTML = recent.map(function(s) {
+          return '<tr><td>' + esc(s.id) + '</td><td>' + esc(s.visitor_name || '') + '</td><td>' + esc(s.demo_pc || '') + '</td><td><span class="badge badge-' + s.status + '">' + s.status + '</span></td><td>' + formatDate(s.started_at) + '</td></tr>';
+        }).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    // ── Events ──
+    async function loadEvents() {
+      var data = await api('GET', '/events');
+      document.getElementById('eventsList').innerHTML = data.events.map(function(e) {
+        return '<tr><td><a href="#" onclick="selectEvent(' + e.id + ');return false" style="color:var(--red)">' + esc(e.name) + '</a></td><td>' + esc(e.date || '--') + '</td><td>' + esc(e.location || '--') + '</td><td>' + (e.active ? '<span class="badge badge-active">Active</span>' : '<button class="btn btn-sm btn-secondary" onclick="activateEvent(' + e.id + ')">Activate</button>') + '</td><td><button class="btn btn-sm btn-danger" onclick="deleteEvent(' + e.id + ')">Delete</button></td></tr>';
+      }).join('');
+    }
+
+    function showCreateEvent() {
+      showModal('<h2>New Event</h2><div class="form-group"><label>Name</label><input id="newEventName" placeholder="Black Hat 2026"></div><div class="form-row"><div class="form-group"><label>Date</label><input id="newEventDate" type="date"></div><div class="form-group"><label>Location</label><input id="newEventLocation" placeholder="Las Vegas, NV"></div></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createEvent()">Create</button></div>');
+    }
+
+    async function createEvent() {
+      var name = document.getElementById('newEventName').value;
+      if (!name) return toast('Name required', 'error');
+      await api('POST', '/events', { name, date: document.getElementById('newEventDate').value, location: document.getElementById('newEventLocation').value });
+      closeModal();
+      toast('Event created');
+      loadEvents();
+    }
+
+    async function activateEvent(id) {
+      await api('POST', '/events/' + id + '/activate');
+      toast('Event activated');
+      loadEvents();
+    }
+
+    async function deleteEvent(id) {
+      if (!confirm('Delete this event?')) return;
+      await api('DELETE', '/events/' + id);
+      toast('Event deleted');
+      loadEvents();
+    }
+
+    async function selectEvent(id) {
+      selectedEventId = id;
+      document.getElementById('eventDetail').style.display = 'block';
+      loadDemoPcs(id);
+      loadBadgeSamples(id);
+      loadBadgeProfile(id);
+    }
+
+    // ── Demo PCs ──
+    async function loadDemoPcs(eventId) {
+      var data = await api('GET', '/events/' + eventId + '/demo-pcs');
+      document.getElementById('demoPcsList').innerHTML = data.demo_pcs.map(function(pc) {
+        return '<tr><td>' + esc(pc.name) + '</td><td><button class="btn btn-sm btn-secondary" onclick="showQrPayload(' + pc.id + ')">View QR</button></td><td><button class="btn btn-sm btn-danger" onclick="deleteDemoPc(' + pc.id + ')">Remove</button></td></tr>';
+      }).join('');
+    }
+
+    async function addDemoPc() {
+      var name = document.getElementById('newPcName').value.trim();
+      if (!name || !selectedEventId) return toast('Enter a PC name', 'error');
+      await api('POST', '/demo-pcs', { name, event_id: selectedEventId });
+      document.getElementById('newPcName').value = '';
+      toast('Demo PC added');
+      loadDemoPcs(selectedEventId);
+    }
+
+    async function showQrPayload(pcId) {
+      var payload = await api('GET', '/demo-pcs/' + pcId + '/qr-payload');
+      showModal('<h2>QR Pairing Payload</h2><pre style="background:var(--bg);padding:12px;border-radius:6px;font-size:12px;overflow-x:auto">' + JSON.stringify(payload, null, 2) + '</pre><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>');
+    }
+
+    async function deleteDemoPc(id) {
+      await api('DELETE', '/demo-pcs/' + id);
+      toast('Demo PC removed');
+      loadDemoPcs(selectedEventId);
+    }
+
+    // ── Badge Training ──
+    async function loadBadgeSamples(eventId) {
+      var data = await api('GET', '/events/' + eventId + '/badge-samples');
+      document.getElementById('badgeSamples').innerHTML = data.samples.map(function(s) {
+        return '<div style="display:inline-block;margin:4px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px">' + esc(s.filename) + (s.extraction ? ' -- ' + esc(JSON.stringify(JSON.parse(s.extraction))) : '') + '</div>';
+      }).join('');
+    }
+
+    async function loadBadgeProfile(eventId) {
+      try {
+        var profile = await api('GET', '/events/' + eventId + '/badge-profile');
+        if (profile) {
+          document.getElementById('badgeProfileEditor').innerHTML =
+            '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-size:12px">' + JSON.stringify(profile, null, 2) + '</pre>' +
+            '<button class="btn btn-secondary" style="margin-top:8px" onclick="editBadgeProfile()">Edit Profile</button>';
+        } else {
+          document.getElementById('badgeProfileEditor').innerHTML = '<p style="color:var(--text-dim)">No badge profile yet. Upload samples to train.</p><button class="btn btn-secondary" onclick="editBadgeProfile()">Create Profile</button>';
+        }
+      } catch (e) { document.getElementById('badgeProfileEditor').innerHTML = ''; }
+    }
+
+    function editBadgeProfile() {
+      showModal('<h2>Badge Profile</h2><div class="form-group"><label>Extraction Prompt</label><textarea id="profilePrompt" rows="4" placeholder="Extract the following fields from this badge: name, company, title..."></textarea></div><div class="form-group"><label>Field Mappings (JSON)</label><textarea id="profileFields" rows="4">[{"field_type":"name","label":"Name","required":true},{"field_type":"company","label":"Company","required":true},{"field_type":"title","label":"Title","required":false}]</textarea></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveBadgeProfile()">Save</button></div>');
+    }
+
+    async function saveBadgeProfile() {
+      try {
+        var fields = JSON.parse(document.getElementById('profileFields').value);
+        var prompt = document.getElementById('profilePrompt').value;
+        await api('PUT', '/events/' + selectedEventId + '/badge-profile', { field_mappings: fields, extraction_prompt: prompt });
+        closeModal();
+        toast('Badge profile saved');
+        loadBadgeProfile(selectedEventId);
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // Badge file upload
+    var badgeDrop = document.getElementById('badgeDrop');
+    var badgeInput = document.getElementById('badgeFileInput');
+    badgeDrop.addEventListener('click', function() { badgeInput.click(); });
+    badgeInput.addEventListener('change', function() { uploadBadgeSamples(this.files); });
+    badgeDrop.addEventListener('dragover', function(e) { e.preventDefault(); this.style.borderColor = 'var(--red)'; });
+    badgeDrop.addEventListener('dragleave', function() { this.style.borderColor = 'var(--border)'; });
+    badgeDrop.addEventListener('drop', function(e) { e.preventDefault(); this.style.borderColor = 'var(--border)'; uploadBadgeSamples(e.dataTransfer.files); });
+
+    async function uploadBadgeSamples(files) {
+      if (!selectedEventId) return;
+      for (var i = 0; i < files.length; i++) {
+        var fd = new FormData();
+        fd.append('sample', files[i]);
+        try {
+          await api('POST', '/events/' + selectedEventId + '/badge-samples', fd);
+        } catch (e) { toast('Upload failed: ' + e.message, 'error'); }
+      }
+      toast('Samples uploaded');
+      loadBadgeSamples(selectedEventId);
+    }
+
+    // ── Sessions ──
+    async function loadSessions() {
+      var data = await api('GET', '/sessions');
+      document.getElementById('sessionsList').innerHTML = data.sessions.map(function(s) {
+        return '<tr><td>' + esc(s.id) + '</td><td>' + esc(s.visitor_name || '--') + '</td><td>' + esc(s.visitor_company || '--') + '</td><td>' + esc(s.demo_pc || '--') + '</td><td>' + (s.screenshot_count || 0) + '</td><td>' + (s.has_audio ? 'Yes' : (s.audio_opted_out ? 'Opted out' : 'No')) + '</td><td><span class="badge badge-' + s.status + '">' + s.status + '</span></td><td>' + formatDate(s.started_at) + '</td></tr>';
+      }).join('');
+    }
+
+    async function importSessions() {
+      toast('Importing sessions from S3...');
+      try {
+        var data = await api('POST', '/sessions/import');
+        toast('Imported ' + data.imported + ' sessions');
+        loadSessions();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ── Contacts ──
+    async function loadContacts() {
+      if (!activeEventId) { document.getElementById('contactsList').innerHTML = '<tr><td colspan="4" style="color:var(--text-dim)">Set an active event first</td></tr>'; return; }
+      var data = await api('GET', '/events/' + activeEventId + '/contacts');
+      document.getElementById('statContacts').textContent = data.count;
+      document.getElementById('contactsList').innerHTML = data.contacts.map(function(c) {
+        return '<tr><td>' + esc(c.name || '--') + '</td><td>' + esc(c.email || '--') + '</td><td>' + esc(c.company || '--') + '</td><td>' + esc(c.title || '--') + '</td></tr>';
+      }).join('');
+
+      // Load matches
+      try {
+        var matches = await api('GET', '/events/' + activeEventId + '/matches');
+        if (matches.matches.length > 0) {
+          document.getElementById('matchResultsCard').style.display = 'block';
+          document.getElementById('matchResults').innerHTML = matches.matches.map(function(m) {
+            var color = m.confidence >= 80 ? 'var(--green)' : m.confidence >= 50 ? 'var(--amber)' : 'var(--red)';
+            return '<tr><td>' + esc(m.visitor_name) + '</td><td>' + esc(m.contact_name) + ' (' + esc(m.contact_email || '') + ')</td><td><span class="confidence-bar"><span class="confidence-fill" style="width:' + m.confidence + '%;background:' + color + '"></span></span>' + m.confidence + '%</td><td style="font-size:12px;color:var(--text-dim)">' + esc(m.reasoning || '') + '</td></tr>';
+          }).join('');
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    async function uploadCsv(input) {
+      if (!activeEventId || !input.files[0]) return;
+      var fd = new FormData();
+      fd.append('csv', input.files[0]);
+      try {
+        var data = await api('POST', '/events/' + activeEventId + '/contacts/import', fd);
+        toast('Imported ' + data.imported + ' contacts');
+        loadContacts();
+      } catch (e) { toast(e.message, 'error'); }
+      input.value = '';
+    }
+
+    async function runMatching() {
+      if (!activeEventId) return toast('Set an active event first', 'error');
+      toast('Running AI matching...');
+      try {
+        var data = await api('POST', '/events/' + activeEventId + '/match');
+        toast('Matched ' + data.matched + ' sessions');
+        loadContacts();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ── Users ──
+    async function loadUsers() {
+      var data = await api('GET', '/users');
+      document.getElementById('usersList').innerHTML = data.users.map(function(u) {
+        return '<tr><td>' + esc(u.username) + '</td><td><span class="badge ' + (u.role === 'admin' ? 'badge-active' : 'badge-completed') + '">' + u.role + '</span></td><td>' + formatDate(u.created_at) + '</td><td>' + (u.username !== currentUser.username ? '<button class="btn btn-sm btn-secondary" onclick="resetUserPw(' + u.id + ')">Reset PW</button> <button class="btn btn-sm btn-danger" onclick="deleteUser(' + u.id + ')">Delete</button>' : '--') + '</td></tr>';
+      }).join('');
+    }
+
+    function showCreateUser() {
+      showModal('<h2>New User</h2><div class="form-group"><label>Username</label><input id="newUsername" placeholder="username"></div><div class="form-group"><label>Password</label><input id="newUserPassword" type="password" placeholder="Initial password"></div><div class="form-group"><label>Role</label><select id="newUserRole"><option value="user">User</option><option value="admin">Admin</option></select></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createUser()">Create</button></div>');
+    }
+
+    async function createUser() {
+      var username = document.getElementById('newUsername').value;
+      var password = document.getElementById('newUserPassword').value;
+      var role = document.getElementById('newUserRole').value;
+      if (!username || !password) return toast('Fill all fields', 'error');
+      await api('POST', '/users', { username, password, role });
+      closeModal();
+      toast('User created');
+      loadUsers();
+    }
+
+    async function resetUserPw(id) {
+      var pw = prompt('New password:');
+      if (!pw) return;
+      await api('POST', '/users/' + id + '/reset-password', { password: pw });
+      toast('Password reset');
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Delete this user?')) return;
+      await api('DELETE', '/users/' + id);
+      toast('User deleted');
+      loadUsers();
+    }
+
+    // ── Helpers ──
+    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    function formatDate(s) { if (!s) return '--'; try { return new Date(s).toLocaleString(); } catch (e) { return s; } }
+
+    // ── Init ──
+    checkAuth();
+  </script>
+</body>
+</html>

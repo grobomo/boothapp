@@ -32,3 +32,8 @@ presenter/batch-report.html
 
 # Contact DB and uploads (runtime data)
 presenter/data/
+
+# Management server runtime data
+management/data/*.db
+management/uploads/*
+!management/uploads/.gitkeep
