@@ -5,6 +5,7 @@ const path = require('path');
 const { runPipeline } = require('./lib/pipeline');
 const { classifyError } = require('./lib/errors');
 const { writeErrorJson } = require('./lib/error-writer');
+const { retry } = require('./lib/retry');
 
 // ---------------------------------------------------------------------------
 // Watcher — monitors sessions directory for new recordings and kicks off
@@ -50,20 +51,56 @@ function getPendingSessions() {
 }
 
 /**
- * Process a single session.  All errors are caught, classified, and persisted.
+ * Upload error.json to S3 so the dashboard can display failures even when
+ * the local filesystem isn't accessible.
+ */
+async function writeErrorToS3(s3Client, bucket, sessionId, errorPayload) {
+  try {
+    const { PutObjectCommand } = require('@aws-sdk/client-s3');
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: `sessions/${sessionId}/output/error.json`,
+        Body: JSON.stringify(errorPayload, null, 2),
+        ContentType: 'application/json',
+      }),
+    );
+  } catch (s3Err) {
+    log(`session=${sessionId} failed to write error.json to S3: ${s3Err.message}`);
+  }
+}
+
+const SESSION_MAX_RETRIES = 2;
+
+/**
+ * Process a single session.  Retries up to 2 times for transient errors.
+ * On final failure, writes error.json both locally and to S3.
  */
 async function processSession(sessionId, clients, config) {
   log(`processing session=${sessionId}`);
 
   try {
-    const result = await runPipeline({
-      sessionId,
-      sessionsDir: SESSIONS_DIR,
-      s3: clients.s3,
-      bedrock: clients.bedrock,
-      config,
-      log,
-    });
+    const result = await retry(
+      () =>
+        runPipeline({
+          sessionId,
+          sessionsDir: SESSIONS_DIR,
+          s3: clients.s3,
+          bedrock: clients.bedrock,
+          config,
+          log,
+        }),
+      {
+        maxRetries: SESSION_MAX_RETRIES,
+        baseDelayMs: config.baseDelayMs || 1000,
+        maxDelayMs: config.maxDelayMs || 30000,
+        shouldRetry: (err) => classifyError(err).retryable,
+        onRetry: (err, attempt, delayMs) => {
+          const classified = classifyError(err);
+          log(`session=${sessionId} retry ${attempt}/${SESSION_MAX_RETRIES} type=${classified.type} delay=${delayMs}ms`);
+        },
+      },
+    );
 
     // Write successful result
     const outputDir = path.join(SESSIONS_DIR, sessionId, 'output');
@@ -77,15 +114,36 @@ async function processSession(sessionId, clients, config) {
   } catch (err) {
     const classified = classifyError(err);
 
-    // Error already written by pipeline, but log a summary here
     log(`session=${sessionId} FAILED type=${classified.type} retryable=${classified.retryable}`);
+
+    // Build error payload and write locally
+    const errorPayload = {
+      error: true,
+      timestamp: new Date().toISOString(),
+      sessionId,
+      type: classified.type,
+      retryable: classified.retryable,
+      message: classified.message,
+      code: classified.code,
+      detail: classified.detail,
+    };
+
+    const outputDir = path.join(SESSIONS_DIR, sessionId, 'output');
+    fs.mkdirSync(outputDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(outputDir, 'error.json'),
+      JSON.stringify(errorPayload, null, 2) + '\n',
+    );
+
+    // Also write error.json to S3 for dashboard visibility
+    await writeErrorToS3(clients.s3, config.bucket, sessionId, errorPayload);
 
     if (classified.type === 's3_access_denied') {
       log(`  -> S3 access denied. Check IAM role/policy for bucket "${config.bucket}".`);
     } else if (classified.type === 'missing_file') {
       log(`  -> Recording file not found. Was it uploaded? Detail: ${classified.detail}`);
     } else if (classified.type === 'throttling') {
-      log(`  -> Service throttled. Pipeline retried ${config.maxRetries || 3} times before giving up.`);
+      log(`  -> Service throttled. Retried ${SESSION_MAX_RETRIES} times before giving up.`);
     } else if (classified.type === 'bedrock_validation') {
       log(`  -> Bedrock rejected the request. Check model ID and payload format.`);
     } else {
