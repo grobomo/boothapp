@@ -216,7 +216,7 @@
                         ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
                         : '--';
                     return '<tr>' +
-                        '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
+                        '<td class="session-id"><a class="summary-link" href="/session-viewer.html?session=' + encodeURIComponent(s.session_id) + '">' + escHtml(s.session_id) + '</a></td>' +
                         '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
                         '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
                         '<td>' + formatDate(s.created_at) + '</td>' +
