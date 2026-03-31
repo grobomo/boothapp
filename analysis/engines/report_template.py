@@ -43,6 +43,45 @@ def _esc(value: Any) -> str:
     return html.escape(str(value))
 
 
+# ---- Avatar helpers -----------------------------------------------------
+
+_AVATAR_COLORS = [
+    "#D71920", "#2D936C", "#448AFF", "#E63946",
+    "#7C4DFF", "#00BFA5", "#FF6D00", "#6D4C41",
+]
+
+
+def _initials(name: str) -> str:
+    """Extract up to two initials from a name."""
+    parts = name.split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    if parts:
+        return parts[0][0].upper()
+    return "?"
+
+
+def _name_color(name: str) -> str:
+    """Deterministic color from name."""
+    return _AVATAR_COLORS[sum(ord(c) for c in name) % len(_AVATAR_COLORS)]
+
+
+def _render_avatar(name: str, photo_url: str | None = None,
+                   css_class: str = "avatar") -> str:
+    """Render a circular avatar -- photo if URL given, else initials."""
+    if photo_url:
+        return (
+            f'<img class="{_esc(css_class)} {_esc(css_class)}--img" '
+            f'src="{_esc(photo_url)}" alt="{_esc(name)}" />'
+        )
+    ini = _initials(name)
+    bg = _name_color(name)
+    return (
+        f'<div class="{_esc(css_class)} {_esc(css_class)}--initials" '
+        f'style="background:{bg};">{ini}</div>'
+    )
+
+
 # ---- CSS ----------------------------------------------------------------
 
 _CSS = f"""
@@ -57,6 +96,54 @@ body {{
     line-height: 1.6;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+}}
+
+/* ---------- avatar ---------- */
+.avatar {{
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2.5px solid rgba(255,255,255,0.25);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1);
+}}
+.avatar--img {{
+    object-fit: cover;
+}}
+.avatar--initials {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 20px;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+}}
+.visitor-info-avatar {{
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2.5px solid {_BRAND['border']};
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+}}
+.visitor-info-avatar--img {{
+    object-fit: cover;
+}}
+.visitor-info-avatar--initials {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 22px;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+}}
+.visitor-header {{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
 }}
 
 /* ---------- header ---------- */
@@ -90,6 +177,12 @@ body {{
     text-align: right;
     font-size: 13px;
     opacity: 0.85;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}}
+.report-header .meta-text {{
+    text-align: right;
 }}
 .report-header .meta .report-id {{
     font-family: 'Consolas', 'Courier New', monospace;
@@ -303,8 +396,10 @@ def _kv_row(label: str, value: str) -> str:
 def _render_header(data: dict) -> str:
     visitor = data.get("visitor", {})
     name = visitor.get("name", "Visitor")
+    photo_url = visitor.get("badge_photo_url")
     report_id = data.get("report_id", "")
     generated = data.get("generated_at", datetime.now().strftime("%Y-%m-%d %H:%M"))
+    avatar_html = _render_avatar(name, photo_url, css_class="avatar")
     return f"""
     <div class="report-header">
         <div class="brand">
@@ -315,9 +410,12 @@ def _render_header(data: dict) -> str:
             </div>
         </div>
         <div class="meta">
-            <div style="font-size:16px;font-weight:600;">{_esc(name)}</div>
-            <div>{_esc(generated)}</div>
-            <div class="report-id">{_esc(report_id)}</div>
+            <div class="meta-text">
+                <div style="font-size:16px;font-weight:600;">{_esc(name)}</div>
+                <div>{_esc(generated)}</div>
+                <div class="report-id">{_esc(report_id)}</div>
+            </div>
+            {avatar_html}
         </div>
     </div>
     """
@@ -343,9 +441,25 @@ def _render_visitor_info(data: dict) -> str:
             rows.append(_kv_row(label, val))
     if not rows:
         return ""
+    name = v.get("name", "Visitor")
+    photo_url = v.get("badge_photo_url")
+    avatar_html = _render_avatar(name, photo_url,
+                                 css_class="visitor-info-avatar")
     return f"""
     <div class="section-title">Visitor Information</div>
     <div class="card">
+        <div class="visitor-header">
+            {avatar_html}
+            <div>
+                <div style="font-size:18px;font-weight:600;color:{_BRAND['dark']};">
+                    {_esc(name)}
+                </div>
+                <div style="font-size:14px;color:{_BRAND['text_muted']};">
+                    {_esc(v.get("title", ""))}
+                    {(" &mdash; " + _esc(v.get("company", ""))) if v.get("company") else ""}
+                </div>
+            </div>
+        </div>
         <div class="kv-grid">
             {"".join(rows)}
         </div>

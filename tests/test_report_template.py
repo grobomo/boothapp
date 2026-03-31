@@ -182,5 +182,72 @@ class TestGenerateReportFromJson(unittest.TestCase):
             os.unlink(path)
 
 
+class TestVisitorAvatar(unittest.TestCase):
+    """Tests for the visitor photo / initials avatar feature."""
+
+    def test_initials_avatar_in_header_no_photo(self):
+        """Without badge_photo_url, header shows initials circle."""
+        result = generate_report(SAMPLE_DATA)
+        self.assertIn("avatar--initials", result)
+        # Jane Doe -> "JD"
+        self.assertIn(">JD</div>", result)
+
+    def test_photo_avatar_in_header(self):
+        """With badge_photo_url, header shows img tag."""
+        data = {**SAMPLE_DATA, "visitor": {
+            **SAMPLE_DATA["visitor"],
+            "badge_photo_url": "https://s3.example.com/sessions/123/badge.jpg",
+        }}
+        result = generate_report(data)
+        self.assertIn("avatar--img", result)
+        self.assertIn("badge.jpg", result)
+        # Body should use img tags, not initials divs (CSS defs don't count)
+        body = result.split("</style>")[1]
+        self.assertNotIn("avatar--initials", body)
+
+    def test_avatar_has_drop_shadow(self):
+        """Avatar CSS includes box-shadow for subtle depth."""
+        result = generate_report(SAMPLE_DATA)
+        self.assertIn("box-shadow", result)
+
+    def test_avatar_is_circular(self):
+        """Avatar CSS uses border-radius: 50%."""
+        result = generate_report(SAMPLE_DATA)
+        self.assertIn("border-radius: 50%", result)
+
+    def test_avatar_has_border(self):
+        """Avatar CSS includes a border."""
+        result = generate_report(SAMPLE_DATA)
+        # Both header and visitor-info avatars get borders
+        self.assertIn("border: 2.5px solid", result)
+
+    def test_visitor_info_section_has_avatar(self):
+        """Visitor Information card shows an avatar."""
+        result = generate_report(SAMPLE_DATA)
+        self.assertIn("visitor-info-avatar", result)
+        self.assertIn("visitor-header", result)
+
+    def test_initials_single_name(self):
+        """Single-word name produces one initial."""
+        data = {"visitor": {"name": "Madonna"}}
+        result = generate_report(data)
+        self.assertIn(">M</div>", result)
+
+    def test_initials_empty_name(self):
+        """Empty/missing name falls back to ?."""
+        data = {"visitor": {"name": ""}}
+        result = generate_report(data)
+        self.assertIn(">?</div>", result)
+
+    def test_photo_url_is_escaped(self):
+        """Photo URL with special chars is HTML-escaped."""
+        data = {"visitor": {
+            "name": "Test",
+            "badge_photo_url": 'https://example.com/photo?a=1&b=2',
+        }}
+        result = generate_report(data)
+        self.assertIn("&amp;b=2", result)
+
+
 if __name__ == "__main__":
     unittest.main()
