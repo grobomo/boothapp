@@ -1,0 +1,88 @@
+{
+    "report_id": "RPT-2026-0331-0042",
+    "generated_at": "2026-03-31 14:22",
+    "visitor": {
+        "name": "Sarah Chen",
+        "title": "VP of Information Security",
+        "company": "Acme Financial Corp",
+        "email": "schen@acmefin.example.com",
+        "industry": "Financial Services",
+        "company_size": "5,000 - 10,000 employees",
+        "visit_duration": "28 minutes"
+    },
+    "products_demonstrated": [
+        {
+            "name": "Vision One XDR",
+            "timestamp": "14:02",
+            "note": "Asked about SOC integration and SIEM correlation"
+        },
+        {
+            "name": "Cloud Security - Container Protection",
+            "timestamp": "14:10",
+            "note": "Running Kubernetes in AWS EKS, interested in runtime protection"
+        },
+        {
+            "name": "Zero Trust Secure Access",
+            "timestamp": "14:18",
+            "note": "Currently evaluating ZTNA solutions for remote workforce"
+        },
+        {
+            "name": "Email Security",
+            "timestamp": "14:24",
+            "note": "Recent BEC incidents, wants AI-powered detection"
+        }
+    ],
+    "interests": [
+        {
+            "topic": "XDR / SOC Modernization",
+            "confidence": "high",
+            "detail": "Primary driver -- consolidating point products into unified platform"
+        },
+        {
+            "topic": "Cloud Workload Security",
+            "confidence": "high",
+            "detail": "Active K8s deployment, evaluating runtime protection vendors"
+        },
+        {
+            "topic": "Zero Trust Network Access",
+            "confidence": "medium",
+            "detail": "In evaluation phase, comparing 3 vendors"
+        },
+        {
+            "topic": "Email Threat Protection",
+            "confidence": "medium",
+            "detail": "Reactive interest after recent BEC incident"
+        },
+        {
+            "topic": "Managed Detection & Response",
+            "confidence": "low",
+            "detail": "Mentioned briefly, has internal SOC team"
+        }
+    ],
+    "recommendations": [
+        {
+            "action": "Schedule technical deep-dive on Vision One XDR with SOC team",
+            "priority": "high"
+        },
+        {
+            "action": "Send Cloud Security container protection datasheet and pricing",
+            "priority": "high"
+        },
+        {
+            "action": "Connect with ZTNA SE for proof-of-concept discussion",
+            "priority": "medium"
+        },
+        {
+            "action": "Share BEC case study and Email Security ROI calculator",
+            "priority": "medium"
+        },
+        {
+            "action": "Follow up in 2 weeks with consolidated proposal",
+            "priority": "high"
+        },
+        {
+            "action": "Add to Vision One webinar invite list for April",
+            "priority": "low"
+        }
+    ]
+}

@@ -1,5 +1,9 @@
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
 .env
 *.log
 .DS_Store
 continuous-claude.log
+examples/sample_report.html
