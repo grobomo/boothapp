@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp Admin Panel</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --red:       #D71920;
+            --red-dim:   rgba(215, 25, 32, 0.15);
+            --green:     #00E676;
+            --green-dim: rgba(0, 230, 118, 0.15);
+            --blue:      #448AFF;
+            --blue-dim:  rgba(68, 138, 255, 0.15);
+            --amber:     #FFAB00;
+            --amber-dim: rgba(255, 171, 0, 0.15);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ---- Header ---- */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .header h1 span {
+            background: linear-gradient(135deg, var(--red), #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-nav a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .header-nav a:hover { color: var(--text); }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+        /* ---- Layout ---- */
+        .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+
+        /* ---- Summary cards ---- */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .card h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        .card .value { font-size: 28px; font-weight: 700; }
+        .card .sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+        /* ---- Section ---- */
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .section-header h2 { font-size: 15px; font-weight: 600; }
+
+        /* ---- Toolbar ---- */
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .toolbar input, .toolbar select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .toolbar input:focus, .toolbar select:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
+        /* ---- Table ---- */
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            padding: 10px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        th {
+            background: var(--surface2);
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        th:hover { color: var(--text); }
+        th .sort-arrow { margin-left: 4px; font-size: 10px; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        /* ---- Badges ---- */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-complete  { background: var(--green-dim); color: var(--green); }
+        .badge-active    { background: var(--blue-dim); color: var(--blue); }
+        .badge-pending   { background: var(--amber-dim); color: var(--amber); }
+        .badge-unknown   { background: rgba(107,115,133,0.15); color: var(--text-dim); }
+
+        /* ---- Buttons ---- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn:hover { border-color: var(--text-dim); background: var(--border); }
+        .btn-danger { border-color: var(--red); color: var(--red); }
+        .btn-danger:hover { background: var(--red-dim); }
+        .btn-primary { border-color: var(--blue); color: var(--blue); }
+        .btn-primary:hover { background: var(--blue-dim); }
+        .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+        /* ---- Form ---- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+        }
+        .form-group input {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .form-group input:focus { outline: none; border-color: var(--blue); }
+        .form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding-top: 8px;
+        }
+
+        /* ---- Toast ---- */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 13px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            animation: slideIn 0.2s ease;
+            max-width: 360px;
+        }
+        .toast.success { border-left: 3px solid var(--green); }
+        .toast.error   { border-left: 3px solid var(--red); }
+        .toast.info    { border-left: 3px solid var(--blue); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ---- Watcher grid ---- */
+        .watcher-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            padding: 20px;
+        }
+        .watcher-item label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .watcher-item .val { font-size: 16px; font-weight: 600; }
+
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-dim);
+        }
+        .error-detail {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1><span>BoothApp</span> // Admin</h1>
+            <nav class="header-nav">
+                <a href="/demo.html">&larr; Dashboard</a>
+                &nbsp;|&nbsp;
+                <a href="/sessions.html">Sessions</a>
+            </nav>
+        </div>
+        <div class="header-actions">
+            <span class="status-dot" id="apiStatus"></span>
+            <span id="apiStatusText" style="font-size:13px;color:var(--text-dim)">Connecting...</span>
+            <button class="btn btn-sm" onclick="refreshAll()">Refresh</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Summary Cards -->
+        <div class="cards">
+            <div class="card">
+                <h3>Total Sessions</h3>
+                <div class="value" id="totalSessions">--</div>
+            </div>
+            <div class="card">
+                <h3>With Analysis</h3>
+                <div class="value" style="color:var(--green)" id="analyzedSessions">--</div>
+            </div>
+            <div class="card">
+                <h3>Pending</h3>
+                <div class="value" style="color:var(--amber)" id="pendingSessions">--</div>
+            </div>
+            <div class="card">
+                <h3>Watcher Uptime</h3>
+                <div class="value" id="watcherUptime">--</div>
+                <div class="sub" id="watcherPending">-- in queue</div>
+            </div>
+            <div class="card">
+                <h3>S3 Usage</h3>
+                <div class="value" id="s3Usage">--</div>
+                <div class="sub" id="s3Objects">-- objects</div>
+            </div>
+        </div>
+
+        <!-- Watcher Status -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Watcher Status</h2>
+            </div>
+            <div class="watcher-grid">
+                <div class="watcher-item">
+                    <label>Status</label>
+                    <div class="val" id="wStatus">--</div>
+                </div>
+                <div class="watcher-item">
+                    <label>Uptime</label>
+                    <div class="val" id="wUptime">--</div>
+                </div>
+                <div class="watcher-item">
+                    <label>Pending Sessions</label>
+                    <div class="val" id="wPending">--</div>
+                </div>
+                <div class="watcher-item">
+                    <label>Poll Interval</label>
+                    <div class="val" id="wPoll">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Table -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Sessions</h2>
+                <button class="btn btn-sm btn-primary" onclick="toggleCreateForm()">+ Create Test Session</button>
+            </div>
+            <div class="toolbar">
+                <input type="text" id="searchInput" placeholder="Search sessions..." oninput="renderSessions()">
+                <select id="statusFilter" onchange="renderSessions()">
+                    <option value="">All Statuses</option>
+                    <option value="complete">Complete</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+            </div>
+            <div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortBy('session_id')">Session ID <span class="sort-arrow" id="sort-session_id"></span></th>
+                            <th onclick="sortBy('visitor_name')">Visitor <span class="sort-arrow" id="sort-visitor_name"></span></th>
+                            <th onclick="sortBy('status')">Status <span class="sort-arrow" id="sort-status"></span></th>
+                            <th onclick="sortBy('created_at')">Created <span class="sort-arrow" id="sort-created_at"></span></th>
+                            <th>Analysis</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionsBody">
+                        <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Create Session Form -->
+        <div class="section" id="createForm" style="display:none">
+            <div class="section-header">
+                <h2>Create Test Session</h2>
+                <button class="btn btn-sm" onclick="toggleCreateForm()">Close</button>
+            </div>
+            <form class="form-grid" onsubmit="createSession(event)">
+                <div class="form-group">
+                    <label>Session ID (optional)</label>
+                    <input type="text" id="newSessionId" placeholder="auto-generated if empty">
+                </div>
+                <div class="form-group">
+                    <label>Visitor Name</label>
+                    <input type="text" id="newVisitorName" placeholder="Jane Smith">
+                </div>
+                <div class="form-group">
+                    <label>Company</label>
+                    <input type="text" id="newVisitorCompany" placeholder="Acme Corp">
+                </div>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="newVisitorTitle" placeholder="VP Engineering">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="newVisitorEmail" placeholder="jane@acme.com">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toasts"></div>
+
+    <script>
+        var sessions = [];
+        var sortField = 'created_at';
+        var sortAsc = false;
+
+        function toast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toasts');
+            var el = document.createElement('div');
+            el.className = 'toast ' + type;
+            el.textContent = message;
+            container.appendChild(el);
+            setTimeout(function() { el.remove(); }, 4000);
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function escAttr(str) {
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '--';
+            var d = new Date(iso);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        }
+
+        function formatUptime(seconds) {
+            if (!seconds && seconds !== 0) return '--';
+            var h = Math.floor(seconds / 3600);
+            var m = Math.floor((seconds % 3600) / 60);
+            var s = seconds % 60;
+            if (h > 0) return h + 'h ' + m + 'm';
+            if (m > 0) return m + 'm ' + s + 's';
+            return s + 's';
+        }
+
+        function statusBadge(status) {
+            var cls = 'badge-unknown';
+            if (status === 'complete') cls = 'badge-complete';
+            else if (status === 'active') cls = 'badge-active';
+            else if (status === 'pending') cls = 'badge-pending';
+            return '<span class="badge ' + cls + '">' + escHtml(status) + '</span>';
+        }
+
+        // ---- Data fetching ----
+
+        function fetchSessions() {
+            return fetch('/api/sessions')
+                .then(function(res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
+                .then(function(data) {
+                    sessions = data.sessions || [];
+                    updateCards();
+                    renderSessions();
+                })
+                .catch(function(err) {
+                    toast('Failed to load sessions: ' + err.message, 'error');
+                });
+        }
+
+        function fetchWatcherStatus() {
+            return fetch('/api/watcher/status')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var isUp = data.status === 'ok';
+                    document.getElementById('wStatus').textContent = isUp ? 'Running' : 'Unreachable';
+                    document.getElementById('wStatus').style.color = isUp ? 'var(--green)' : 'var(--red)';
+                    document.getElementById('wUptime').textContent = formatUptime(data.uptime);
+                    document.getElementById('wPending').textContent = data.pendingSessions != null ? data.pendingSessions : '--';
+                    document.getElementById('wPoll').textContent = data.pollIntervalMs ? (data.pollIntervalMs / 1000) + 's' : '--';
+
+                    document.getElementById('watcherUptime').textContent = formatUptime(data.uptime);
+                    document.getElementById('watcherPending').textContent = (data.pendingSessions != null ? data.pendingSessions : '--') + ' in queue';
+                })
+                .catch(function() {
+                    document.getElementById('wStatus').textContent = 'Unreachable';
+                    document.getElementById('wStatus').style.color = 'var(--red)';
+                    document.getElementById('watcherUptime').textContent = '--';
+                });
+        }
+
+        function fetchStorageStats() {
+            return fetch('/api/storage/stats')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.error) throw new Error(data.error);
+                    document.getElementById('s3Usage').textContent = data.totalSizeMB + ' MB';
+                    document.getElementById('s3Objects').textContent = data.totalObjects + ' objects';
+                })
+                .catch(function() {
+                    document.getElementById('s3Usage').textContent = 'N/A';
+                    document.getElementById('s3Objects').textContent = '';
+                });
+        }
+
+        function updateCards() {
+            var analyzed = 0, pending = 0;
+            sessions.forEach(function(s) {
+                if (s.has_analysis) analyzed++;
+                if (s.status === 'pending' || s.status === 'unknown') pending++;
+            });
+            document.getElementById('totalSessions').textContent = sessions.length;
+            document.getElementById('analyzedSessions').textContent = analyzed;
+            document.getElementById('pendingSessions').textContent = pending;
+        }
+
+        // ---- Sorting ----
+
+        function sortBy(field) {
+            if (sortField === field) {
+                sortAsc = !sortAsc;
+            } else {
+                sortField = field;
+                sortAsc = true;
+            }
+            document.querySelectorAll('.sort-arrow').forEach(function(el) { el.textContent = ''; });
+            var arrow = document.getElementById('sort-' + field);
+            if (arrow) arrow.textContent = sortAsc ? '\u25B2' : '\u25BC';
+            renderSessions();
+        }
+
+        // ---- Render table ----
+
+        function renderSessions() {
+            var search = document.getElementById('searchInput').value.toLowerCase();
+            var statusFilter = document.getElementById('statusFilter').value;
+
+            var filtered = sessions.filter(function(s) {
+                if (statusFilter && s.status !== statusFilter) return false;
+                if (search) {
+                    var haystack = (s.session_id + ' ' + (s.visitor_name || '')).toLowerCase();
+                    if (haystack.indexOf(search) === -1) return false;
+                }
+                return true;
+            });
+
+            filtered.sort(function(a, b) {
+                var va = a[sortField] || '';
+                var vb = b[sortField] || '';
+                if (va < vb) return sortAsc ? -1 : 1;
+                if (va > vb) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            var tbody = document.getElementById('sessionsBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No sessions found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(function(s) {
+                var analysisCell = s.has_analysis
+                    ? '<span style="color:var(--green)">Yes</span>'
+                    : '<span style="color:var(--text-dim)">No</span>';
+
+                var actions = '';
+                if (!s.has_analysis) {
+                    actions += '<button class="btn btn-sm btn-primary" onclick="retrySession(\'' + escAttr(s.session_id) + '\')">Retry</button> ';
+                } else {
+                    actions += '<button class="btn btn-sm" onclick="retrySession(\'' + escAttr(s.session_id) + '\')">Re-analyze</button> ';
+                }
+                actions += '<button class="btn btn-sm btn-danger" onclick="deleteSession(\'' + escAttr(s.session_id) + '\')">Delete</button>';
+
+                return '<tr>'
+                    + '<td><code>' + escHtml(s.session_id) + '</code></td>'
+                    + '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>'
+                    + '<td>' + statusBadge(s.status || 'unknown') + '</td>'
+                    + '<td>' + formatDate(s.created_at) + '</td>'
+                    + '<td>' + analysisCell + '</td>'
+                    + '<td>' + actions + '</td>'
+                    + '</tr>';
+            }).join('');
+        }
+
+        // ---- Actions ----
+
+        function deleteSession(id) {
+            if (!confirm('Delete session ' + id + '? This cannot be undone.')) return;
+            fetch('/api/sessions/' + encodeURIComponent(id), { method: 'DELETE' })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.error) throw new Error(data.error);
+                    toast('Session ' + id + ' deleted', 'success');
+                    fetchSessions();
+                })
+                .catch(function(err) { toast('Delete failed: ' + err.message, 'error'); });
+        }
+
+        function retrySession(id) {
+            fetch('/api/sessions/' + encodeURIComponent(id) + '/retry', { method: 'POST' })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.error) throw new Error(data.error);
+                    toast('Re-triggered analysis for ' + id, 'success');
+                    fetchSessions();
+                })
+                .catch(function(err) { toast('Retry failed: ' + err.message, 'error'); });
+        }
+
+        function toggleCreateForm() {
+            var form = document.getElementById('createForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function createSession(e) {
+            e.preventDefault();
+            var body = {
+                sessionId: document.getElementById('newSessionId').value || undefined,
+                visitorName: document.getElementById('newVisitorName').value || undefined,
+                visitorCompany: document.getElementById('newVisitorCompany').value || undefined,
+                visitorTitle: document.getElementById('newVisitorTitle').value || undefined,
+                visitorEmail: document.getElementById('newVisitorEmail').value || undefined,
+            };
+            fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.error) throw new Error(data.error);
+                toast('Session ' + data.sessionId + ' created', 'success');
+                toggleCreateForm();
+                document.getElementById('newSessionId').value = '';
+                document.getElementById('newVisitorName').value = '';
+                document.getElementById('newVisitorCompany').value = '';
+                document.getElementById('newVisitorTitle').value = '';
+                document.getElementById('newVisitorEmail').value = '';
+                fetchSessions();
+            })
+            .catch(function(err) { toast('Create failed: ' + err.message, 'error'); });
+        }
+
+        // ---- Refresh ----
+
+        function refreshAll() {
+            fetchSessions();
+            fetchWatcherStatus();
+            fetchStorageStats();
+        }
+
+        function checkApi() {
+            fetch('/api/watcher/status')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var ok = data.status === 'ok';
+                    document.getElementById('apiStatus').className = 'status-dot ' + (ok ? 'online' : 'offline');
+                    document.getElementById('apiStatusText').textContent = ok ? 'Watcher Connected' : 'Watcher Offline';
+                })
+                .catch(function() {
+                    document.getElementById('apiStatus').className = 'status-dot offline';
+                    document.getElementById('apiStatusText').textContent = 'API Offline';
+                });
+        }
+
+        // ---- Init ----
+        refreshAll();
+        checkApi();
+        setInterval(refreshAll, 10000);
+        setInterval(checkApi, 15000);
+    </script>
+</body>
+</html>
