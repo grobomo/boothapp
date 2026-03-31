@@ -5,5 +5,5 @@
   "workflow": {
     "verifier": true
   },
-  "spec_dir": ".specs/build-a-session-metadata"
+  "spec_dir": ".specs/in-altarrboothapp-create-a"
 }
