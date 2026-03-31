@@ -346,9 +346,24 @@ AUDIO_DEVICE=                         # Force specific mic (auto-detected if uns
 
 # Notifications
 WEBHOOK_URL=                          # Teams/Slack webhook for alerts
+
+# Teams-to-GitHub Issues (see docs/TEAMS-WEBHOOK-SETUP.md)
+TEAMS_WEBHOOK_SECRET=                 # HMAC secret from Teams outgoing webhook
+GITHUB_TOKEN=                         # GitHub PAT with repo scope
+GITHUB_REPO=altarr/boothapp          # Target repo for issues
 ```
 
 See [.env.example](.env.example) for the full list.
+
+### Teams Channel Integration
+
+Team members can create GitHub issues by posting messages in a Teams channel.
+See **[docs/TEAMS-WEBHOOK-SETUP.md](docs/TEAMS-WEBHOOK-SETUP.md)** for the
+complete setup guide, or run the quick checker:
+
+```bash
+bash scripts/verify-teams-webhook.sh
+```
 
 ---
 
