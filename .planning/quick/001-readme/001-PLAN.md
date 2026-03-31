@@ -1,13 +1,16 @@
-# Plan: Add Comprehensive README.md
+# Plan: Comprehensive README.md with Badges and Mermaid Diagram
 
 ## Goal
-Add a professional, hackathon-ready README.md to the boothapp repo root covering all system components.
+Upgrade README.md with shields.io badges, Mermaid architecture flowchart, component status badges, and demo instructions.
 
 ## Success Criteria
-1. README.md exists at repo root with project overview
-2. ASCII architecture diagram showing data flow
-3. Setup instructions for: Chrome extension, audio recorder, session orchestrator, analysis pipeline
-4. Key features section
-5. S3 data contract format documented
-6. Team credits for "Smells Like Machine Learning"
-7. Professional presentation suitable for hackathon judging
+1. Shields.io badges for Node.js, AWS, Chrome Extension at top
+2. ASCII art banner preserved
+3. One-paragraph project description
+4. Mermaid flowchart showing Chrome Extension -> S3 -> Watcher -> Analysis -> Report
+5. Quick start guide with prerequisites, setup, running
+6. Component list with status badges (complete/in-progress)
+7. S3 data contract reference
+8. Demo instructions section
+9. Team credits
+10. Professional presentation suitable for hackathon judging
