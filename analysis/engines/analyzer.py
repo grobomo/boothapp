@@ -351,11 +351,36 @@ class SessionAnalyzer:
         return "\n".join(lines), screenshot_map
 
     def _extract_json(self, text: str) -> dict:
-        match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
-        if match:
-            text = match.group(1)
-        text = text.strip()
-        return json.loads(text)
+        """Extract JSON from LLM response that may contain markdown fences or extra text."""
+        logger.debug("Raw LLM response (first 200 chars): %.200s", text)
+
+        # 1. Try stripping markdown code fences
+        fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+        if fence_match:
+            try:
+                return json.loads(fence_match.group(1).strip())
+            except json.JSONDecodeError:
+                pass
+
+        # 2. Try parsing the full text as-is
+        stripped = text.strip()
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError:
+            pass
+
+        # 3. Find the outermost { ... } block
+        brace_match = re.search(r"\{[\s\S]*\}", stripped)
+        if brace_match:
+            try:
+                return json.loads(brace_match.group(0))
+            except json.JSONDecodeError:
+                pass
+
+        raise json.JSONDecodeError(
+            f"No valid JSON found in LLM response (first 200 chars): {text[:200]}",
+            text, 0,
+        )
 
     def _pass1_factual_extraction(self, timeline_text: str, screenshot_map: dict) -> dict:
         client = get_client()
@@ -399,6 +424,37 @@ class SessionAnalyzer:
             (b.text for b in message.content if hasattr(b, "text")),
             ""
         )
+        try:
+            return self._extract_json(text)
+        except json.JSONDecodeError:
+            logger.warning("pass1: JSON extraction failed, retrying with explicit JSON instruction")
+            return self._retry_json_only(client, SYSTEM_FACTUAL, user_content)
+
+    def _retry_json_only(self, client, system: str, user_content) -> dict:
+        """Retry a failed pass with an explicit 'respond with only JSON' instruction."""
+        if isinstance(user_content, str):
+            retry_content = user_content + "\n\nIMPORTANT: Respond with ONLY a valid JSON object. No markdown, no explanation, no code fences. Just the raw JSON."
+        else:
+            retry_content = list(user_content) + [{
+                "type": "text",
+                "text": "\n\nIMPORTANT: Respond with ONLY a valid JSON object. No markdown, no explanation, no code fences. Just the raw JSON.",
+            }]
+
+        def _do_retry():
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=MAX_TOKENS,
+                system=system,
+                messages=[{"role": "user", "content": retry_content}],
+                thinking={"type": "adaptive"},
+            ) as stream:
+                return stream.get_final_message()
+
+        message = _call_with_retry("retry_json_only", _do_retry)
+        text = next(
+            (b.text for b in message.content if hasattr(b, "text")),
+            ""
+        )
         return self._extract_json(text)
 
     def _pass2_recommendations(self, factual_results: dict) -> dict:
@@ -429,7 +485,11 @@ class SessionAnalyzer:
             (b.text for b in message.content if hasattr(b, "text")),
             ""
         )
-        return self._extract_json(text)
+        try:
+            return self._extract_json(text)
+        except json.JSONDecodeError:
+            logger.warning("pass2: JSON extraction failed, retrying with explicit JSON instruction")
+            return self._retry_json_only(client, SYSTEM_RECOMMENDATIONS, prompt)
 
     def _build_summary_json(self, factual: dict, recommendations: dict) -> dict:
         session_id = self._metadata.get("session_id", "unknown")
