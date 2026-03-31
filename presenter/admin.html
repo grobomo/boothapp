@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BoothApp — Admin Panel</title>
+<title>BoothApp — Admin Console</title>
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,9 +13,10 @@
     color: #e6edf3;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     min-height: 100vh;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
   }
 
+  /* ── Header ──────────────────────────────────────────────────────────────── */
   header {
     max-width: 1200px;
     margin: 0 auto 1.5rem;
@@ -30,6 +31,7 @@
     font-size: 1.8rem;
     font-weight: 600;
     color: #58a6ff;
+    letter-spacing: 0.02em;
   }
 
   .header-right {
@@ -38,109 +40,140 @@
     gap: 1rem;
     font-size: 0.85rem;
   }
-  .header-right a { color: #8b949e; text-decoration: none; }
+  .header-right a {
+    color: #8b949e;
+    text-decoration: none;
+  }
   .header-right a:hover { color: #e6edf3; }
-  .user-badge { color: #8b949e; font-family: monospace; }
 
-  /* -- Tabs -- */
-  .tabs {
+  .user-badge {
+    color: #8b949e;
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+
+  /* ── Messages ────────────────────────────────────────────────────────────── */
+  .msg {
+    max-width: 1200px;
+    margin: 0 auto 1rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: none;
+  }
+  .msg-error { background: #f8514922; border: 1px solid #f85149; color: #f85149; }
+  .msg-success { background: #23863622; border: 1px solid #238636; color: #3fb950; }
+
+  /* ── Panels / Sections ───────────────────────────────────────────────────── */
+  .panel {
     max-width: 1200px;
     margin: 0 auto 1.5rem;
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid #30363d;
-  }
-  .tab-btn {
-    padding: 0.6rem 1.2rem;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: #8b949e;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .tab-btn:hover { color: #e6edf3; }
-  .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
-
-  .tab-panel { display: none; max-width: 1200px; margin: 0 auto; }
-  .tab-panel.active { display: block; }
-
-  /* -- Cards -- */
-  .card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    padding: 1.5rem 2rem;
-    margin-bottom: 1.5rem;
-  }
-  .card h2 {
-    font-size: 1.15rem;
-    color: #e6edf3;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #21262d;
-  }
-
-  /* -- Summary cards -- */
-  .summary-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  .stat-card {
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 10px;
-    padding: 1rem;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e6edf3;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .panel-body {
+    padding: 0;
+  }
+
+  /* ── Status grid ─────────────────────────────────────────────────────────── */
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .status-cell {
+    padding: 1rem 1.2rem;
+    border-right: 1px solid #21262d;
     text-align: center;
   }
-  .stat-card .label {
-    font-size: 0.75rem;
-    color: #8b949e;
+  .status-cell:last-child { border-right: none; }
+
+  .status-cell .label {
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    color: #8b949e;
     margin-bottom: 0.3rem;
   }
-  .stat-card .value {
-    font-size: 1.8rem;
+
+  .status-cell .value {
+    font-size: 1.6rem;
     font-weight: 700;
     font-family: monospace;
+    color: #e6edf3;
   }
-  .stat-card .value.green  { color: #3fb950; }
-  .stat-card .value.yellow { color: #d29922; }
-  .stat-card .value.red    { color: #f85149; }
-  .stat-card .value.blue   { color: #58a6ff; }
-  .stat-card .value.muted  { color: #8b949e; }
 
-  /* -- Tables -- */
-  table { width: 100%; border-collapse: collapse; }
+  .status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+  }
+  .status-dot.active  { background: #3fb950; }
+  .status-dot.stale   { background: #d29922; }
+  .status-dot.unknown { background: #484f58; }
+  .status-dot.error   { background: #f85149; }
+
+  .dim { color: #8b949e; font-size: 0.8rem; }
+
+  /* ── Tables ──────────────────────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
   thead th {
     text-align: left;
-    padding: 0.6rem 0.75rem;
-    font-size: 0.72rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.73rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #8b949e;
     border-bottom: 1px solid #30363d;
+    white-space: nowrap;
     cursor: pointer;
     user-select: none;
-    white-space: nowrap;
   }
   thead th:hover { color: #e6edf3; }
-  thead th .sort-arrow { margin-left: 0.3rem; font-size: 0.65rem; }
-  tbody tr { border-bottom: 1px solid #21262d; }
+  thead th .sort-arrow { margin-left: 0.2rem; font-size: 0.65rem; }
+
+  tbody tr {
+    border-bottom: 1px solid #21262d;
+  }
   tbody tr:hover { background: #1c2128; }
+
   td {
-    padding: 0.55rem 0.75rem;
+    padding: 0.55rem 1rem;
     font-size: 0.88rem;
     vertical-align: middle;
   }
-  td.mono { font-family: monospace; font-size: 0.85rem; }
 
-  /* -- Badges -- */
+  .mono { font-family: monospace; }
+  .accent { color: #58a6ff; font-weight: 600; }
+
+  /* ── Badges ──────────────────────────────────────────────────────────────── */
   .badge {
     display: inline-block;
     padding: 0.15rem 0.5rem;
@@ -148,23 +181,36 @@
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
   }
-  .badge-active     { background: #f8514933; color: #f85149; }
   .badge-recording  { background: #f8514933; color: #f85149; }
-  .badge-ended      { background: #23863633; color: #3fb950; }
   .badge-completed  { background: #23863633; color: #3fb950; }
-  .badge-analyzed   { background: #23863633; color: #3fb950; }
-  .badge-reviewed   { background: #23863633; color: #3fb950; }
-  .badge-sent       { background: #23863633; color: #3fb950; }
-  .badge-processing { background: #58a6ff33; color: #58a6ff; }
+  .badge-ended      { background: #23863633; color: #3fb950; }
   .badge-waiting    { background: #d2992233; color: #d29922; }
-  .badge-failed     { background: #da363333; color: #f85149; }
+  .badge-analyzing  { background: #58a6ff33; color: #58a6ff; }
   .badge-unknown    { background: #30363d;   color: #8b949e; }
 
-  /* -- Buttons -- */
+  /* ── Score bar ───────────────────────────────────────────────────────────── */
+  .score-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .score-track {
+    width: 50px;
+    height: 5px;
+    background: #30363d;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .score-fill.low  { background: #f85149; }
+  .score-fill.mid  { background: #d29922; }
+  .score-fill.high { background: #3fb950; }
+  .score-label { font-size: 0.8rem; font-family: monospace; min-width: 2em; text-align: right; }
+
+  /* ── Buttons ─────────────────────────────────────────────────────────────── */
   .btn {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     padding: 0.35rem 0.8rem;
     border-radius: 6px;
     border: none;
@@ -172,307 +218,153 @@
     font-weight: 600;
     transition: background 0.15s;
   }
-  .btn-primary { background: #238636; color: #fff; }
-  .btn-primary:hover { background: #2ea043; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-sm { font-size: 0.75rem; padding: 0.25rem 0.6rem; }
+
+  .btn-accent  { background: #1f6feb; color: #fff; }
+  .btn-accent:hover { background: #388bfd; }
+
   .btn-danger  { background: #da3633; color: #fff; }
-  .btn-danger:hover  { background: #f85149; }
-  .btn-blue    { background: #1f6feb; color: #fff; }
-  .btn-blue:hover    { background: #388bfd; }
-  .btn-ghost   { background: transparent; color: #8b949e; border: 1px solid #30363d; }
-  .btn-ghost:hover   { color: #e6edf3; border-color: #8b949e; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-danger:hover { background: #f85149; }
 
-  .action-btns { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .btn-refresh { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .btn-refresh:hover { color: #e6edf3; border-color: #484f58; }
 
-  /* -- Filter bar -- */
-  .filter-bar {
+  .action-cell {
     display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    align-items: flex-end;
+    gap: 0.4rem;
   }
-  .filter-bar input, .filter-bar select {
-    font-size: 0.88rem;
-    padding: 0.4rem 0.7rem;
-    border-radius: 6px;
-    border: 1px solid #30363d;
-    background: #0d1117;
-    color: #e6edf3;
-  }
-  .filter-bar input:focus, .filter-bar select:focus { outline: 2px solid #58a6ff; }
-  .filter-bar label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; }
 
-  /* -- Form -- */
-  .form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-  .form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-  .form-field label {
-    font-size: 0.75rem;
-    color: #8b949e;
+  /* ── Activity log ────────────────────────────────────────────────────────── */
+  .log-badge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
-  .form-field input, .form-field select {
-    font-size: 0.9rem;
-    padding: 0.45rem 0.7rem;
-    border-radius: 6px;
-    border: 1px solid #30363d;
-    background: #0d1117;
-    color: #e6edf3;
-  }
-  .form-field input:focus, .form-field select:focus { outline: 2px solid #58a6ff; }
-  .form-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    align-items: center;
+  .log-info    { background: #1f6feb33; color: #58a6ff; }
+  .log-success { background: #23863633; color: #3fb950; }
+  .log-error   { background: #f8514933; color: #f85149; }
+  .log-warning { background: #d2992233; color: #d29922; }
+
+  .log-table td {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.82rem;
+    vertical-align: top;
   }
 
-  /* -- Messages -- */
-  .msg {
-    padding: 0.55rem 1rem;
-    border-radius: 8px;
-    font-size: 0.88rem;
-    margin-bottom: 1rem;
-    display: none;
-  }
-  .msg-error   { background: #f8514922; border: 1px solid #f85149; color: #f85149; }
-  .msg-success { background: #23863622; border: 1px solid #238636; color: #3fb950; }
-
-  /* -- Watcher info grid -- */
-  .watcher-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-  .watcher-item { display: flex; flex-direction: column; gap: 0.2rem; }
-  .watcher-item .wlabel {
-    font-size: 0.72rem;
-    color: #8b949e;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .watcher-item .wvalue { font-size: 1rem; font-family: monospace; color: #e6edf3; }
-
-  .empty-state { text-align: center; padding: 2rem; color: #484f58; }
+  /* ── Responsive ──────────────────────────────────────────────────────────── */
   .hidden { display: none !important; }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     body { padding: 1rem; }
-    .summary-row { grid-template-columns: repeat(2, 1fr); }
-    .form-grid { grid-template-columns: 1fr; }
-    td, th { padding: 0.4rem 0.5rem; font-size: 0.8rem; }
+    .status-grid { grid-template-columns: repeat(2, 1fr); }
+    .status-cell { border-bottom: 1px solid #21262d; }
+  }
+
+  @media (max-width: 600px) {
+    .status-grid { grid-template-columns: 1fr; }
+    .action-cell { flex-direction: column; }
+    td, th { padding: 0.4rem 0.6rem; font-size: 0.8rem; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Admin Panel</h1>
+  <h1>Admin Console</h1>
   <div class="header-right">
     <span class="user-badge" id="current-user"></span>
-    <a href="sessions.html">Dashboard</a>
+    <button class="btn btn-refresh" id="refresh-btn">Refresh</button>
+    <a href="sessions.html">Sessions</a>
     <a href="workers.html">Workers</a>
     <a href="#" id="logout-link">Logout</a>
   </div>
 </header>
 
-<div class="msg msg-error" id="global-error"></div>
-<div class="msg msg-success" id="global-success"></div>
+<div class="msg msg-error" id="error-msg"></div>
+<div class="msg msg-success" id="success-msg"></div>
 
-<!-- Setup: API endpoint -->
-<div id="setup-panel" class="card hidden" style="max-width:500px;margin:4rem auto;">
-  <h2>Connect to API</h2>
-  <div class="form-field" style="margin-bottom:1rem;">
-    <label for="api-url-input">Orchestrator API URL</label>
-    <input id="api-url-input" type="text" placeholder="https://your-api.example.com or http://localhost:3000">
+<!-- ── System Status ─────────────────────────────────────────────────────── -->
+<div class="panel">
+  <div class="panel-header">
+    <h2>System Status</h2>
   </div>
-  <button class="btn btn-primary" id="save-api-btn">Connect</button>
-  <div style="font-size:0.75rem;color:#484f58;margin-top:0.5rem;">Stored in localStorage only.</div>
-</div>
-
-<!-- Tabs -->
-<div class="tabs" id="tab-bar">
-  <button class="tab-btn active" data-tab="sessions">Sessions</button>
-  <button class="tab-btn" data-tab="watcher">Watcher</button>
-  <button class="tab-btn" data-tab="s3">S3 Storage</button>
-  <button class="tab-btn" data-tab="create">Create Session</button>
-</div>
-
-<!-- ============ TAB: Sessions ============ -->
-<div class="tab-panel active" id="panel-sessions">
-  <div class="summary-row" id="session-stats">
-    <div class="stat-card"><div class="label">Total</div><div class="value blue" id="st-total">--</div></div>
-    <div class="stat-card"><div class="label">Active</div><div class="value red" id="st-active">--</div></div>
-    <div class="stat-card"><div class="label">Processing</div><div class="value blue" id="st-processing">--</div></div>
-    <div class="stat-card"><div class="label">Analyzed</div><div class="value green" id="st-analyzed">--</div></div>
-    <div class="stat-card"><div class="label">Failed</div><div class="value red" id="st-failed">--</div></div>
-  </div>
-
-  <div class="card">
-    <div class="filter-bar">
-      <div>
-        <label>Search</label><br>
-        <input type="text" id="filter-search" placeholder="ID or visitor name...">
+  <div class="panel-body">
+    <div class="status-grid">
+      <div class="status-cell">
+        <div class="label">Watcher</div>
+        <div class="value" id="watcher-status" style="font-size:1rem;">
+          <span class="status-dot unknown"></span> Checking...
+        </div>
       </div>
-      <div>
-        <label>Status</label><br>
-        <select id="filter-status">
-          <option value="">All</option>
-          <option value="active">Active</option>
-          <option value="recording">Recording</option>
-          <option value="ended">Ended</option>
-          <option value="processing">Processing</option>
-          <option value="analyzed">Analyzed</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="sent">Sent</option>
-        </select>
+      <div class="status-cell">
+        <div class="label">S3 Objects</div>
+        <div class="value" id="s3-objects">--</div>
       </div>
-      <div style="margin-left:auto;">
-        <button class="btn btn-ghost" id="refresh-sessions-btn">Refresh</button>
+      <div class="status-cell">
+        <div class="label">S3 Size</div>
+        <div class="value" id="s3-size">--</div>
+      </div>
+      <div class="status-cell">
+        <div class="label">Lambda (24h)</div>
+        <div class="value" id="lambda-invocations">--</div>
       </div>
     </div>
+  </div>
+</div>
 
-    <table id="sessions-table">
+<!-- ── Session Management ────────────────────────────────────────────────── -->
+<div class="panel">
+  <div class="panel-header">
+    <h2>Session Management</h2>
+    <span class="dim" id="session-count"></span>
+  </div>
+  <div class="panel-body" style="overflow-x:auto;">
+    <table id="session-table">
       <thead>
         <tr>
-          <th data-sort="id">Session ID <span class="sort-arrow"></span></th>
-          <th data-sort="visitor">Visitor <span class="sort-arrow"></span></th>
-          <th data-sort="status">Status <span class="sort-arrow"></span></th>
-          <th data-sort="se">SE <span class="sort-arrow"></span></th>
-          <th data-sort="started">Started <span class="sort-arrow"></span></th>
-          <th data-sort="ended">Ended <span class="sort-arrow"></span></th>
+          <th data-col="id">Session ID <span class="sort-arrow"></span></th>
+          <th data-col="name">Visitor <span class="sort-arrow"></span></th>
+          <th data-col="date">Date <span class="sort-arrow"></span></th>
+          <th data-col="status">Status <span class="sort-arrow"></span></th>
+          <th data-col="score">Engagement <span class="sort-arrow"></span></th>
           <th>Actions</th>
         </tr>
       </thead>
-      <tbody id="sessions-body">
-        <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+      <tbody id="session-body">
+        <tr><td colspan="6" style="text-align:center;padding:2rem;color:#484f58;">Loading sessions...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- ============ TAB: Watcher ============ -->
-<div class="tab-panel" id="panel-watcher">
-  <div class="card">
-    <h2>Watcher Health</h2>
-    <div class="filter-bar" style="margin-bottom:1rem;">
-      <div class="form-field">
-        <label for="watcher-url">Watcher Health URL</label>
-        <input id="watcher-url" type="text" placeholder="http://localhost:8095/health" style="width:320px;">
-      </div>
-      <button class="btn btn-ghost" id="refresh-watcher-btn" style="align-self:flex-end;">Refresh</button>
-    </div>
-    <div id="watcher-offline" class="empty-state hidden">
-      Watcher not reachable. Check that the watcher process is running and the URL is correct.
-    </div>
-    <div id="watcher-data" class="hidden">
-      <div class="summary-row">
-        <div class="stat-card"><div class="label">Status</div><div class="value green" id="w-status">--</div></div>
-        <div class="stat-card"><div class="label">Uptime</div><div class="value muted" id="w-uptime">--</div></div>
-        <div class="stat-card"><div class="label">Processed</div><div class="value green" id="w-processed">--</div></div>
-        <div class="stat-card"><div class="label">Failed</div><div class="value red" id="w-failed">--</div></div>
-        <div class="stat-card"><div class="label">Queue</div><div class="value yellow" id="w-queue">--</div></div>
-      </div>
-      <div class="watcher-grid" style="margin-top:1rem;">
-        <div class="watcher-item">
-          <span class="wlabel">Last Session ID</span>
-          <span class="wvalue" id="w-last-id">--</span>
-        </div>
-        <div class="watcher-item">
-          <span class="wlabel">Last Processed At</span>
-          <span class="wvalue" id="w-last-time">--</span>
-        </div>
-      </div>
-    </div>
+<!-- ── Activity Log ──────────────────────────────────────────────────────── -->
+<div class="panel">
+  <div class="panel-header">
+    <h2>Activity Log</h2>
+    <span class="dim">Last 50 events</span>
   </div>
-</div>
-
-<!-- ============ TAB: S3 Storage ============ -->
-<div class="tab-panel" id="panel-s3">
-  <div class="card">
-    <h2>S3 Bucket Usage</h2>
-    <div style="margin-bottom:1rem;text-align:right;">
-      <button class="btn btn-ghost" id="refresh-s3-btn">Refresh</button>
-    </div>
-    <div id="s3-loading" class="empty-state">Loading bucket stats...</div>
-    <div id="s3-data" class="hidden">
-      <div class="summary-row">
-        <div class="stat-card"><div class="label">Sessions</div><div class="value blue" id="s3-sessions">--</div></div>
-        <div class="stat-card"><div class="label">Total Objects</div><div class="value muted" id="s3-objects">--</div></div>
-        <div class="stat-card"><div class="label">Total Size</div><div class="value muted" id="s3-size">--</div></div>
-        <div class="stat-card"><div class="label">Audio Files</div><div class="value yellow" id="s3-audio">--</div></div>
-        <div class="stat-card"><div class="label">Screenshots</div><div class="value blue" id="s3-screenshots">--</div></div>
-        <div class="stat-card"><div class="label">Outputs</div><div class="value green" id="s3-outputs">--</div></div>
-      </div>
-      <h3 style="font-size:0.95rem;color:#8b949e;margin:1.5rem 0 0.75rem;">Per-Session Breakdown</h3>
-      <table id="s3-table">
-        <thead>
-          <tr>
-            <th>Session ID</th>
-            <th>Objects</th>
-            <th>Size</th>
-            <th>Has Audio</th>
-            <th>Has Clicks</th>
-            <th>Has Output</th>
-          </tr>
-        </thead>
-        <tbody id="s3-body"></tbody>
-      </table>
-    </div>
-    <div id="s3-error" class="hidden" style="color:#f85149;text-align:center;padding:1rem;"></div>
-  </div>
-</div>
-
-<!-- ============ TAB: Create Session ============ -->
-<div class="tab-panel" id="panel-create">
-  <div class="card">
-    <h2>Manual Session Creation</h2>
-    <p style="font-size:0.85rem;color:#8b949e;margin-bottom:1rem;">
-      Create a test session via the orchestrator API. Useful for testing the pipeline without the Android app.
-    </p>
-    <div class="msg msg-error hidden" id="create-error"></div>
-    <div class="msg msg-success hidden" id="create-success"></div>
-    <form id="create-form">
-      <div class="form-grid">
-        <div class="form-field">
-          <label for="c-session-id">Session ID</label>
-          <input id="c-session-id" type="text" placeholder="TEST001" pattern="[A-Z0-9]{1,20}" required>
-        </div>
-        <div class="form-field">
-          <label for="c-visitor-name">Visitor Name</label>
-          <input id="c-visitor-name" type="text" placeholder="Jane Doe" required>
-        </div>
-        <div class="form-field">
-          <label for="c-se-name">SE Name</label>
-          <input id="c-se-name" type="text" placeholder="Casey Mondoux">
-        </div>
-        <div class="form-field">
-          <label for="c-demo-pc">Demo PC</label>
-          <input id="c-demo-pc" type="text" placeholder="booth-pc-1" required>
-        </div>
-        <div class="form-field">
-          <label for="c-company">Company (optional)</label>
-          <input id="c-company" type="text" placeholder="Acme Corp">
-        </div>
-      </div>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary" id="create-btn">Create Session</button>
-        <button type="button" class="btn btn-ghost" id="randomize-btn">Randomize ID</button>
-      </div>
-    </form>
+  <div class="panel-body" style="overflow-x:auto;max-height:400px;overflow-y:auto;">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th style="width:140px;cursor:default;">Time</th>
+          <th style="width:80px;cursor:default;">Type</th>
+          <th style="cursor:default;">Event</th>
+        </tr>
+      </thead>
+      <tbody id="log-body">
+        <tr><td colspan="3" style="text-align:center;padding:1.5rem;color:#484f58;">Loading events...</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
 <script src="auth.js"></script>
+<script src="admin.js"></script>
 <script>
 (function () {
   // ── Auth gate ─────────────────────────────────────────────────────────────
@@ -492,542 +384,38 @@
     BoothAuth.logout();
   });
 
-  // ── Config ────────────────────────────────────────────────────────────────
-  var LS_API = "boothapp_api_url";
-  var LS_WATCHER = "boothapp_watcher_url";
-  var BUCKET = "boothapp-sessions-752266476357";
-  var REGION = "us-east-1";
-  var apiUrl = "";
-  var s3 = null;
-
-  function getApiUrl() {
-    return (localStorage.getItem(LS_API) || "").replace(/\/+$/, "");
-  }
-
-  function getS3() {
-    if (s3) return s3;
-    var ak = localStorage.getItem("boothapp_aws_ak");
-    var sk = localStorage.getItem("boothapp_aws_sk");
-    if (!ak || !sk) return null;
-    AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
-    s3 = new AWS.S3({ params: { Bucket: BUCKET } });
-    return s3;
-  }
-
-  // ── Setup check ───────────────────────────────────────────────────────────
-  apiUrl = getApiUrl();
-  var setupPanel = document.getElementById("setup-panel");
-  var tabBar = document.getElementById("tab-bar");
-
-  if (!apiUrl) {
-    setupPanel.classList.remove("hidden");
-    tabBar.style.display = "none";
-    document.querySelectorAll(".tab-panel").forEach(function (p) { p.style.display = "none"; });
-  }
-
-  document.getElementById("save-api-btn").addEventListener("click", function () {
-    var url = document.getElementById("api-url-input").value.trim();
-    if (!url) return;
-    localStorage.setItem(LS_API, url);
-    apiUrl = url.replace(/\/+$/, "");
-    setupPanel.classList.add("hidden");
-    tabBar.style.display = "";
-    document.querySelector(".tab-panel.active").style.display = "";
-    loadSessions();
+  // ── Init console ──────────────────────────────────────────────────────────
+  var ready = AdminConsole.init({
+    errorMsg:          document.getElementById("error-msg"),
+    successMsg:        document.getElementById("success-msg"),
+    watcherStatus:     document.getElementById("watcher-status"),
+    s3Objects:         document.getElementById("s3-objects"),
+    s3Size:            document.getElementById("s3-size"),
+    lambdaInvocations: document.getElementById("lambda-invocations"),
+    sessionTable:      document.getElementById("session-table"),
+    sessionBody:       document.getElementById("session-body"),
+    sessionCount:      document.getElementById("session-count"),
+    logBody:           document.getElementById("log-body")
   });
 
-  // Watcher URL default
-  var watcherInput = document.getElementById("watcher-url");
-  watcherInput.value = localStorage.getItem(LS_WATCHER) || "http://localhost:8095/health";
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function esc(str) {
-    var d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
+  if (!ready) {
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+    return;
   }
 
-  function showGlobalError(msg) {
-    var el = document.getElementById("global-error");
-    el.textContent = msg; el.style.display = "block";
-    document.getElementById("global-success").style.display = "none";
-    setTimeout(function () { el.style.display = "none"; }, 8000);
-  }
+  AdminConsole.start();
 
-  function showGlobalSuccess(msg) {
-    var el = document.getElementById("global-success");
-    el.textContent = msg; el.style.display = "block";
-    document.getElementById("global-error").style.display = "none";
-    setTimeout(function () { el.style.display = "none"; }, 5000);
-  }
-
-  function formatDate(iso) {
-    if (!iso) return "--";
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return "--";
-    var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return mon[d.getMonth()] + " " + d.getDate() + " " +
-      (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" +
-      (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
-  }
-
-  function formatBytes(bytes) {
-    if (bytes === 0) return "0 B";
-    var units = ["B", "KB", "MB", "GB"];
-    var i = Math.floor(Math.log(bytes) / Math.log(1024));
-    if (i >= units.length) i = units.length - 1;
-    return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + " " + units[i];
-  }
-
-  function formatUptime(seconds) {
-    if (!seconds && seconds !== 0) return "--";
-    var h = Math.floor(seconds / 3600);
-    var m = Math.floor((seconds % 3600) / 60);
-    var s = seconds % 60;
-    if (h > 0) return h + "h " + m + "m";
-    if (m > 0) return m + "m " + s + "s";
-    return s + "s";
-  }
-
-  function badgeClass(status) {
-    var map = {
-      active: "badge-active", recording: "badge-recording",
-      ended: "badge-ended", completed: "badge-completed",
-      analyzed: "badge-analyzed", reviewed: "badge-reviewed",
-      sent: "badge-sent", processing: "badge-processing",
-      waiting: "badge-waiting", failed: "badge-failed"
-    };
-    return map[status] || "badge-unknown";
-  }
-
-  // ── Tab switching ─────────────────────────────────────────────────────────
-  document.querySelectorAll(".tab-btn").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
-      document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("active"); });
-      btn.classList.add("active");
-      document.getElementById("panel-" + btn.getAttribute("data-tab")).classList.add("active");
-      var tab = btn.getAttribute("data-tab");
-      if (tab === "watcher") loadWatcher();
-      if (tab === "s3") loadS3();
-    });
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: Sessions
-  // ══════════════════════════════════════════════════════════════════════════
-  var allSessions = [];
-  var sessionSortCol = "started";
-  var sessionSortAsc = false;
-
-  function loadSessions() {
-    if (!apiUrl) return;
-    fetch(apiUrl + "/sessions")
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        allSessions = Array.isArray(data) ? data : [];
-        updateSessionStats();
-        renderSessions();
-      })
-      .catch(function (err) {
-        showGlobalError("Failed to load sessions: " + err.message);
-      });
-  }
-
-  function updateSessionStats() {
-    var counts = { total: allSessions.length, active: 0, processing: 0, analyzed: 0, failed: 0 };
-    allSessions.forEach(function (s) {
-      var st = s.status || "";
-      if (st === "active" || st === "recording") counts.active++;
-      else if (st === "processing") counts.processing++;
-      else if (st === "analyzed" || st === "reviewed" || st === "sent") counts.analyzed++;
-      if (s.analysis_error || st === "failed") counts.failed++;
-    });
-    document.getElementById("st-total").textContent = counts.total;
-    document.getElementById("st-active").textContent = counts.active;
-    document.getElementById("st-processing").textContent = counts.processing;
-    document.getElementById("st-analyzed").textContent = counts.analyzed;
-    document.getElementById("st-failed").textContent = counts.failed;
-  }
-
-  function getFilteredSessions() {
-    var search = document.getElementById("filter-search").value.toLowerCase().trim();
-    var status = document.getElementById("filter-status").value;
-    return allSessions.filter(function (s) {
-      if (status && s.status !== status) return false;
-      if (search) {
-        var id = (s.session_id || "").toLowerCase();
-        var name = (s.visitor_name || "").toLowerCase();
-        if (id.indexOf(search) === -1 && name.indexOf(search) === -1) return false;
-      }
-      return true;
-    });
-  }
-
-  function sortSessions(list) {
-    var col = sessionSortCol;
-    var asc = sessionSortAsc;
-    return list.slice().sort(function (a, b) {
-      var va, vb;
-      switch (col) {
-        case "id":      va = a.session_id || ""; vb = b.session_id || ""; break;
-        case "visitor":  va = a.visitor_name || ""; vb = b.visitor_name || ""; break;
-        case "status":  va = a.status || ""; vb = b.status || ""; break;
-        case "se":      va = a.se_name || ""; vb = b.se_name || ""; break;
-        case "started": va = a.started_at || a.created_at || ""; vb = b.started_at || b.created_at || ""; break;
-        case "ended":   va = a.ended_at || ""; vb = b.ended_at || ""; break;
-        default:        va = a.started_at || ""; vb = b.started_at || "";
-      }
-      va = va.toString().toLowerCase();
-      vb = vb.toString().toLowerCase();
-      if (va < vb) return asc ? -1 : 1;
-      if (va > vb) return asc ? 1 : -1;
-      return 0;
-    });
-  }
-
-  function renderSessions() {
-    var filtered = getFilteredSessions();
-    var sorted = sortSessions(filtered);
-    var tbody = document.getElementById("sessions-body");
-
-    document.querySelectorAll("#sessions-table thead th[data-sort]").forEach(function (th) {
-      var arrow = th.querySelector(".sort-arrow");
-      if (th.getAttribute("data-sort") === sessionSortCol) {
-        arrow.textContent = sessionSortAsc ? " ^" : " v";
-      } else {
-        arrow.textContent = "";
-      }
-    });
-
-    if (sorted.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No sessions match filters.</td></tr>';
-      return;
-    }
-
-    var html = "";
-    sorted.forEach(function (s) {
-      var sid = esc(s.session_id || "--");
-      var isFailed = !!(s.analysis_error || s.status === "failed");
-      var canReanalyze = ["ended", "processing", "analyzed"].indexOf(s.status) !== -1;
-
-      html += "<tr>";
-      html += '<td class="mono" style="color:#58a6ff;font-weight:600;">' + sid + "</td>";
-      html += "<td>" + esc(s.visitor_name || "--") + "</td>";
-      html += '<td><span class="badge ' + badgeClass(s.status || "unknown") + '">' + esc(s.status || "unknown") + "</span>"
-            + (isFailed ? ' <span style="color:#f85149;font-size:0.75rem;">[error]</span>' : "")
-            + "</td>";
-      html += "<td>" + esc(s.se_name || "--") + "</td>";
-      html += '<td class="mono">' + esc(formatDate(s.started_at || s.created_at)) + "</td>";
-      html += '<td class="mono">' + esc(formatDate(s.ended_at)) + "</td>";
-      html += '<td class="action-btns">';
-      if (canReanalyze) {
-        html += '<button class="btn btn-blue reanalyze-btn" data-sid="' + esc(s.session_id) + '">Re-analyze</button>';
-      }
-      if (isFailed || s.status === "active") {
-        html += '<button class="btn btn-danger delete-btn" data-sid="' + esc(s.session_id) + '">Delete</button>';
-      }
-      html += "</td></tr>";
-    });
-    tbody.innerHTML = html;
-
-    // Bind action buttons
-    tbody.querySelectorAll(".reanalyze-btn").forEach(function (btn) {
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        reanalyzeSession(btn.getAttribute("data-sid"), btn);
-      });
-    });
-    tbody.querySelectorAll(".delete-btn").forEach(function (btn) {
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        deleteSession(btn.getAttribute("data-sid"), btn);
-      });
-    });
-  }
-
-  // Sort handler
-  document.querySelectorAll("#sessions-table thead th[data-sort]").forEach(function (th) {
+  // ── Sort headers ──────────────────────────────────────────────────────────
+  document.querySelectorAll("#session-table thead th[data-col]").forEach(function (th) {
     th.addEventListener("click", function () {
-      var col = th.getAttribute("data-sort");
-      if (sessionSortCol === col) { sessionSortAsc = !sessionSortAsc; }
-      else { sessionSortCol = col; sessionSortAsc = true; }
-      renderSessions();
+      AdminConsole.setSort(th.getAttribute("data-col"));
     });
   });
 
-  // Filter handlers
-  document.getElementById("filter-search").addEventListener("input", renderSessions);
-  document.getElementById("filter-status").addEventListener("change", renderSessions);
-  document.getElementById("refresh-sessions-btn").addEventListener("click", loadSessions);
-
-  function reanalyzeSession(sessionId, btn) {
-    if (!confirm("Re-trigger analysis for session " + sessionId + "?")) return;
-    btn.disabled = true;
-    fetch(apiUrl + "/sessions/" + encodeURIComponent(sessionId) + "/state", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state: "processing", context: { reason: "manual_retrigger", triggered_by: BoothAuth.currentUser() } })
-    })
-    .then(function (r) {
-      if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || "HTTP " + r.status); });
-      return r.json();
-    })
-    .then(function () {
-      showGlobalSuccess("Analysis re-triggered for " + sessionId);
-      loadSessions();
-    })
-    .catch(function (err) {
-      showGlobalError("Re-analyze failed: " + err.message);
-      btn.disabled = false;
-    });
-  }
-
-  function deleteSession(sessionId, btn) {
-    if (!confirm("DELETE session " + sessionId + " from S3? This cannot be undone.")) return;
-    btn.disabled = true;
-    var client = getS3();
-    if (!client) { showGlobalError("No AWS credentials"); btn.disabled = false; return; }
-
-    var prefix = "sessions/" + sessionId + "/";
-    client.listObjectsV2({ Prefix: prefix }, function (err, data) {
-      if (err) { showGlobalError("List failed: " + err.message); btn.disabled = false; return; }
-      if (!data.Contents || data.Contents.length === 0) {
-        showGlobalError("No objects found for session " + sessionId);
-        btn.disabled = false;
-        return;
-      }
-      var objects = data.Contents.map(function (o) { return { Key: o.Key }; });
-      client.deleteObjects({ Delete: { Objects: objects, Quiet: true } }, function (err2) {
-        if (err2) { showGlobalError("Delete failed: " + err2.message); btn.disabled = false; return; }
-        // Best-effort cleanup of command files
-        client.listObjectsV2({ Prefix: "commands/" }, function (err3, cmdData) {
-          if (!err3 && cmdData.Contents) {
-            var cmdObjects = cmdData.Contents
-              .filter(function (o) { return o.Key.indexOf(sessionId) !== -1; })
-              .map(function (o) { return { Key: o.Key }; });
-            if (cmdObjects.length > 0) {
-              client.deleteObjects({ Delete: { Objects: cmdObjects, Quiet: true } }, function () {});
-            }
-          }
-          showGlobalSuccess("Deleted session " + sessionId + " (" + objects.length + " objects)");
-          loadSessions();
-        });
-      });
-    });
-  }
-
-  if (apiUrl) loadSessions();
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: Watcher
-  // ══════════════════════════════════════════════════════════════════════════
-  function loadWatcher() {
-    var url = watcherInput.value.trim();
-    if (!url) return;
-    localStorage.setItem(LS_WATCHER, url);
-
-    fetch(url)
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        document.getElementById("watcher-offline").classList.add("hidden");
-        document.getElementById("watcher-data").classList.remove("hidden");
-        document.getElementById("w-status").textContent = data.status || "--";
-        document.getElementById("w-status").className = "value " + (data.status === "ok" ? "green" : "red");
-        document.getElementById("w-uptime").textContent = formatUptime(data.uptime_seconds);
-        document.getElementById("w-processed").textContent = data.sessions_processed != null ? data.sessions_processed : "--";
-        document.getElementById("w-failed").textContent = data.sessions_failed != null ? data.sessions_failed : "--";
-        document.getElementById("w-queue").textContent = data.queue_depth != null ? data.queue_depth : "--";
-        document.getElementById("w-last-id").textContent = data.last_session_id || "--";
-        document.getElementById("w-last-time").textContent = data.last_processed_at ? formatDate(data.last_processed_at) : "--";
-      })
-      .catch(function () {
-        document.getElementById("watcher-data").classList.add("hidden");
-        document.getElementById("watcher-offline").classList.remove("hidden");
-      });
-  }
-
-  document.getElementById("refresh-watcher-btn").addEventListener("click", loadWatcher);
-  watcherInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") loadWatcher();
+  // ── Refresh button ────────────────────────────────────────────────────────
+  document.getElementById("refresh-btn").addEventListener("click", function () {
+    AdminConsole.loadAll();
   });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: S3 Storage
-  // ══════════════════════════════════════════════════════════════════════════
-  function loadS3() {
-    var client = getS3();
-    if (!client) {
-      document.getElementById("s3-loading").classList.add("hidden");
-      document.getElementById("s3-error").classList.remove("hidden");
-      document.getElementById("s3-error").textContent = "No AWS credentials configured.";
-      return;
-    }
-
-    document.getElementById("s3-loading").classList.remove("hidden");
-    document.getElementById("s3-data").classList.add("hidden");
-    document.getElementById("s3-error").classList.add("hidden");
-
-    var allObjects = [];
-    function listAll(token) {
-      var params = { Prefix: "sessions/", MaxKeys: 1000 };
-      if (token) params.ContinuationToken = token;
-      client.listObjectsV2(params, function (err, data) {
-        if (err) {
-          document.getElementById("s3-loading").classList.add("hidden");
-          document.getElementById("s3-error").classList.remove("hidden");
-          document.getElementById("s3-error").textContent = "S3 error: " + err.message;
-          return;
-        }
-        allObjects = allObjects.concat(data.Contents || []);
-        if (data.IsTruncated) {
-          listAll(data.NextContinuationToken);
-        } else {
-          processS3Data(allObjects);
-        }
-      });
-    }
-    listAll(null);
-  }
-
-  function processS3Data(objects) {
-    var sessionMap = {};
-    var totalSize = 0;
-    var audioCount = 0;
-    var screenshotCount = 0;
-    var outputCount = 0;
-
-    objects.forEach(function (obj) {
-      totalSize += obj.Size || 0;
-      var parts = obj.Key.split("/");
-      if (parts.length < 3) return;
-      var sid = parts[1];
-      if (!sessionMap[sid]) {
-        sessionMap[sid] = { objects: 0, size: 0, hasAudio: false, hasClicks: false, hasOutput: false };
-      }
-      sessionMap[sid].objects++;
-      sessionMap[sid].size += obj.Size || 0;
-
-      var subpath = parts.slice(2).join("/");
-      if (subpath.indexOf("audio/") === 0) { sessionMap[sid].hasAudio = true; audioCount++; }
-      if (subpath.indexOf("screenshots/") === 0) { screenshotCount++; }
-      if (subpath.indexOf("clicks/") === 0) { sessionMap[sid].hasClicks = true; }
-      if (subpath.indexOf("output/") === 0) { sessionMap[sid].hasOutput = true; outputCount++; }
-    });
-
-    var sessionIds = Object.keys(sessionMap).sort();
-
-    document.getElementById("s3-sessions").textContent = sessionIds.length;
-    document.getElementById("s3-objects").textContent = objects.length;
-    document.getElementById("s3-size").textContent = formatBytes(totalSize);
-    document.getElementById("s3-audio").textContent = audioCount;
-    document.getElementById("s3-screenshots").textContent = screenshotCount;
-    document.getElementById("s3-outputs").textContent = outputCount;
-
-    var tbody = document.getElementById("s3-body");
-    if (sessionIds.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No session data in S3.</td></tr>';
-    } else {
-      var html = "";
-      sessionIds.forEach(function (sid) {
-        var s = sessionMap[sid];
-        html += "<tr>";
-        html += '<td class="mono" style="color:#58a6ff;">' + esc(sid) + "</td>";
-        html += '<td class="mono">' + s.objects + "</td>";
-        html += '<td class="mono">' + formatBytes(s.size) + "</td>";
-        html += "<td>" + (s.hasAudio ? '<span style="color:#3fb950;">yes</span>' : '<span style="color:#484f58;">no</span>') + "</td>";
-        html += "<td>" + (s.hasClicks ? '<span style="color:#3fb950;">yes</span>' : '<span style="color:#484f58;">no</span>') + "</td>";
-        html += "<td>" + (s.hasOutput ? '<span style="color:#3fb950;">yes</span>' : '<span style="color:#484f58;">no</span>') + "</td>";
-        html += "</tr>";
-      });
-      tbody.innerHTML = html;
-    }
-
-    document.getElementById("s3-loading").classList.add("hidden");
-    document.getElementById("s3-data").classList.remove("hidden");
-  }
-
-  document.getElementById("refresh-s3-btn").addEventListener("click", loadS3);
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: Create Session
-  // ══════════════════════════════════════════════════════════════════════════
-  function randomSessionId() {
-    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    var id = "";
-    for (var i = 0; i < 7; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
-    return id;
-  }
-
-  document.getElementById("randomize-btn").addEventListener("click", function () {
-    document.getElementById("c-session-id").value = randomSessionId();
-  });
-
-  document.getElementById("c-session-id").value = randomSessionId();
-
-  document.getElementById("create-form").addEventListener("submit", function (e) {
-    e.preventDefault();
-    var errEl = document.getElementById("create-error");
-    var sucEl = document.getElementById("create-success");
-    errEl.style.display = "none";
-    sucEl.style.display = "none";
-
-    var sessionId = document.getElementById("c-session-id").value.trim().toUpperCase();
-    var visitorName = document.getElementById("c-visitor-name").value.trim();
-    var seName = document.getElementById("c-se-name").value.trim();
-    var demoPc = document.getElementById("c-demo-pc").value.trim();
-    var company = document.getElementById("c-company").value.trim();
-
-    if (!sessionId || !visitorName || !demoPc) {
-      errEl.textContent = "Session ID, Visitor Name, and Demo PC are required.";
-      errEl.style.display = "block";
-      return;
-    }
-
-    var btn = document.getElementById("create-btn");
-    btn.disabled = true;
-
-    var payload = {
-      session_id: sessionId,
-      visitor_name: visitorName,
-      demo_pc: demoPc
-    };
-    if (seName) payload.se_name = seName;
-    if (company) payload.visitor_company = company;
-
-    fetch(apiUrl + "/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-    .then(function (r) {
-      if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || "HTTP " + r.status); });
-      return r.json();
-    })
-    .then(function () {
-      sucEl.textContent = "Session " + sessionId + " created successfully!";
-      sucEl.style.display = "block";
-      document.getElementById("c-session-id").value = randomSessionId();
-      document.getElementById("c-visitor-name").value = "";
-      document.getElementById("c-se-name").value = "";
-      document.getElementById("c-demo-pc").value = "";
-      document.getElementById("c-company").value = "";
-      btn.disabled = false;
-      loadSessions();
-    })
-    .catch(function (err) {
-      errEl.textContent = "Create failed: " + err.message;
-      errEl.style.display = "block";
-      btn.disabled = false;
-    });
-  });
-
 })();
 </script>
 </body>
