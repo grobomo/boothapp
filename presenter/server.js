@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,6 +8,9 @@ const BUCKET = process.env.S3_BUCKET || 'boothapp-sessions';
 const REGION = process.env.AWS_REGION || 'us-east-1';
 
 const s3 = new S3Client({ region: REGION });
+
+// Parse JSON bodies for POST routes
+app.use(express.json());
 
 // Serve static HTML files
 app.use(express.static(path.join(__dirname)));
@@ -102,6 +105,83 @@ app.get('/api/sessions/:id/summary', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Presenter server running on http://localhost:${PORT}`);
+// ---------------------------------------------------------------------------
+// Session Notes API
+// ---------------------------------------------------------------------------
+
+// Helper: load notes.json from S3 for a session
+async function loadNotes(sessionId, s3Client) {
+    const client = s3Client || s3;
+    try {
+        const cmd = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: `${sessionId}/notes.json`,
+        });
+        const result = await client.send(cmd);
+        const body = await result.Body.transformToString();
+        const data = JSON.parse(body);
+        return data.notes || [];
+    } catch (err) {
+        if (err.name === 'NoSuchKey') return [];
+        throw err;
+    }
+}
+
+// Helper: save notes.json to S3
+async function saveNotes(sessionId, notes, s3Client) {
+    const client = s3Client || s3;
+    const cmd = new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: `${sessionId}/notes.json`,
+        Body: JSON.stringify({ notes }, null, 2),
+        ContentType: 'application/json',
+    });
+    await client.send(cmd);
+}
+
+// GET /api/sessions/:id/notes - retrieve all notes for a session
+app.get('/api/sessions/:id/notes', async (req, res) => {
+    try {
+        const notes = await loadNotes(req.params.id);
+        res.json({ notes });
+    } catch (err) {
+        console.error('Failed to load notes:', err.message);
+        res.status(500).json({ error: 'Failed to load notes', detail: err.message });
+    }
 });
+
+// POST /api/sessions/:id/notes - append a note to a session
+app.post('/api/sessions/:id/notes', async (req, res) => {
+    try {
+        const { content, author, timestamp } = req.body || {};
+
+        if (!content || typeof content !== 'string' || !content.trim()) {
+            return res.status(400).json({ error: 'content is required' });
+        }
+
+        const note = {
+            timestamp: timestamp || new Date().toISOString(),
+            author: (author && typeof author === 'string') ? author : 'Anonymous',
+            content: content.trim(),
+        };
+
+        const notes = await loadNotes(req.params.id);
+        notes.push(note);
+        await saveNotes(req.params.id, notes);
+
+        res.status(201).json({ notes });
+    } catch (err) {
+        console.error('Failed to save note:', err.message);
+        res.status(500).json({ error: 'Failed to save note', detail: err.message });
+    }
+});
+
+// Export for testing
+module.exports = { app, loadNotes, saveNotes };
+
+// Only start listening when run directly (not when required for tests)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Presenter server running on http://localhost:${PORT}`);
+    });
+}
