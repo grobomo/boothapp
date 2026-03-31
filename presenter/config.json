@@ -1,0 +1,11 @@
+{
+  "s3BucketName": "boothapp-sessions",
+  "s3Region": "us-east-1",
+  "lambdaArn": "",
+  "analysisModel": "claude-sonnet-4-6",
+  "screenshotQuality": "medium",
+  "autoRefreshInterval": "10",
+  "theme": "dark",
+  "notificationSounds": true,
+  "adminPassword": ""
+}

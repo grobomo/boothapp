@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Presenter Settings</title>
+    <style>
+        /* ============================================================
+           RESET & BASE
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --red-light: #FF4D52;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+            --cyan:      #00BCD4;
+            --purple:    #7C4DFF;
+            --danger:    #FF5252;
+        }
+
+        html.light {
+            --bg:        #F5F5F5;
+            --surface:   #FFFFFF;
+            --surface2:  #EEEEEE;
+            --border:    #D0D0D0;
+            --text:      #1A1A1A;
+            --text-dim:  #666666;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background .3s, color .3s;
+        }
+
+        /* ============================================================
+           BACKGROUND (matches other presenter pages)
+           ============================================================ */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(rgba(215,25,32,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(215,25,32,.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+            animation: gridPulse 10s ease-in-out infinite;
+        }
+        @keyframes gridPulse {
+            0%, 100% { opacity: .3; }
+            50%      { opacity: .7; }
+        }
+
+        .bg-glow {
+            position: fixed; z-index: 0;
+            border-radius: 50%;
+            filter: blur(180px);
+            opacity: .12;
+            animation: drift 25s ease-in-out infinite;
+        }
+        .bg-glow--1 { top: -300px; left: -200px; width: 800px; height: 800px; background: var(--red); }
+        .bg-glow--2 { bottom: -300px; right: -200px; width: 700px; height: 700px; background: var(--red); animation-delay: -12s; }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33%      { transform: translate(50px, 30px) scale(1.05); }
+            66%      { transform: translate(-30px, 50px) scale(.95); }
+        }
+
+        html.light .bg-grid,
+        html.light .bg-glow { display: none; }
+
+        /* ============================================================
+           LAYOUT
+           ============================================================ */
+        .page {
+            position: relative;
+            z-index: 1;
+            padding: 32px 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            width: 48px; height: 48px;
+            background: var(--red);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: 800; color: #fff;
+            box-shadow: 0 0 30px var(--red-glow);
+        }
+
+        .header h1 { font-size: 24px; font-weight: 700; }
+        .header-sub { font-size: 13px; color: var(--text-dim); }
+
+        .nav-links { display: flex; gap: 12px; }
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all .2s;
+        }
+        .nav-links a:hover {
+            color: var(--text);
+            border-color: var(--red);
+            background: rgba(215,25,32,.08);
+        }
+
+        /* ============================================================
+           SECTIONS
+           ============================================================ */
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: background .3s, border-color .3s;
+        }
+        .section:hover { border-color: rgba(215,25,32,.3); }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .icon {
+            width: 28px; height: 28px;
+            background: var(--surface2);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+        }
+
+        /* ============================================================
+           FORM CONTROLS
+           ============================================================ */
+        .field {
+            margin-bottom: 16px;
+        }
+        .field:last-child { margin-bottom: 0; }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .field input[type="text"],
+        .field input[type="password"],
+        .field select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .field input:focus,
+        .field select:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px var(--red-glow);
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* ============================================================
+           TOGGLE SWITCH
+           ============================================================ */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        .toggle-row span { font-size: 14px; }
+
+        .toggle {
+            position: relative;
+            width: 48px; height: 26px;
+            cursor: pointer;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle .slider {
+            position: absolute; inset: 0;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            transition: all .3s;
+        }
+        .toggle .slider::before {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px;
+            width: 18px; height: 18px;
+            background: var(--text-dim);
+            border-radius: 50%;
+            transition: all .3s;
+        }
+        .toggle input:checked + .slider {
+            background: var(--red);
+            border-color: var(--red);
+        }
+        .toggle input:checked + .slider::before {
+            transform: translateX(22px);
+            background: #fff;
+        }
+
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--red);
+            color: #fff;
+            box-shadow: 0 0 20px var(--red-glow);
+        }
+        .btn-primary:hover { background: var(--red-dark); }
+        .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--red); }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        /* ============================================================
+           STATUS TOAST
+           ============================================================ */
+        .toast {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 100;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all .3s;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: #0d3320; color: var(--success); border: 1px solid rgba(0,230,118,.2); }
+        .toast.error   { background: #331111; color: var(--danger);  border: 1px solid rgba(255,82,82,.2); }
+        .toast.info    { background: #0d1f33; color: var(--blue);    border: 1px solid rgba(68,138,255,.2); }
+
+        html.light .toast.success { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+        html.light .toast.error   { background: #fce4ec; color: #c62828; border-color: #ef9a9a; }
+        html.light .toast.info    { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+
+        /* ============================================================
+           CONNECTION TEST
+           ============================================================ */
+        .test-result {
+            margin-top: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .test-result.pass { background: rgba(0,230,118,.08); color: var(--success); border: 1px solid rgba(0,230,118,.2); display: block; }
+        .test-result.fail { background: rgba(255,82,82,.08); color: var(--danger); border: 1px solid rgba(255,82,82,.2); display: block; }
+
+        /* ============================================================
+           SPINNER
+           ============================================================ */
+        .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 600px) {
+            .page { padding: 16px; }
+            .field-row { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow--1"></div>
+    <div class="bg-glow bg-glow--2"></div>
+
+    <div class="page">
+        <!-- ============================================================
+             HEADER
+             ============================================================ -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">B</div>
+                <div>
+                    <h1>Settings</h1>
+                    <div class="header-sub">Presenter Configuration</div>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a href="demo.html">Demo</a>
+                <a href="stats.html">Stats</a>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             AWS CONFIGURATION
+             ============================================================ -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon">S3</div>
+                S3 Storage
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="s3BucketName">Bucket Name</label>
+                    <input type="text" id="s3BucketName" placeholder="boothapp-sessions-123456">
+                    <div class="field-hint">S3 bucket for session data</div>
+                </div>
+                <div class="field">
+                    <label for="s3Region">Region</label>
+                    <select id="s3Region">
+                        <option value="us-east-1">us-east-1 (N. Virginia)</option>
+                        <option value="us-east-2">us-east-2 (Ohio)</option>
+                        <option value="us-west-1">us-west-1 (N. California)</option>
+                        <option value="us-west-2">us-west-2 (Oregon)</option>
+                        <option value="eu-west-1">eu-west-1 (Ireland)</option>
+                        <option value="eu-central-1">eu-central-1 (Frankfurt)</option>
+                        <option value="ap-northeast-1">ap-northeast-1 (Tokyo)</option>
+                        <option value="ap-southeast-1">ap-southeast-1 (Singapore)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             LAMBDA CONFIGURATION
+             ============================================================ -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon">&lambda;</div>
+                Session Orchestrator
+            </div>
+            <div class="field">
+                <label for="lambdaArn">Lambda ARN</label>
+                <input type="text" id="lambdaArn" placeholder="arn:aws:lambda:us-east-1:123456789:function:boothapp-orchestrator">
+                <div class="field-hint">ARN of the session orchestrator Lambda function</div>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" id="btnTestConnection" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div class="test-result" id="testResult"></div>
+        </div>
+
+        <!-- ============================================================
+             ANALYSIS MODEL
+             ============================================================ -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon">AI</div>
+                Analysis
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="analysisModel">Model</label>
+                    <select id="analysisModel">
+                        <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                        <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
+                    </select>
+                    <div class="field-hint">AI model used for session analysis</div>
+                </div>
+                <div class="field">
+                    <label for="screenshotQuality">Screenshot Quality</label>
+                    <select id="screenshotQuality">
+                        <option value="low">Low (faster uploads)</option>
+                        <option value="medium">Medium (balanced)</option>
+                        <option value="high">High (best detail)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             DISPLAY PREFERENCES
+             ============================================================ -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon">&diams;</div>
+                Display
+            </div>
+            <div class="field">
+                <label for="autoRefreshInterval">Auto-Refresh Interval</label>
+                <select id="autoRefreshInterval">
+                    <option value="5">5 seconds</option>
+                    <option value="10">10 seconds</option>
+                    <option value="30">30 seconds</option>
+                </select>
+                <div class="field-hint">How often dashboards poll for new data</div>
+            </div>
+            <div class="toggle-row">
+                <span>Theme</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:13px;color:var(--text-dim)">Dark</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="font-size:13px;color:var(--text-dim)">Light</span>
+                </div>
+            </div>
+            <div class="toggle-row">
+                <span>Notification Sounds</span>
+                <label class="toggle">
+                    <input type="checkbox" id="notificationSounds" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             ADMIN PASSWORD
+             ============================================================ -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon">&sect;</div>
+                Security
+            </div>
+            <div class="field">
+                <label for="currentPassword">Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter current password">
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" placeholder="Enter new password">
+                </div>
+                <div class="field">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirm new password">
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="changePassword()">Update Password</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             SAVE / RESET
+             ============================================================ -->
+        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+            <button class="btn btn-secondary" onclick="resetDefaults()">Reset to Defaults</button>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    /* ==================================================================
+       CONFIG KEYS -- matches config.json fields
+       ================================================================== */
+    var SETTINGS_KEY = 'boothapp_settings';
+    var PASSWORD_KEY = 'boothapp_admin_password';
+
+    var FIELD_IDS = [
+        's3BucketName', 's3Region', 'lambdaArn',
+        'analysisModel', 'screenshotQuality', 'autoRefreshInterval'
+    ];
+
+    var defaults = null;
+
+    /* ==================================================================
+       INIT
+       ================================================================== */
+    (function init() {
+        loadDefaults(function() {
+            loadSettings();
+            applyTheme();
+        });
+    })();
+
+    function loadDefaults(cb) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'config.json', true);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                try { defaults = JSON.parse(xhr.responseText); } catch(e) { defaults = {}; }
+            } else {
+                defaults = {};
+            }
+            cb();
+        };
+        xhr.onerror = function() { defaults = {}; cb(); };
+        xhr.send();
+    }
+
+    function loadSettings() {
+        var saved = {};
+        try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e) {}
+        var merged = Object.assign({}, defaults, saved);
+
+        FIELD_IDS.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && merged[id] !== undefined) el.value = merged[id];
+        });
+
+        var theme = merged.theme || 'dark';
+        document.getElementById('themeToggle').checked = (theme === 'light');
+
+        var sounds = merged.notificationSounds !== undefined ? merged.notificationSounds : true;
+        document.getElementById('notificationSounds').checked = sounds;
+    }
+
+    /* ==================================================================
+       SAVE
+       ================================================================== */
+    function saveSettings() {
+        var settings = {};
+        FIELD_IDS.forEach(function(id) {
+            settings[id] = document.getElementById(id).value;
+        });
+        settings.theme = document.getElementById('themeToggle').checked ? 'light' : 'dark';
+        settings.notificationSounds = document.getElementById('notificationSounds').checked;
+
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        showToast('Settings saved', 'success');
+    }
+
+    /* ==================================================================
+       RESET
+       ================================================================== */
+    function resetDefaults() {
+        localStorage.removeItem(SETTINGS_KEY);
+        loadSettings();
+        applyTheme();
+        showToast('Reset to defaults', 'info');
+    }
+
+    /* ==================================================================
+       THEME
+       ================================================================== */
+    function toggleTheme() {
+        applyTheme();
+    }
+
+    function applyTheme() {
+        var isLight = document.getElementById('themeToggle').checked;
+        document.documentElement.classList.toggle('light', isLight);
+    }
+
+    /* ==================================================================
+       PASSWORD
+       ================================================================== */
+    function changePassword() {
+        var current = document.getElementById('currentPassword').value;
+        var newPw   = document.getElementById('newPassword').value;
+        var confirm = document.getElementById('confirmPassword').value;
+
+        var storedHash = localStorage.getItem(PASSWORD_KEY) || '';
+
+        if (storedHash && hashPassword(current) !== storedHash) {
+            showToast('Current password is incorrect', 'error');
+            return;
+        }
+
+        if (!newPw) {
+            showToast('New password cannot be empty', 'error');
+            return;
+        }
+
+        if (newPw !== confirm) {
+            showToast('Passwords do not match', 'error');
+            return;
+        }
+
+        if (newPw.length < 6) {
+            showToast('Password must be at least 6 characters', 'error');
+            return;
+        }
+
+        localStorage.setItem(PASSWORD_KEY, hashPassword(newPw));
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        showToast('Password updated', 'success');
+    }
+
+    function hashPassword(pw) {
+        /* Simple hash for localStorage -- NOT cryptographic security.
+           For a real deployment, use bcrypt on the server side. */
+        var hash = 0;
+        for (var i = 0; i < pw.length; i++) {
+            hash = ((hash << 5) - hash) + pw.charCodeAt(i);
+            hash |= 0;
+        }
+        return 'h:' + hash.toString(36);
+    }
+
+    /* ==================================================================
+       TEST CONNECTION
+       ================================================================== */
+    function testConnection() {
+        var btn = document.getElementById('btnTestConnection');
+        var result = document.getElementById('testResult');
+        var bucket = document.getElementById('s3BucketName').value.trim();
+        var region = document.getElementById('s3Region').value;
+        var lambdaArn = document.getElementById('lambdaArn').value.trim();
+
+        if (!bucket) {
+            result.className = 'test-result fail';
+            result.textContent = '[FAIL] S3 bucket name is required';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Testing...';
+        result.className = 'test-result';
+        result.style.display = 'none';
+
+        var lines = [];
+        var s3ok = false;
+        var lambdaOk = false;
+
+        /* -- S3 HEAD check via CORS -- */
+        var s3url = 'https://' + bucket + '.s3.' + region + '.amazonaws.com/';
+        var s3xhr = new XMLHttpRequest();
+        s3xhr.open('HEAD', s3url, true);
+        s3xhr.timeout = 8000;
+        s3xhr.onload = function() {
+            /* Any HTTP response (even 403) means the bucket exists */
+            if (s3xhr.status === 403 || s3xhr.status === 200) {
+                lines.push('[OK]   S3 bucket "' + bucket + '" is reachable (HTTP ' + s3xhr.status + ')');
+                s3ok = true;
+            } else if (s3xhr.status === 404) {
+                lines.push('[FAIL] S3 bucket "' + bucket + '" not found (HTTP 404)');
+            } else {
+                lines.push('[WARN] S3 bucket returned HTTP ' + s3xhr.status);
+                s3ok = true;
+            }
+            checkLambda();
+        };
+        s3xhr.onerror = function() {
+            lines.push('[FAIL] S3 bucket "' + bucket + '" is not reachable (network error)');
+            checkLambda();
+        };
+        s3xhr.ontimeout = function() {
+            lines.push('[FAIL] S3 bucket "' + bucket + '" timed out');
+            checkLambda();
+        };
+        s3xhr.send();
+
+        function checkLambda() {
+            if (!lambdaArn) {
+                lines.push('[SKIP] Lambda ARN not configured');
+                finish();
+                return;
+            }
+
+            /* Validate ARN format */
+            var arnPattern = /^arn:aws:lambda:[a-z0-9-]+:\d{12}:function:.+$/;
+            if (arnPattern.test(lambdaArn)) {
+                lines.push('[OK]   Lambda ARN format is valid');
+                lambdaOk = true;
+            } else {
+                lines.push('[FAIL] Lambda ARN format is invalid');
+            }
+            finish();
+        }
+
+        function finish() {
+            var allOk = s3ok && (lambdaOk || !lambdaArn);
+            result.className = 'test-result ' + (allOk ? 'pass' : 'fail');
+            result.textContent = lines.join('\n');
+            btn.disabled = false;
+            btn.innerHTML = 'Test Connection';
+        }
+    }
+
+    /* ==================================================================
+       TOAST
+       ================================================================== */
+    function showToast(msg, type) {
+        var el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = 'toast ' + type + ' show';
+        clearTimeout(el._timer);
+        el._timer = setTimeout(function() {
+            el.className = 'toast ' + type;
+        }, 3000);
+    }
+    </script>
+</body>
+</html>

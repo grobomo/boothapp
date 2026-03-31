@@ -75,6 +75,7 @@ flowchart LR
 | Error Handling | `analysis/lib/errors.js` | ![Status](https://img.shields.io/badge/status-planned-lightgrey) | Transient vs. permanent failure classification with retry |
 | Demo Landing Page | `presenter/demo.html` | ![Status](https://img.shields.io/badge/status-complete-brightgreen) | Trade show booth display with particle effects |
 | Stats Dashboard | `presenter/stats.html` | ![Status](https://img.shields.io/badge/status-complete-brightgreen) | Live demo statistics for booth screens |
+| Presenter Settings | `presenter/settings.html` | ![Status](https://img.shields.io/badge/status-complete-brightgreen) | S3, Lambda, model, theme, and display configuration |
 | Health Dashboard | `infra/health.html` | ![Status](https://img.shields.io/badge/status-planned-lightgrey) | Pipeline monitoring page |
 | Preflight Check | `scripts/preflight.sh` | ![Status](https://img.shields.io/badge/status-planned-lightgrey) | 9-point automated system check before demo day |
 
@@ -246,7 +247,9 @@ boothapp/
 |   +-- sample_data.json           # Example session data
 |-- presenter/
 |   |-- demo.html                  # Trade show booth landing page
-|   +-- stats.html                 # Live demo statistics dashboard
+|   |-- stats.html                 # Live demo statistics dashboard
+|   |-- settings.html              # Presenter configuration page
+|   +-- config.json                # Default settings values
 |-- tests/                         # Test suites (103 tests)
 |-- infra/
 |   |-- presign-lambda/
