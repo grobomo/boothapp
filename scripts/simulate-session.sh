@@ -181,7 +181,7 @@ echo ""
 echo -e "${BOLD}--- Phase 1: Badge Scan ---${RESET}"
 sleep 2
 
-cat > "${SESSION_DIR}/badge.json" << 'BADGE_EOF'
+cat > "${SESSION_DIR}/badge.json" <<BADGE_EOF
 {
     "name": "Maria Rodriguez",
     "title": "Director of Security Operations",
@@ -189,12 +189,9 @@ cat > "${SESSION_DIR}/badge.json" << 'BADGE_EOF'
     "email": "mrodriguez@pnwhealth.example.com",
     "industry": "Healthcare",
     "company_size": "10,000 - 25,000 employees",
-    "scanned_at": "SESSION_TIMESTAMP"
+    "scanned_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 BADGE_EOF
-
-# Patch in actual timestamp
-sed -i "s/SESSION_TIMESTAMP/$(date -u +%Y-%m-%dT%H:%M:%SZ)/" "${SESSION_DIR}/badge.json"
 
 log_success "Badge scanned: ${BOLD}${VISITOR_NAME}${RESET} -- ${VISITOR_TITLE}, ${VISITOR_COMPANY}"
 sleep 1
@@ -209,36 +206,35 @@ echo ""
 
 SECONDS=0   # reset bash timer for elapsed_ms
 
-# Initialize clicks.json as empty array
-echo "[]" > "${SESSION_DIR}/clicks.json"
-
 NUM_CLICKS=${#CLICK_URLS[@]}
+
+# Accumulate clicks in a variable, rewrite file each time (avoids sed -i portability)
+CLICKS_JSON=""
 
 for (( i=0; i<NUM_CLICKS; i++ )); do
     ms=$(elapsed_ms)
     click_num=$(printf "%03d" $((i + 1)))
 
     # Build the click JSON object
-    click_json=$(cat <<CLICK_EOF
-{
-    "timestamp": ${ms},
-    "url": "${CLICK_URLS[$i]}",
-    "element": "${CLICK_ELEMENTS[$i]}",
-    "x": ${CLICK_X[$i]},
-    "y": ${CLICK_Y[$i]}
-}
+    click_entry=$(cat <<CLICK_EOF
+    {
+        "timestamp": ${ms},
+        "url": "${CLICK_URLS[$i]}",
+        "element": "${CLICK_ELEMENTS[$i]}",
+        "x": ${CLICK_X[$i]},
+        "y": ${CLICK_Y[$i]}
+    }
 CLICK_EOF
 )
 
-    # Append to clicks.json array
-    # Read current array, strip trailing ], append new entry, close ]
+    # Append to accumulated JSON and rewrite file
     if [ "$i" -eq 0 ]; then
-        echo "[${click_json}]" > "${SESSION_DIR}/clicks.json"
+        CLICKS_JSON="${click_entry}"
     else
-        # Remove trailing ] and newline, append comma + new entry + ]
-        sed -i '$ s/]$//' "${SESSION_DIR}/clicks.json"
-        echo ",${click_json}]" >> "${SESSION_DIR}/clicks.json"
+        CLICKS_JSON="${CLICKS_JSON},
+${click_entry}"
     fi
+    printf '[%s\n]' "${CLICKS_JSON}" > "${SESSION_DIR}/clicks.json"
 
     # Create a placeholder screenshot
     echo "JPEG placeholder -- click-${click_num} at ${ms}ms" > "${SCREENSHOTS_DIR}/click-${click_num}.jpg"
