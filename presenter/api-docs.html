@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/nav.js"></script>
+<title>BoothApp — API Documentation</title>
+<link rel="stylesheet" href="styles/mobile.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #0d1117;
+    --bg-card: #161b22;
+    --bg-code: #0d1117;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-muted: #8b949e;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-red: #f85149;
+    --accent-orange: #f78166;
+    --accent-purple: #bc8cff;
+    --accent-yellow: #e3b341;
+  }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 1.5rem 2rem;
+    padding-top: 72px;
+  }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  /* ── Table of Contents ──────────────────────────────────── */
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .toc h2 {
+    font-size: 1rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.8rem;
+  }
+
+  .toc-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 2rem;
+  }
+
+  .toc-list a {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  .toc-list a:hover { text-decoration: underline; }
+
+  /* ── Method badges ──────────────────────────────────────── */
+  .method {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: "SF Mono", "Fira Code", monospace;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    min-width: 3.2rem;
+    text-align: center;
+  }
+
+  .method-get  { background: rgba(63,185,80,0.15); color: var(--accent-green); border: 1px solid rgba(63,185,80,0.3); }
+  .method-post { background: rgba(88,166,255,0.15); color: var(--accent-blue); border: 1px solid rgba(88,166,255,0.3); }
+
+  /* ── Endpoint card ──────────────────────────────────────── */
+  .endpoint {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .endpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .endpoint-header:hover { background: rgba(88,166,255,0.04); }
+
+  .endpoint-url {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    flex: 1;
+  }
+
+  .endpoint-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .endpoint-body {
+    padding: 1.2rem;
+    display: none;
+  }
+
+  .endpoint.open .endpoint-body { display: block; }
+
+  .endpoint-section {
+    margin-bottom: 1.2rem;
+  }
+
+  .endpoint-section:last-child { margin-bottom: 0; }
+
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+  }
+
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .param-table th {
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .param-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid rgba(48,54,61,0.4);
+    vertical-align: top;
+  }
+
+  .param-name {
+    font-family: "SF Mono", "Fira Code", monospace;
+    color: var(--accent-purple);
+    font-size: 0.85rem;
+  }
+
+  .param-type {
+    font-family: "SF Mono", "Fira Code", monospace;
+    color: var(--accent-orange);
+    font-size: 0.8rem;
+  }
+
+  /* ── Code blocks ────────────────────────────────────────── */
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    position: relative;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .copy-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+
+  /* ── JSON syntax highlighting ───────────────────────────── */
+  .json-key { color: var(--accent-blue); }
+  .json-string { color: var(--accent-green); }
+  .json-number { color: var(--accent-orange); }
+  .json-bool { color: var(--accent-purple); }
+  .json-null { color: var(--accent-red); }
+
+  /* ── Try It section ─────────────────────────────────────── */
+  .try-it {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  .try-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+
+  .try-input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    outline: none;
+  }
+
+  .try-input:focus { border-color: var(--accent-blue); }
+
+  .try-input::placeholder { color: rgba(139,148,158,0.5); }
+
+  .try-btn {
+    background: rgba(88,166,255,0.12);
+    border: 1px solid rgba(88,166,255,0.3);
+    color: var(--accent-blue);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+
+  .try-btn:hover { background: rgba(88,166,255,0.22); }
+
+  .try-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .try-body {
+    width: 100%;
+    min-height: 60px;
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.82rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    outline: none;
+    resize: vertical;
+  }
+
+  .try-body:focus { border-color: var(--accent-blue); }
+
+  .response-box {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .response-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .status-badge {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .status-2xx { background: rgba(63,185,80,0.15); color: var(--accent-green); }
+  .status-4xx { background: rgba(248,81,73,0.15); color: var(--accent-red); }
+  .status-5xx { background: rgba(248,81,73,0.15); color: var(--accent-red); }
+  .status-err { background: rgba(248,81,73,0.15); color: var(--accent-red); }
+
+  .response-body {
+    padding: 0.75rem;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .timing { font-family: "SF Mono", "Fira Code", monospace; }
+
+  /* ── Base URL display ───────────────────────────────────── */
+  .base-url-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .base-url-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  .base-url-value {
+    font-family: "SF Mono", "Fira Code", monospace;
+    color: var(--accent-green);
+  }
+
+  /* ── Responsive ─────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    body { padding: 1rem; padding-top: 68px; }
+    .toc-list { grid-template-columns: 1fr; }
+    .try-row { flex-direction: column; }
+    .try-input { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>API Documentation</h1>
+  <p class="subtitle">BoothApp Presenter Server &mdash; REST API Reference</p>
+
+  <div class="base-url-bar">
+    <span class="base-url-label">Base URL</span>
+    <span class="base-url-value" id="baseUrl"></span>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <h2>Endpoints</h2>
+    <ul class="toc-list">
+      <li><a href="#health"><span class="method method-get">GET</span> /api/health</a></li>
+      <li><a href="#config"><span class="method method-get">GET</span> /api/config</a></li>
+      <li><a href="#pages"><span class="method method-get">GET</span> /api/pages</a></li>
+      <li><a href="#screenshots"><span class="method method-get">GET</span> /api/session/:id/screenshots</a></li>
+      <li><a href="#analyze-batch"><span class="method method-post">POST</span> /api/analyze-batch</a></li>
+      <li><a href="#analyze-status"><span class="method method-get">GET</span> /api/analyze-status</a></li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- GET /api/health                                               -->
+  <!-- ============================================================ -->
+  <div class="endpoint open" id="health">
+    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-url">/api/health</span>
+      <span class="endpoint-desc">System health &amp; uptime</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="endpoint-section">
+        <div class="section-label">Description</div>
+        <p style="font-size:0.9rem; color:var(--text-muted);">Returns server health status, uptime in seconds, active session count, and version.</p>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"status"</span>: <span class="json-string">"ok"</span>,
+  <span class="json-key">"uptime"</span>: <span class="json-number">3472</span>,
+  <span class="json-key">"sessions_count"</span>: <span class="json-number">0</span>,
+  <span class="json-key">"version"</span>: <span class="json-string">"1.0.0"</span>
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Example</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl <span class="json-string">http://localhost:3000/api/health</span></pre>
+      </div>
+
+      <div class="endpoint-section try-it">
+        <div class="try-row">
+          <button class="try-btn" onclick="tryIt(this, 'GET', '/api/health')">Try it</button>
+        </div>
+        <div class="response-box" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- GET /api/config                                               -->
+  <!-- ============================================================ -->
+  <div class="endpoint" id="config">
+    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-url">/api/config</span>
+      <span class="endpoint-desc">Server configuration</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="endpoint-section">
+        <div class="section-label">Description</div>
+        <p style="font-size:0.9rem; color:var(--text-muted);">Returns current server configuration: S3 bucket, AWS region, port, and Node.js version.</p>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"s3_bucket"</span>: <span class="json-string">"boothapp-sessions-752266476357"</span>,
+  <span class="json-key">"aws_region"</span>: <span class="json-string">"us-east-1"</span>,
+  <span class="json-key">"port"</span>: <span class="json-number">3000</span>,
+  <span class="json-key">"node_version"</span>: <span class="json-string">"v20.11.0"</span>
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Example</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl <span class="json-string">http://localhost:3000/api/config</span></pre>
+      </div>
+
+      <div class="endpoint-section try-it">
+        <div class="try-row">
+          <button class="try-btn" onclick="tryIt(this, 'GET', '/api/config')">Try it</button>
+        </div>
+        <div class="response-box" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- GET /api/pages                                                -->
+  <!-- ============================================================ -->
+  <div class="endpoint" id="pages">
+    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-url">/api/pages</span>
+      <span class="endpoint-desc">List available HTML pages</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="endpoint-section">
+        <div class="section-label">Description</div>
+        <p style="font-size:0.9rem; color:var(--text-muted);">Returns a list of all HTML page files served by the presenter.</p>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"pages"</span>: [
+    { <span class="json-key">"name"</span>: <span class="json-string">"admin"</span>, <span class="json-key">"path"</span>: <span class="json-string">"/admin.html"</span> },
+    { <span class="json-key">"name"</span>: <span class="json-string">"sessions"</span>, <span class="json-key">"path"</span>: <span class="json-string">"/sessions.html"</span> },
+    { <span class="json-key">"name"</span>: <span class="json-string">"api-docs"</span>, <span class="json-key">"path"</span>: <span class="json-string">"/api-docs.html"</span> }
+  ]
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Example</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl <span class="json-string">http://localhost:3000/api/pages</span></pre>
+      </div>
+
+      <div class="endpoint-section try-it">
+        <div class="try-row">
+          <button class="try-btn" onclick="tryIt(this, 'GET', '/api/pages')">Try it</button>
+        </div>
+        <div class="response-box" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- GET /api/session/:id/screenshots                              -->
+  <!-- ============================================================ -->
+  <div class="endpoint" id="screenshots">
+    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-url">/api/session/:id/screenshots</span>
+      <span class="endpoint-desc">Session screenshots &amp; click data</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="endpoint-section">
+        <div class="section-label">Description</div>
+        <p style="font-size:0.9rem; color:var(--text-muted);">Lists all screenshots captured during a session with presigned S3 URLs (valid 1 hour). Also returns click event data if available.</p>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">URL Parameters</div>
+        <table class="param-table">
+          <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="param-name">id</span></td>
+              <td><span class="param-type">string</span></td>
+              <td>Session ID (alphanumeric, hyphens, underscores)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"session_id"</span>: <span class="json-string">"demo-2026-03-31"</span>,
+  <span class="json-key">"screenshots"</span>: [
+    {
+      <span class="json-key">"key"</span>: <span class="json-string">"sessions/demo-2026-03-31/screenshots/001.png"</span>,
+      <span class="json-key">"filename"</span>: <span class="json-string">"001.png"</span>,
+      <span class="json-key">"url"</span>: <span class="json-string">"https://s3.amazonaws.com/..."</span>,
+      <span class="json-key">"size"</span>: <span class="json-number">245832</span>,
+      <span class="json-key">"last_modified"</span>: <span class="json-string">"2026-03-31T12:00:00Z"</span>
+    }
+  ],
+  <span class="json-key">"clicks"</span>: [
+    {
+      <span class="json-key">"url"</span>: <span class="json-string">"https://portal.trendmicro.com/dashboard"</span>,
+      <span class="json-key">"x"</span>: <span class="json-number">450</span>,
+      <span class="json-key">"y"</span>: <span class="json-number">320</span>,
+      <span class="json-key">"timestamp"</span>: <span class="json-number">1711872000000</span>
+    }
+  ]
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Error Responses</div>
+        <table class="param-table">
+          <thead><tr><th>Status</th><th>Condition</th></tr></thead>
+          <tbody>
+            <tr><td><span class="param-type">400</span></td><td>Invalid session ID format</td></tr>
+            <tr><td><span class="param-type">404</span></td><td>Session not found in S3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Example</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl <span class="json-string">http://localhost:3000/api/session/demo-2026-03-31/screenshots</span></pre>
+      </div>
+
+      <div class="endpoint-section try-it">
+        <div class="section-label">Try it</div>
+        <div class="try-row">
+          <input class="try-input" type="text" placeholder="Session ID (e.g. demo-2026-03-31)" data-param="id">
+          <button class="try-btn" onclick="tryItParam(this, 'GET', '/api/session/{id}/screenshots')">Send</button>
+        </div>
+        <div class="response-box" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- POST /api/analyze-batch                                       -->
+  <!-- ============================================================ -->
+  <div class="endpoint" id="analyze-batch">
+    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="method method-post">POST</span>
+      <span class="endpoint-url">/api/analyze-batch</span>
+      <span class="endpoint-desc">Queue sessions for batch AI analysis</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="endpoint-section">
+        <div class="section-label">Description</div>
+        <p style="font-size:0.9rem; color:var(--text-muted);">Submits one or more sessions for AI analysis via Claude/Bedrock. Sessions are processed sequentially. Maximum 100 sessions per batch. Previously analyzed sessions are re-analyzed.</p>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Request Body</div>
+        <table class="param-table">
+          <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="param-name">session_ids</span></td>
+              <td><span class="param-type">string[]</span></td>
+              <td>Array of session IDs to analyze (1-100)</td>
+            </tr>
+          </tbody>
+        </table>
+        <pre style="margin-top:0.5rem"><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"session_ids"</span>: [<span class="json-string">"session-001"</span>, <span class="json-string">"session-002"</span>]
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"batch_id"</span>: <span class="json-string">"m1abc2d"</span>,
+  <span class="json-key">"queued"</span>: <span class="json-number">2</span>,
+  <span class="json-key">"already_analyzed"</span>: <span class="json-number">1</span>,
+  <span class="json-key">"total"</span>: <span class="json-number">2</span>
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Error Responses</div>
+        <table class="param-table">
+          <thead><tr><th>Status</th><th>Condition</th></tr></thead>
+          <tbody>
+            <tr><td><span class="param-type">400</span></td><td>session_ids missing or empty</td></tr>
+            <tr><td><span class="param-type">400</span></td><td>More than 100 sessions</td></tr>
+            <tr><td><span class="param-type">500</span></td><td>S3 connectivity error</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Example</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl -X POST <span class="json-string">http://localhost:3000/api/analyze-batch</span> \
+  -H <span class="json-string">"Content-Type: application/json"</span> \
+  -d <span class="json-string">'{"session_ids": ["session-001", "session-002"]}'</span></pre>
+      </div>
+
+      <div class="endpoint-section try-it">
+        <div class="section-label">Try it</div>
+        <div class="try-row">
+          <textarea class="try-body" rows="3" data-body="true">{"session_ids": ["session-001"]}</textarea>
+        </div>
+        <div class="try-row">
+          <button class="try-btn" onclick="tryItBody(this, 'POST', '/api/analyze-batch')">Send</button>
+        </div>
+        <div class="response-box" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- GET /api/analyze-status                                       -->
+  <!-- ============================================================ -->
+  <div class="endpoint" id="analyze-status">
+    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="method method-get">GET</span>
+      <span class="endpoint-url">/api/analyze-status</span>
+      <span class="endpoint-desc">Batch analysis progress</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="endpoint-section">
+        <div class="section-label">Description</div>
+        <p style="font-size:0.9rem; color:var(--text-muted);">Returns the current batch analysis progress: queued, running, completed, and failed counts with percentage. Poll this endpoint after submitting a batch.</p>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response (active batch)</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"active"</span>: <span class="json-bool">true</span>,
+  <span class="json-key">"batch_id"</span>: <span class="json-string">"m1abc2d"</span>,
+  <span class="json-key">"started_at"</span>: <span class="json-string">"2026-03-31T12:00:00.000Z"</span>,
+  <span class="json-key">"total"</span>: <span class="json-number">5</span>,
+  <span class="json-key">"queued"</span>: <span class="json-number">2</span>,
+  <span class="json-key">"running"</span>: <span class="json-number">1</span>,
+  <span class="json-key">"completed"</span>: <span class="json-number">2</span>,
+  <span class="json-key">"failed"</span>: <span class="json-number">0</span>,
+  <span class="json-key">"progress_pct"</span>: <span class="json-number">40</span>,
+  <span class="json-key">"errors"</span>: []
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Response (no batch)</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="json-key">{</span>
+  <span class="json-key">"active"</span>: <span class="json-bool">false</span>,
+  <span class="json-key">"message"</span>: <span class="json-string">"No batch has been submitted"</span>
+<span class="json-key">}</span></pre>
+      </div>
+
+      <div class="endpoint-section">
+        <div class="section-label">Example</div>
+        <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl <span class="json-string">http://localhost:3000/api/analyze-status</span></pre>
+      </div>
+
+      <div class="endpoint-section try-it">
+        <div class="try-row">
+          <button class="try-btn" onclick="tryIt(this, 'GET', '/api/analyze-status')">Try it</button>
+        </div>
+        <div class="response-box" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .container -->
+
+<script>
+(function() {
+  'use strict';
+
+  // Set base URL display
+  var base = window.location.origin;
+  document.getElementById('baseUrl').textContent = base;
+
+  // Toggle endpoint open/closed
+  window.toggleEndpoint = function(header) {
+    header.parentElement.classList.toggle('open');
+  };
+
+  // Copy code block text
+  window.copyCode = function(btn) {
+    var pre = btn.parentElement;
+    var text = pre.textContent.replace('Copy', '').trim();
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+    });
+  };
+
+  // Highlight JSON for response display
+  function highlightJson(str) {
+    try {
+      var obj = typeof str === 'string' ? JSON.parse(str) : str;
+      str = JSON.stringify(obj, null, 2);
+    } catch (e) {
+      return escapeHtml(str);
+    }
+    return str.replace(/("(?:\\.|[^"\\])*")\s*:/g, '<span class="json-key">$1</span>:')
+              .replace(/:\s*("(?:\\.|[^"\\])*")/g, ': <span class="json-string">$1</span>')
+              .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
+              .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>')
+              .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function statusClass(code) {
+    if (code >= 200 && code < 300) return 'status-2xx';
+    if (code >= 400 && code < 500) return 'status-4xx';
+    if (code >= 500) return 'status-5xx';
+    return 'status-err';
+  }
+
+  function showResponse(box, status, body, duration) {
+    box.style.display = 'block';
+    var statusText = typeof status === 'number' ? status : 'ERR';
+    box.innerHTML =
+      '<div class="response-header">' +
+        '<span class="status-badge ' + statusClass(status) + '">' + statusText + '</span>' +
+        '<span class="timing">' + duration + 'ms</span>' +
+      '</div>' +
+      '<div class="response-body">' + highlightJson(body) + '</div>';
+  }
+
+  function findResponseBox(btn) {
+    var section = btn.closest('.endpoint-body');
+    return section.querySelector('.response-box');
+  }
+
+  async function doFetch(method, url, body) {
+    var opts = { method: method, headers: {} };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = body;
+    }
+    var t0 = performance.now();
+    var res = await fetch(url, opts);
+    var duration = Math.round(performance.now() - t0);
+    var text = await res.text();
+    return { status: res.status, body: text, duration: duration };
+  }
+
+  // Simple GET with no params
+  window.tryIt = async function(btn, method, path) {
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    var box = findResponseBox(btn);
+    try {
+      var r = await doFetch(method, path);
+      showResponse(box, r.status, r.body, r.duration);
+    } catch (e) {
+      showResponse(box, 'ERR', e.message, 0);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Try it';
+  };
+
+  // GET with URL params (replaces {param} placeholders)
+  window.tryItParam = async function(btn, method, pathTemplate) {
+    var section = btn.closest('.endpoint-body');
+    var inputs = section.querySelectorAll('.try-input[data-param]');
+    var path = pathTemplate;
+    for (var i = 0; i < inputs.length; i++) {
+      var val = inputs[i].value.trim();
+      if (!val) { inputs[i].focus(); return; }
+      path = path.replace('{' + inputs[i].dataset.param + '}', encodeURIComponent(val));
+    }
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    var box = findResponseBox(btn);
+    try {
+      var r = await doFetch(method, path);
+      showResponse(box, r.status, r.body, r.duration);
+    } catch (e) {
+      showResponse(box, 'ERR', e.message, 0);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  };
+
+  // POST with JSON body
+  window.tryItBody = async function(btn, method, path) {
+    var section = btn.closest('.endpoint-body');
+    var textarea = section.querySelector('.try-body');
+    var body = textarea ? textarea.value.trim() : '';
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    var box = findResponseBox(btn);
+    try {
+      var r = await doFetch(method, path, body);
+      showResponse(box, r.status, r.body, r.duration);
+    } catch (e) {
+      showResponse(box, 'ERR', e.message, 0);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  };
+})();
+</script>
+
+</body>
+</html>
