@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "start:watcher": "node analysis/watcher.js",
-    "test": "node analysis/test/correlator-test.js && node analysis/test/render-report-test.js && node analysis/test/email-report-test.js && bash scripts/test/verify-integration.sh",
+    "test": "node analysis/test/correlator-test.js && node analysis/test/render-report-test.js && node analysis/test/email-report-test.js && node audio/test-visualizer.js && bash scripts/test/verify-integration.sh",
     "demo": "bash scripts/demo-session.sh",
     "preflight": "bash scripts/preflight.sh",
     "analyze": "python3 analysis/analyze.py",
