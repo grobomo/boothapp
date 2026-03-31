@@ -92,7 +92,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        binding.btnCapture.setOnClickListener { capturePhoto() }
+        binding.btnCapture.setOnClickListener {
+            if (capturedBadgeFile != null) {
+                retakePhoto()
+            } else {
+                capturePhoto()
+            }
+        }
         binding.btnStartSession.setOnClickListener { startSession() }
         binding.btnEndSession.setOnClickListener { confirmEndSession() }
     }
@@ -121,6 +127,16 @@ class MainActivity : AppCompatActivity() {
         binding.ivCapturedBadge.visibility = View.GONE
         binding.tvCameraHint.visibility = View.VISIBLE
         cameraManager.startCamera(binding.previewView, this)
+    }
+
+    private fun retakePhoto() {
+        capturedBadgeFile = null
+        capturedBitmap = null
+        binding.etVisitorName.text?.clear()
+        binding.etVisitorCompany.text?.clear()
+        binding.btnStartSession.isEnabled = false
+        binding.btnCapture.text = getString(R.string.capture_badge)
+        startCameraPreview()
     }
 
     private fun capturePhoto() {
