@@ -462,6 +462,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'get_screenshot_count') {
+    getAllScreenshots().then((screenshots) => {
+      sendResponse({ status: 'ok', count: screenshots.length });
+    }).catch(() => {
+      sendResponse({ status: 'ok', count: 0 });
+    });
+    return true;
+  }
+
   if (message.type === 'upload_session') {
     const { session_id, click_buffer } = message;
     uploadSessionData(session_id, click_buffer).then(() => {
