@@ -473,7 +473,7 @@ function correlate(metadata, clicks, transcript, screenshots) {
   }
 }
 
-module.exports = { correlate, parseOffset, detectTopics, computeEngagement, findNearestScreenshot, buildScreenshotIndex, normalizeClicks, normalizeTranscript };
+module.exports = { correlate, parseOffset, detectTopics, computeEngagement, findNearestScreenshot, buildScreenshotIndex, normalizeClicks, normalizeTranscript, PRODUCT_TOPICS };
 
 // --- Self-test when run directly: node correlator.js ---
 if (require.main === module) {
