@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { teamsWebhookHandler } = require('./teams-webhook');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,8 +10,16 @@ const REGION = process.env.AWS_REGION || 'us-east-1';
 
 const s3 = new S3Client({ region: REGION });
 
+// Parse JSON bodies and capture raw body for HMAC validation
+app.use(express.json({
+    verify: (req, _res, buf) => { req.rawBody = buf.toString(); },
+}));
+
 // Serve static HTML files
 app.use(express.static(path.join(__dirname)));
+
+// POST /api/teams/webhook - receive Teams outgoing webhook messages
+app.post('/api/teams/webhook', teamsWebhookHandler);
 
 // GET /api/sessions - list all sessions with metadata and analysis status
 app.get('/api/sessions', async (req, res) => {
