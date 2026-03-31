@@ -5,5 +5,5 @@
   "workflow": {
     "verifier": true
   },
-  "spec_dir": ".specs/in-grobomoclaudeportable-git-clone"
+  "spec_dir": ".specs/in-boothapp-repo-rebase"
 }

@@ -499,6 +499,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'test_s3_connection') {
+    (async () => {
+      try {
+        const config = await chrome.storage.local.get([
+          's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
+        ]);
+        const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
+        if (!s3Bucket || !s3Region || !awsAccessKeyId || !awsSecretAccessKey) {
+          sendResponse({ connected: false, error: 'Not configured' });
+          return;
+        }
+        const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
+        // Try to read active-session.json -- 200 or 404 both mean S3 is reachable
+        const body = new Uint8Array(0);
+        const { url, headers } = await signS3Request(
+          'GET', s3Bucket, 'active-session.json', s3Region, body, 'application/json', credentials
+        );
+        const response = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
+        // 200 = file exists, 404 = file doesn't exist but bucket is accessible
+        // 403 = bad credentials, other = network error
+        sendResponse({ connected: response.status === 200 || response.status === 404 });
+      } catch (err) {
+        sendResponse({ connected: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
   if (message.type === 'get_popup_status') {
     (async () => {
       try {

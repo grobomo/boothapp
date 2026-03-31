@@ -30,11 +30,25 @@
       "notes": "test/correlator-test.js -- all passing"
     },
     {
-      "id": "enrichment",
-      "title": "Add screenshot matching, engagement scoring, and topic detection",
+      "id": "screenshot-matching",
+      "title": "Add screenshot matching by timestamp (binary search, 5s window)",
       "status": "completed",
       "pr": null,
-      "notes": "Screenshot-to-click matching (2s window), 30s segment engagement scores (0-10), product topic detection (10 keywords). Pipeline updated to fetch screenshots from S3 and pass to correlator. 48 self-test assertions."
+      "notes": "buildScreenshotIndex + findNearestScreenshot, backward-compatible optional 4th param"
+    },
+    {
+      "id": "engagement-scoring",
+      "title": "Add engagement scoring 0-10 (click freq, visitor speech, questions, duration, topics)",
+      "status": "completed",
+      "pr": null,
+      "notes": "computeEngagement weighted formula, output as engagement_score field"
+    },
+    {
+      "id": "topic-detection",
+      "title": "Add product topic detection (12 V1 categories from URLs, titles, DOM, speech)",
+      "status": "completed",
+      "pr": null,
+      "notes": "detectTopics scans all event text, returns ranked topics with evidence sources"
     }
   ],
   "depends_on": ["ana-01-session-watcher"],

@@ -4,8 +4,8 @@
 // Usage: node render-report.js <sessionPath>
 //   sessionPath: local directory or s3://bucket/sessions/<sessionId>
 //
-// Reads: summary.json, follow-up.json, timeline.json (from output/ subdir)
-// Template: render-report.html ({{placeholder}} syntax)
+// Reads: metadata.json, summary.json, follow-up.json, timeline.json (from output/ subdir)
+// Template: templates/report.html ({{placeholder}} syntax)
 // Writes: output/summary.html (locally or to S3)
 
 'use strict';
@@ -32,7 +32,7 @@ function getS3() {
   }
   return _s3;
 }
-const TEMPLATE_PATH = path.join(__dirname, 'render-report.html');
+const TEMPLATE_PATH = path.join(__dirname, 'templates', 'report.html');
 
 function parseS3Path(s3Uri) {
   const without = s3Uri.replace('s3://', '');
@@ -230,8 +230,8 @@ function scoreColorLight(score) {
 }
 
 function scoreDasharray(score) {
-  // SVG circle r=36 => circumference = 2 * PI * 36 ~= 226.19
-  const circumference = 2 * Math.PI * 36;
+  // SVG circle r=30 => circumference = 2 * PI * 30 ~= 188.50
+  const circumference = 2 * Math.PI * 30;
   const filled = (score / 100) * circumference;
   return `${filled.toFixed(1)} ${circumference.toFixed(1)}`;
 }
@@ -317,13 +317,31 @@ async function run() {
   const template = fs.readFileSync(TEMPLATE_PATH, 'utf8');
   console.log(`[render-report] Template loaded: ${TEMPLATE_PATH}`);
 
-  let summary, followUp, timeline;
+  let metadata, summary, followUp, timeline;
+
+  try {
+    metadata = await readJson('metadata.json');
+  } catch (err) {
+    console.warn(`[render-report] metadata.json not found, using defaults: ${err.message}`);
+    metadata = {};
+  }
 
   try {
     summary = await readJson('output/summary.json');
   } catch (err) {
     console.error(`[render-report] Failed to read output/summary.json: ${err.message}`);
     process.exit(1);
+  }
+
+  // Merge metadata fields into summary as fallbacks (metadata.json has se_name,
+  // visitor_name, etc. that the Claude analysis may not include in summary.json)
+  for (const key of ['se_name', 'visitor_name', 'demo_pc']) {
+    if (!summary[key] && metadata[key]) summary[key] = metadata[key];
+  }
+  // Compute demo_duration_minutes from metadata timestamps if not in summary
+  if (!summary.demo_duration_minutes && metadata.started_at && metadata.ended_at) {
+    const ms = new Date(metadata.ended_at) - new Date(metadata.started_at);
+    if (ms > 0) summary.demo_duration_minutes = Math.round(ms / 60000);
   }
 
   try {

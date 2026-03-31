@@ -98,7 +98,7 @@ console.log('\nTest 1: Full data — all placeholders replaced');
   assert(html.includes('Test Visitor'), 'visitor name present');
   assert(html.includes('Test Corp'), 'company name present');
   assert(html.includes('Test SE'), 'SE name present');
-  assert(html.includes('12 minutes'), 'duration present');
+  assert(html.includes('12 min'), 'duration present');
   assert(html.includes('XDR'), 'product badge present');
   assert(html.includes('Detection Rules'), 'interest topic present');
   assert(html.includes('Welcome to the demo'), 'timeline speech present');
@@ -225,11 +225,36 @@ console.log('\nTest 8: Session score computation');
 
   // With 1 high + 1 medium interest, 2 products, 2 moments, high priority, 12min duration:
   // 50 + 10 + 5 + 10 + 6 + 10 = 91
-  const scoreMatch = html.match(/class="score-value">(\d+)</);
+  const scoreMatch = html.match(/class="score-num">(\d+)</);
   assert(scoreMatch, 'score value found in HTML');
   const score = parseInt(scoreMatch[1], 10);
   assert(score >= 50, `score ${score} is at least baseline 50`);
   assert(score <= 100, `score ${score} is capped at 100`);
+
+  fs.rmSync(dir, { recursive: true });
+}
+
+// ─── Test 9: Metadata fallback — se_name and duration from metadata.json ─────
+
+console.log('\nTest 9: Metadata fallback — se_name and duration from metadata.json');
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-test-'));
+  // Setup session WITHOUT se_name or demo_duration in summary.json
+  setupSession(dir, { se_name: undefined, demo_duration_minutes: undefined });
+
+  // Write metadata.json at session root (like S3 layout)
+  fs.writeFileSync(path.join(dir, 'metadata.json'), JSON.stringify({
+    session_id: 'TEST001',
+    visitor_name: 'Test Visitor',
+    se_name: 'Metadata SE',
+    started_at: '2026-08-06T10:00:00Z',
+    ended_at: '2026-08-06T10:20:00Z',
+  }, null, 2));
+
+  const html = runRenderer(dir);
+
+  assert(html.includes('Metadata SE'), 'se_name falls back to metadata.json');
+  assert(html.includes('20 min'), 'duration computed from metadata timestamps');
 
   fs.rmSync(dir, { recursive: true });
 }

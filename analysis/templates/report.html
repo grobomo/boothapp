@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Demo Report — {{visitor_name}}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    /* ── Reset ────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    /* ── Layout: sidebar + main ───────────────────────────────── */
+    .report-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: #1a1a1a;
+      border-right: 1px solid #2a2a2a;
+      padding: 32px 24px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .sidebar-logo-icon {
+      width: 40px;
+      height: 40px;
+      background: #D32F2F;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .sidebar-logo-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+
+    .sidebar-logo-sub {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+      letter-spacing: 0.04em;
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #999;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .sidebar-nav a:hover {
+      background: #252525;
+      color: #e0e0e0;
+    }
+
+    .sidebar-nav a svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    .sidebar-visitor {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #2a2a2a;
+    }
+
+    .sidebar-visitor-photo {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #252525;
+      border: 2px solid #D32F2F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+      overflow: hidden;
+    }
+
+    .sidebar-visitor-photo svg {
+      width: 32px;
+      height: 32px;
+      fill: #666;
+    }
+
+    .sidebar-visitor-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .sidebar-visitor-name {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .sidebar-visitor-company {
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .sidebar-meta {
+      margin-top: 20px;
+    }
+
+    .sidebar-meta-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #222;
+      font-size: 12px;
+    }
+
+    .sidebar-meta-label { color: #666; }
+    .sidebar-meta-value { color: #ccc; font-weight: 500; }
+
+    /* ── Main content ─────────────────────────────────────────── */
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      padding: 0;
+    }
+
+    /* ── Header banner ────────────────────────────────────────── */
+    .report-header {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2a1515 50%, #1a1a1a 100%);
+      border-bottom: 3px solid #D32F2F;
+      padding: 40px 40px 32px;
+      position: relative;
+    }
+
+    .report-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #D32F2F, #FF5252, #D32F2F);
+    }
+
+    .header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .header-title h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .header-title h1 span {
+      color: #D32F2F;
+    }
+
+    .header-subtitle {
+      font-size: 14px;
+      color: #999;
+      margin-top: 6px;
+    }
+
+    .header-date-badge {
+      background: rgba(211, 47, 47, 0.12);
+      border: 1px solid rgba(211, 47, 47, 0.3);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: #FF8A80;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .header-chips {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-block;
+      background: rgba(211, 47, 47, 0.1);
+      border: 1px solid rgba(211, 47, 47, 0.25);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #FF8A80;
+      letter-spacing: 0.02em;
+    }
+
+    .chip-priority {
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .chip-priority-high { background: rgba(211, 47, 47, 0.2); border-color: rgba(211, 47, 47, 0.4); color: #FF8A80; }
+    .chip-priority-medium { background: rgba(255, 152, 0, 0.15); border-color: rgba(255, 152, 0, 0.3); color: #FFB74D; }
+    .chip-priority-low { background: rgba(100, 100, 100, 0.2); border-color: rgba(150, 150, 150, 0.3); color: #bbb; }
+
+    /* ── Score bar ────────────────────────────────────────────── */
+    .score-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 24px 40px 0;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
+    }
+
+    .score-ring svg {
+      width: 72px;
+      height: 72px;
+      transform: rotate(-90deg);
+    }
+
+    .score-ring .ring-bg {
+      fill: none;
+      stroke: #2a2a2a;
+      stroke-width: 6;
+    }
+
+    .score-ring .ring-fill {
+      fill: none;
+      stroke: {{score_color}};
+      stroke-width: 6;
+      stroke-linecap: round;
+      stroke-dasharray: {{score_dasharray}};
+    }
+
+    .score-ring .score-num {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .score-info { flex: 1; }
+
+    .score-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: {{score_color}};
+      margin-bottom: 4px;
+    }
+
+    .score-desc {
+      font-size: 13px;
+      color: #bbb;
+      line-height: 1.5;
+    }
+
+    .score-track {
+      margin-top: 10px;
+      height: 5px;
+      background: #2a2a2a;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .score-track-fill {
+      height: 100%;
+      width: {{session_score}}%;
+      background: linear-gradient(90deg, {{score_color}}, {{score_color_light}});
+      border-radius: 3px;
+    }
+
+    /* ── Sections ─────────────────────────────────────────────── */
+    .sections { padding: 32px 40px 48px; }
+
+    .section {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .si-red    { background: rgba(211, 47, 47, 0.15); color: #FF5252; }
+    .si-green  { background: rgba(76, 175, 80, 0.15); color: #81C784; }
+    .si-amber  { background: rgba(255, 152, 0, 0.15); color: #FFB74D; }
+    .si-blue   { background: rgba(66, 165, 245, 0.15); color: #64B5F6; }
+    .si-purple { background: rgba(171, 71, 188, 0.15); color: #CE93D8; }
+    .si-cyan   { background: rgba(38, 198, 218, 0.15); color: #4DD0E1; }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .section-body { padding: 20px; }
+
+    /* ── Executive Summary ────────────────────────────────────── */
+    .exec-box {
+      background: rgba(211, 47, 47, 0.05);
+      border: 1px solid rgba(211, 47, 47, 0.15);
+      border-left: 4px solid #D32F2F;
+      border-radius: 8px;
+      padding: 20px 24px;
+    }
+
+    .exec-box p {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #e0e0e0;
+    }
+
+    /* ── Product badges ───────────────────────────────────────── */
+    .product-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .product-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #2a1515, #1f1212);
+      border: 1px solid rgba(211, 47, 47, 0.2);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #FF8A80;
+      transition: border-color 0.15s;
+    }
+
+    .product-badge:hover { border-color: rgba(211, 47, 47, 0.5); }
+
+    .p-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: #D32F2F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* ── Interest table ───────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #666;
+      border-bottom: 2px solid #2a2a2a;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #222;
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .conf-high   { color: #81C784; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+    .conf-medium { color: #FFB74D; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+    .conf-low    { color: #999; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+
+    /* ── Timeline ─────────────────────────────────────────────── */
+    .timeline { position: relative; padding-left: 28px; }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: linear-gradient(to bottom, #D32F2F, #2a2a2a);
+    }
+
+    .tl-event {
+      position: relative;
+      margin-bottom: 18px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid #222;
+    }
+
+    .tl-event:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .tl-dot {
+      position: absolute;
+      left: -22px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid #444;
+      background: #121212;
+    }
+
+    .tl-dot.tl-click { border-color: #D32F2F; background: #4a1515; box-shadow: 0 0 6px rgba(211, 47, 47, 0.3); }
+    .tl-dot.tl-speech { border-color: #4CAF50; background: #1b3a1b; box-shadow: 0 0 6px rgba(76, 175, 80, 0.3); }
+
+    .tl-time {
+      font-size: 11px;
+      font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+      color: #666;
+      margin-bottom: 3px;
+    }
+
+    .tl-speaker {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #999;
+      margin-right: 8px;
+    }
+
+    .tl-text { font-size: 13px; color: #ccc; line-height: 1.5; }
+
+    .tl-click-label {
+      display: inline-block;
+      background: rgba(211, 47, 47, 0.2);
+      color: #FF8A80;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 8px;
+      letter-spacing: 0.06em;
+    }
+
+    .tl-screenshot {
+      margin-top: 8px;
+      max-width: 280px;
+      border-radius: 6px;
+      border: 1px solid #2a2a2a;
+      overflow: hidden;
+    }
+
+    .tl-screenshot img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── Follow-up cards ──────────────────────────────────────── */
+    .action-cards { display: grid; gap: 12px; }
+
+    .action-card {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: #1f1f1f;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 16px 18px;
+      transition: border-color 0.15s;
+    }
+
+    .action-card:hover { border-color: #D32F2F; }
+
+    .followup-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #D32F2F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .followup-content { flex: 1; }
+
+    .followup-text {
+      font-size: 13px;
+      color: #e0e0e0;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .followup-priority {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 6px;
+    }
+
+    .priority-high   { background: rgba(211, 47, 47, 0.2); color: #FF8A80; border: 1px solid rgba(211, 47, 47, 0.3); }
+    .priority-medium { background: rgba(255, 152, 0, 0.15); color: #FFB74D; border: 1px solid rgba(255, 152, 0, 0.2); }
+    .priority-low    { background: rgba(100, 100, 100, 0.15); color: #bbb; border: 1px solid rgba(150, 150, 150, 0.2); }
+
+    /* ── SDR Notes ────────────────────────────────────────────── */
+    .sdr-notes {
+      background: #151515;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #ccc;
+    }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    .report-footer {
+      border-top: 1px solid #2a2a2a;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #555;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-brand svg {
+      width: 14px;
+      height: 14px;
+      fill: #D32F2F;
+    }
+
+    .footer-brand span {
+      font-weight: 600;
+      color: #777;
+    }
+
+    /* ── Empty state ──────────────────────────────────────────── */
+    .empty { color: #555; font-style: italic; font-size: 12px; padding: 8px 0; }
+
+    /* ── Responsive: collapse sidebar on narrow screens ────────── */
+    @media (max-width: 768px) {
+      .report-wrapper { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        padding: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+      }
+      .sidebar-logo { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+      .sidebar-nav { display: none; }
+      .sidebar-visitor { margin-top: 0; padding-top: 0; border-top: none; display: flex; align-items: center; gap: 12px; }
+      .sidebar-visitor-photo { width: 40px; height: 40px; margin: 0; }
+      .sidebar-visitor-name { text-align: left; font-size: 14px; }
+      .sidebar-visitor-company { text-align: left; }
+      .sidebar-meta { display: none; }
+      .report-header { padding: 24px 20px 20px; }
+      .header-title h1 { font-size: 22px; }
+      .header-row { flex-direction: column; gap: 12px; }
+      .score-bar { margin: 16px 20px 0; padding: 16px; }
+      .sections { padding: 20px; }
+      .report-footer { padding: 20px; flex-direction: column; gap: 8px; }
+    }
+
+    /* ── Email fallback: inline-block for clients without flex ── */
+    @media screen and (max-width: 600px) {
+      .product-grid { display: block; }
+      .product-badge { display: block; margin-bottom: 8px; }
+      .header-chips { display: block; }
+      .chip { margin-bottom: 6px; }
+    }
+
+    /* ── Print ────────────────────────────────────────────────── */
+    @media print {
+      body { background: #fff; color: #222; }
+      .sidebar { display: none; }
+      .report-wrapper { display: block; }
+      .report-header { background: #fff; border-bottom: 3px solid #D32F2F; }
+      .report-header::before { background: #D32F2F; }
+      .header-title h1 { color: #111; }
+      .header-title h1 span { color: #D32F2F; }
+      .header-subtitle { color: #666; }
+      .header-date-badge { background: #fef2f2; border-color: #fecaca; color: #D32F2F; }
+      .score-bar { background: #f9f9f9; border-color: #ddd; }
+      .score-ring .ring-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .score-ring .score-num { color: #111; }
+      .section { background: #fff; border-color: #ddd; break-inside: avoid; }
+      .section-header { border-color: #ddd; }
+      .section-title { color: #111; }
+      .section-icon { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .exec-box { background: #fef2f2; border-color: #fecaca; border-left-color: #D32F2F; }
+      .exec-box p { color: #333; }
+      .product-badge { background: #fef2f2; color: #D32F2F; border-color: #fecaca; }
+      .p-icon { background: #D32F2F; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      th { color: #666; border-color: #ddd; }
+      td { color: #333; border-color: #eee; }
+      .conf-high   { color: #2e7d32; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .conf-medium { color: #e65100; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .timeline::before { background: #D32F2F; }
+      .tl-dot { background: #fff; border-color: #ccc; }
+      .tl-dot.tl-click { border-color: #D32F2F; background: #fef2f2; }
+      .tl-dot.tl-speech { border-color: #4CAF50; background: #f1f8e9; }
+      .tl-text { color: #333; }
+      .action-card { background: #f9f9f9; border-color: #ddd; }
+      .followup-num { background: #D32F2F; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .followup-text { color: #333; }
+      .sdr-notes { background: #f9f9f9; border-color: #ddd; color: #333; }
+      .report-footer { border-color: #ddd; color: #999; }
+      a { color: #D32F2F; }
+    }
+
+    @page { margin: 1.5cm; size: A4; }
+  </style>
+</head>
+<body>
+
+  <div class="report-wrapper">
+
+    <!-- ════════════════════════════════════════════════════════════
+         SIDEBAR
+         ════════════════════════════════════════════════════════════ -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        </div>
+        <div>
+          <div class="sidebar-logo-text">Trend Micro</div>
+          <div class="sidebar-logo-sub">Vision One</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#products"><svg viewBox="0 0 24 24"><path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z"/></svg> Products</a>
+        <a href="#interests"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg> Interests</a>
+        <a href="#followup"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Follow-Up</a>
+        <a href="#timeline"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> Timeline</a>
+      </nav>
+
+      <div class="sidebar-visitor">
+        <div class="sidebar-visitor-photo">
+          {{visitor_photo}}
+        </div>
+        <div class="sidebar-visitor-name">{{visitor_name}}</div>
+        <div class="sidebar-visitor-company">{{visitor_company}}</div>
+        <div class="sidebar-meta">
+          <div class="sidebar-meta-item">
+            <span class="sidebar-meta-label">Duration</span>
+            <span class="sidebar-meta-value">{{demo_duration_minutes}} min</span>
+          </div>
+          <div class="sidebar-meta-item">
+            <span class="sidebar-meta-label">SE</span>
+            <span class="sidebar-meta-value">{{se_name}}</span>
+          </div>
+          <div class="sidebar-meta-item">
+            <span class="sidebar-meta-label">Date</span>
+            <span class="sidebar-meta-value">{{session_date}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         MAIN CONTENT
+         ════════════════════════════════════════════════════════════ -->
+    <div class="main-content">
+
+      <!-- Header Banner -->
+      <div class="report-header">
+        <div class="header-row">
+          <div class="header-title">
+            <h1>Demo Report <span>|</span> {{visitor_name}}</h1>
+            <div class="header-subtitle">Personalized summary from your Vision One demo experience</div>
+          </div>
+          <div class="header-date-badge">{{session_date}}</div>
+        </div>
+        <div class="header-chips">
+          {{priority_chip}}
+          {{tag_chips}}
+        </div>
+      </div>
+
+      <!-- Engagement Score -->
+      <div class="score-bar">
+        <div class="score-ring">
+          <svg viewBox="0 0 72 72">
+            <circle class="ring-bg" cx="36" cy="36" r="30"/>
+            <circle class="ring-fill" cx="36" cy="36" r="30"/>
+          </svg>
+          <span class="score-num">{{session_score}}</span>
+        </div>
+        <div class="score-info">
+          <div class="score-label">Engagement Score</div>
+          <div class="score-desc">{{score_summary}}</div>
+          <div class="score-track">
+            <div class="score-track-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sections">
+
+        <!-- ══════════════════════════════════════════════════════
+             EXECUTIVE SUMMARY
+             ══════════════════════════════════════════════════════ -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon si-red">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+            </div>
+            <div class="section-title">Executive Summary</div>
+          </div>
+          <div class="section-body">
+            <div class="exec-box">
+              <p>{{executive_summary}}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             PRODUCTS DEMONSTRATED
+             ══════════════════════════════════════════════════════ -->
+        <div class="section" id="products">
+          <div class="section-header">
+            <div class="section-icon si-purple">
+              <svg viewBox="0 0 24 24"><path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z"/></svg>
+            </div>
+            <div class="section-title">Products Demonstrated</div>
+          </div>
+          <div class="section-body">
+            <div class="product-grid">
+              {{products_shown}}
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             KEY INTERESTS & DISCUSSION TOPICS
+             ══════════════════════════════════════════════════════ -->
+        <div class="section" id="interests">
+          <div class="section-header">
+            <div class="section-icon si-amber">
+              <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            </div>
+            <div class="section-title">Key Interests &amp; Discussion Topics</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Topic</th>
+                <th style="text-align:center">Confidence</th>
+                <th>Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{visitor_interests}}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             RECOMMENDED FOLLOW-UP ACTIONS
+             ══════════════════════════════════════════════════════ -->
+        <div class="section" id="followup">
+          <div class="section-header">
+            <div class="section-icon si-green">
+              <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            </div>
+            <div class="section-title">Recommended Follow-Up Actions</div>
+          </div>
+          <div class="section-body">
+            <div class="action-cards">
+              {{follow_up_cards}}
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             DEMO TIMELINE
+             ══════════════════════════════════════════════════════ -->
+        <div class="section" id="timeline">
+          <div class="section-header">
+            <div class="section-icon si-blue">
+              <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+            </div>
+            <div class="section-title">Demo Timeline</div>
+          </div>
+          <div class="section-body">
+            <div class="timeline">
+              {{timeline_events}}
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             SDR NOTES
+             ══════════════════════════════════════════════════════ -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-icon si-cyan">
+              <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+            </div>
+            <div class="section-title">SDR Notes</div>
+          </div>
+          <div class="section-body">
+            <div class="sdr-notes">{{sdr_notes}}</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="report-footer">
+        <div class="footer-brand">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+          <span>Trend Micro Vision One</span>
+        </div>
+        <div>Generated {{generated_at}}</div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
