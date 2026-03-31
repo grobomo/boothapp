@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Session Viewer</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-dark:  #A8131A;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --amber:     #FFAB00;
+            --blue:      #448AFF;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ---- Header ---- */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--red), #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .back {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .header .back:hover { color: var(--text); }
+        .header .session-id {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-left: auto;
+        }
+
+        /* ---- Layout ---- */
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 16px;
+            padding: 24px 32px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* ---- Panels ---- */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .panel-title {
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-body {
+            padding: 16px;
+        }
+
+        /* ---- Visitor Card ---- */
+        .visitor-card { grid-column: 1 / 2; }
+        .visitor-info { display: flex; flex-direction: column; gap: 8px; }
+        .visitor-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .visitor-detail {
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+        .visitor-detail span {
+            color: var(--text);
+            font-weight: 500;
+        }
+        .visitor-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .meta-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .meta-tag.status { background: rgba(0,230,118,0.15); color: var(--success); }
+        .meta-tag.status-pending { background: rgba(255,171,0,0.15); color: var(--amber); }
+        .meta-tag.date { background: rgba(68,138,255,0.15); color: var(--blue); }
+
+        /* ---- Analysis Summary ---- */
+        .analysis-card { grid-column: 2 / 3; }
+        .analysis-body { display: flex; flex-direction: column; gap: 12px; }
+        .analysis-score {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .score-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .score-high   { background: rgba(0,230,118,0.15); color: var(--success); }
+        .score-medium { background: rgba(255,171,0,0.15);  color: var(--amber); }
+        .score-low    { background: rgba(107,115,133,0.15); color: var(--text-dim); }
+        .analysis-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+
+        /* ---- Products + Follow-ups row ---- */
+        .products-panel { grid-column: 1 / 2; }
+        .followups-panel { grid-column: 2 / 3; }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .product-tag {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(215, 25, 32, 0.12);
+            color: #FF6B6B;
+            border: 1px solid rgba(215, 25, 32, 0.25);
+        }
+
+        .followup-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .followup-list li {
+            padding: 10px 14px;
+            background: var(--surface2);
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            border-left: 3px solid var(--red);
+        }
+
+        /* ---- Timeline ---- */
+        .timeline-panel {
+            grid-column: 1 / 2;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        .timeline-panel .panel-body {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+            padding-left: 24px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 8px;
+            bottom: 8px;
+            width: 2px;
+            background: var(--border);
+        }
+        .tl-event {
+            position: relative;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+        }
+        .tl-event:hover {
+            background: var(--surface2);
+        }
+        .tl-dot {
+            position: absolute;
+            left: -21px;
+            top: 16px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+            border: 2px solid var(--bg);
+        }
+        .tl-event.engagement-high .tl-dot   { background: var(--success); }
+        .tl-event.engagement-medium .tl-dot { background: var(--amber); }
+        .tl-event.engagement-low .tl-dot    { background: var(--text-dim); }
+
+        .tl-time {
+            font-size: 11px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .tl-desc {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+        .tl-url {
+            font-size: 12px;
+            color: var(--blue);
+            word-break: break-all;
+        }
+        .tl-topics {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .tl-topic {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: rgba(68,138,255,0.12);
+            color: var(--blue);
+        }
+        .tl-screenshots {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .tl-thumb {
+            width: 120px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .tl-thumb:hover { border-color: var(--red); }
+
+        /* ---- Transcript ---- */
+        .transcript-panel {
+            grid-column: 2 / 3;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        .transcript-panel .panel-body {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .transcript-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tx-line {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .tx-speaker {
+            flex-shrink: 0;
+            width: 80px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 0;
+        }
+        .tx-speaker.presenter { color: var(--red); }
+        .tx-speaker.visitor   { color: var(--blue); }
+        .tx-speaker.unknown   { color: var(--text-dim); }
+        .tx-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+        .tx-time {
+            font-size: 10px;
+            color: var(--text-dim);
+            font-family: 'Consolas', 'Monaco', monospace;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        /* ---- Lightbox ---- */
+        .lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        /* ---- Loading / Error ---- */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .loading-overlay.hidden { display: none; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--red);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-banner {
+            display: none;
+            background: rgba(215, 25, 32, 0.15);
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 32px;
+            color: #FF6B6B;
+            font-size: 14px;
+        }
+        .error-banner.visible { display: block; }
+
+        .empty-state {
+            color: var(--text-dim);
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        /* ---- Scrollbar ---- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <span style="color: var(--text-dim); font-size: 14px;">Loading session data...</span>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+        <img id="lightbox-img" src="" alt="Screenshot" />
+    </div>
+
+    <div class="header">
+        <a class="back" href="/sessions.html">&larr; Sessions</a>
+        <h1>Session Viewer</h1>
+        <span class="session-id" id="session-id-display"></span>
+    </div>
+
+    <div class="error-banner" id="error-banner"></div>
+
+    <div class="content" id="content" style="display:none;">
+        <!-- Row 1: Visitor + Analysis -->
+        <div class="panel visitor-card">
+            <div class="panel-title">Visitor</div>
+            <div class="panel-body">
+                <div class="visitor-info" id="visitor-info">
+                    <span class="empty-state">No visitor data</span>
+                </div>
+            </div>
+        </div>
+        <div class="panel analysis-card">
+            <div class="panel-title">Analysis Summary</div>
+            <div class="panel-body">
+                <div class="analysis-body" id="analysis-body">
+                    <span class="empty-state">No analysis available</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Products + Follow-ups -->
+        <div class="panel products-panel">
+            <div class="panel-title">Products Demonstrated</div>
+            <div class="panel-body">
+                <div class="tag-list" id="products-list">
+                    <span class="empty-state">No products identified</span>
+                </div>
+            </div>
+        </div>
+        <div class="panel followups-panel">
+            <div class="panel-title">Follow-up Actions</div>
+            <div class="panel-body">
+                <ul class="followup-list" id="followups-list">
+                    <li class="empty-state">No follow-up actions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Row 3: Timeline + Transcript -->
+        <div class="panel timeline-panel">
+            <div class="panel-title">Session Timeline</div>
+            <div class="panel-body">
+                <div class="timeline" id="timeline">
+                    <span class="empty-state">No timeline data</span>
+                </div>
+            </div>
+        </div>
+        <div class="panel transcript-panel">
+            <div class="panel-title">Transcript</div>
+            <div class="panel-body">
+                <div class="transcript-lines" id="transcript">
+                    <span class="empty-state">No transcript available</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var sessionId = new URLSearchParams(window.location.search).get('session');
+
+        if (!sessionId) {
+            document.getElementById('loading').classList.add('hidden');
+            showError('No session ID provided. Use ?session=<id> in the URL.');
+        } else {
+            document.getElementById('session-id-display').textContent = sessionId;
+            loadSession(sessionId);
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('error-banner');
+            el.textContent = msg;
+            el.classList.add('visible');
+        }
+
+        function formatTs(ts) {
+            if (!ts) return '--';
+            var d = new Date(typeof ts === 'number' ? ts : ts);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '--';
+            var d = new Date(iso);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function relativeTime(ms, baseMs) {
+            var diff = Math.floor((ms - baseMs) / 1000);
+            var m = Math.floor(diff / 60);
+            var s = diff % 60;
+            return (m > 0 ? m + 'm ' : '') + s + 's';
+        }
+
+        // ---- Lightbox ----
+        document.getElementById('lightbox').addEventListener('click', function() {
+            this.classList.remove('active');
+        });
+
+        function openLightbox(src) {
+            var lb = document.getElementById('lightbox');
+            document.getElementById('lightbox-img').src = src;
+            lb.classList.add('active');
+        }
+
+        // ---- Load session ----
+        async function loadSession(sid) {
+            try {
+                var resp = await fetch('/api/sessions/' + encodeURIComponent(sid) + '/data');
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var data = await resp.json();
+
+                renderVisitor(data.metadata, data.badge);
+                renderAnalysis(data.analysis);
+                renderProducts(data.analysis, data.clicks);
+                renderFollowups(data.analysis);
+                renderTimeline(data.clicks, sid);
+                renderTranscript(data.transcript);
+
+                document.getElementById('content').style.display = 'grid';
+            } catch (err) {
+                showError('Failed to load session: ' + err.message);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // ---- Render: Visitor Card ----
+        function renderVisitor(meta, badge) {
+            var el = document.getElementById('visitor-info');
+            var name = (badge && badge.name) || (meta && meta.visitor_name) || 'Unknown Visitor';
+            var company = (badge && badge.company) || '';
+            var title = (badge && badge.title) || '';
+            var email = (badge && badge.email) || '';
+            var status = (meta && meta.status) || 'unknown';
+            var created = (meta && meta.created_at) || null;
+
+            var html = '<div class="visitor-name">' + escHtml(name) + '</div>';
+            if (title) html += '<div class="visitor-detail">Title: <span>' + escHtml(title) + '</span></div>';
+            if (company) html += '<div class="visitor-detail">Company: <span>' + escHtml(company) + '</span></div>';
+            if (email) html += '<div class="visitor-detail">Email: <span>' + escHtml(email) + '</span></div>';
+
+            html += '<div class="visitor-meta">';
+            var statusCls = status === 'complete' ? 'status' : 'status-pending';
+            html += '<span class="meta-tag ' + statusCls + '">' + escHtml(status) + '</span>';
+            if (created) html += '<span class="meta-tag date">' + escHtml(formatDate(created)) + '</span>';
+            html += '</div>';
+
+            el.innerHTML = html;
+        }
+
+        // ---- Render: Analysis Summary ----
+        function renderAnalysis(analysis) {
+            var el = document.getElementById('analysis-body');
+            if (!analysis) return;
+
+            var html = '';
+
+            // Engagement score
+            var summary = analysis.summary || analysis;
+            var engagement = summary.avgEngagement || summary.engagement || null;
+            if (engagement) {
+                var cls = 'score-' + engagement;
+                html += '<div class="analysis-score">';
+                html += '<span>Engagement:</span>';
+                html += '<span class="score-badge ' + cls + '">' + escHtml(engagement) + '</span>';
+                html += '</div>';
+            }
+
+            // Score counts
+            if (summary.scoreCounts) {
+                var sc = summary.scoreCounts;
+                html += '<div class="analysis-text">';
+                html += 'Segments: ' + (summary.totalSegments || 0) + ' total';
+                html += ' &mdash; High: ' + (sc.high || 0);
+                html += ', Medium: ' + (sc.medium || 0);
+                html += ', Low: ' + (sc.low || 0);
+                html += '</div>';
+            }
+
+            // Key insights / text summary
+            if (summary.insights || summary.text || analysis.insights) {
+                var insights = summary.insights || analysis.insights || summary.text;
+                if (typeof insights === 'string') {
+                    html += '<div class="analysis-text">' + escHtml(insights) + '</div>';
+                } else if (Array.isArray(insights)) {
+                    html += '<div class="analysis-text">';
+                    insights.forEach(function(i) {
+                        html += '<div style="margin-bottom:6px;">&bull; ' + escHtml(typeof i === 'string' ? i : i.text || JSON.stringify(i)) + '</div>';
+                    });
+                    html += '</div>';
+                }
+            }
+
+            if (html) el.innerHTML = html;
+        }
+
+        // ---- Render: Products ----
+        function renderProducts(analysis, clicks) {
+            var el = document.getElementById('products-list');
+            var topics = new Set();
+
+            // From analysis summary
+            if (analysis) {
+                var summary = analysis.summary || analysis;
+                if (summary.topics && Array.isArray(summary.topics)) {
+                    summary.topics.forEach(function(t) { topics.add(t); });
+                }
+                if (summary.products && Array.isArray(summary.products)) {
+                    summary.products.forEach(function(p) { topics.add(typeof p === 'string' ? p : p.name || ''); });
+                }
+            }
+
+            // From click segments
+            if (analysis && analysis.segments) {
+                analysis.segments.forEach(function(seg) {
+                    if (seg.topics) seg.topics.forEach(function(t) { topics.add(t); });
+                });
+            }
+
+            if (topics.size === 0) return;
+            var html = '';
+            topics.forEach(function(t) {
+                if (t) html += '<span class="product-tag">' + escHtml(t) + '</span>';
+            });
+            if (html) el.innerHTML = html;
+        }
+
+        // ---- Render: Follow-ups ----
+        function renderFollowups(analysis) {
+            var el = document.getElementById('followups-list');
+            if (!analysis) return;
+
+            var followups = analysis.followups || analysis.follow_ups || analysis.actions ||
+                            (analysis.summary && (analysis.summary.followups || analysis.summary.follow_ups || analysis.summary.actions));
+
+            if (!followups || !Array.isArray(followups) || followups.length === 0) return;
+
+            var html = '';
+            followups.forEach(function(f) {
+                var text = typeof f === 'string' ? f : f.text || f.action || f.description || JSON.stringify(f);
+                html += '<li>' + escHtml(text) + '</li>';
+            });
+            el.innerHTML = html;
+        }
+
+        // ---- Render: Timeline ----
+        function renderTimeline(clicks, sid) {
+            var el = document.getElementById('timeline');
+            if (!clicks || !Array.isArray(clicks) || clicks.length === 0) return;
+
+            // Sort by timestamp
+            var sorted = clicks.slice().sort(function(a, b) {
+                return (a.timestamp || 0) - (b.timestamp || 0);
+            });
+            var baseTs = sorted[0].timestamp || 0;
+
+            var html = '';
+            sorted.forEach(function(click, idx) {
+                var engagement = click.engagement_score || '';
+                html += '<div class="tl-event engagement-' + escHtml(engagement) + '">';
+                html += '<div class="tl-dot"></div>';
+
+                var ts = click.timestamp;
+                html += '<div class="tl-time">' + formatTs(ts) + ' (+' + relativeTime(ts, baseTs) + ')</div>';
+
+                // Description
+                var desc = click.element || click.description || 'Click #' + (idx + 1);
+                html += '<div class="tl-desc">' + escHtml(desc) + '</div>';
+
+                if (click.url) {
+                    html += '<div class="tl-url">' + escHtml(click.url) + '</div>';
+                }
+
+                // Topics
+                if (click.topics && click.topics.length > 0) {
+                    html += '<div class="tl-topics">';
+                    click.topics.forEach(function(t) {
+                        html += '<span class="tl-topic">' + escHtml(t) + '</span>';
+                    });
+                    html += '</div>';
+                }
+
+                // Screenshots
+                var screenshots = click.screenshot_urls || [];
+                if (click.screenshot_file) {
+                    var fname = click.screenshot_file.replace(/^screenshots\//, '');
+                    screenshots.push('/api/sessions/' + encodeURIComponent(sid) + '/screenshots/' + encodeURIComponent(fname));
+                }
+                if (screenshots.length > 0) {
+                    html += '<div class="tl-screenshots">';
+                    screenshots.forEach(function(url) {
+                        // If it's a relative S3 path, convert to API URL
+                        var src = url;
+                        if (!url.startsWith('/') && !url.startsWith('http')) {
+                            var fname = url.replace(/^screenshots\//, '');
+                            src = '/api/sessions/' + encodeURIComponent(sid) + '/screenshots/' + encodeURIComponent(fname);
+                        }
+                        html += '<img class="tl-thumb" src="' + escHtml(src) + '" alt="Screenshot" onclick="openLightbox(this.src)" loading="lazy" />';
+                    });
+                    html += '</div>';
+                }
+
+                html += '</div>';
+            });
+
+            el.innerHTML = html;
+        }
+
+        // ---- Render: Transcript ----
+        function renderTranscript(transcript) {
+            var el = document.getElementById('transcript');
+            if (!transcript) return;
+
+            var lines = [];
+            if (Array.isArray(transcript)) {
+                lines = transcript;
+            } else if (transcript.segments) {
+                lines = transcript.segments;
+            } else if (transcript.lines) {
+                lines = transcript.lines;
+            } else if (typeof transcript === 'string') {
+                el.innerHTML = '<div class="tx-text" style="white-space:pre-wrap;">' + escHtml(transcript) + '</div>';
+                return;
+            }
+
+            if (lines.length === 0) return;
+
+            var html = '';
+            lines.forEach(function(line) {
+                var speaker = line.speaker || line.role || 'Unknown';
+                var text = line.text || line.content || '';
+                var time = line.start || line.timestamp || null;
+                var speakerCls = 'unknown';
+                var spLower = speaker.toLowerCase();
+                if (spLower.indexOf('present') !== -1 || spLower.indexOf('rep') !== -1 || spLower === 'agent') {
+                    speakerCls = 'presenter';
+                } else if (spLower.indexOf('visit') !== -1 || spLower.indexOf('guest') !== -1 || spLower === 'customer') {
+                    speakerCls = 'visitor';
+                }
+
+                html += '<div class="tx-line">';
+                html += '<span class="tx-speaker ' + speakerCls + '">' + escHtml(speaker) + '</span>';
+                html += '<span class="tx-text">' + escHtml(text) + '</span>';
+                if (time !== null) html += '<span class="tx-time">' + formatTs(time) + '</span>';
+                html += '</div>';
+            });
+
+            el.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

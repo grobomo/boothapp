@@ -248,6 +248,76 @@ app.post('/api/sessions', async (req, res) => {
     }
 });
 
+// GET /api/sessions/:id/data - fetch all session JSON data in one call
+app.get('/api/sessions/:id/data', async (req, res) => {
+    const sid = req.params.id;
+    const result = { session_id: sid, metadata: null, badge: null, clicks: null, transcript: null, analysis: null };
+
+    async function fetchJson(key) {
+        try {
+            const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+            const r = await s3.send(cmd);
+            return JSON.parse(await r.Body.transformToString());
+        } catch { return null; }
+    }
+
+    try {
+        const [metadata, badge, clicks, clicksAlt, transcript, analysis, analysisAlt] = await Promise.all([
+            fetchJson(`${sid}/metadata.json`),
+            fetchJson(`${sid}/badge.json`),
+            fetchJson(`${sid}/clicks.json`),
+            fetchJson(`${sid}/clicks/clicks.json`),
+            fetchJson(`${sid}/transcript.json`),
+            fetchJson(`${sid}/output/summary.json`),
+            fetchJson(`${sid}/output/result.json`),
+        ]);
+
+        result.metadata = metadata;
+        result.badge = badge;
+        result.clicks = clicks || clicksAlt;
+        result.transcript = transcript;
+        result.analysis = analysis || analysisAlt;
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch session data', detail: err.message });
+    }
+});
+
+// GET /api/sessions/:id/screenshots/:filename - proxy screenshot from S3
+app.get('/api/sessions/:id/screenshots/:filename', async (req, res) => {
+    const key = `${req.params.id}/screenshots/${req.params.filename}`;
+    try {
+        const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+        const r = await s3.send(cmd);
+        res.setHeader('Content-Type', r.ContentType || 'image/jpeg');
+        r.Body.pipe(res);
+    } catch (err) {
+        if (err.name === 'NoSuchKey') {
+            res.status(404).json({ error: 'Screenshot not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch screenshot', detail: err.message });
+        }
+    }
+});
+
+// GET /api/sessions/:id/files - list all files in a session prefix
+app.get('/api/sessions/:id/files', async (req, res) => {
+    try {
+        const prefix = `${req.params.id}/`;
+        const cmd = new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix });
+        const r = await s3.send(cmd);
+        const files = (r.Contents || []).map(o => ({
+            key: o.Key,
+            size: o.Size,
+            lastModified: o.LastModified,
+        }));
+        res.json({ files });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to list files', detail: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Presenter server running on http://localhost:${PORT}`);
 });
