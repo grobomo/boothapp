@@ -89,6 +89,74 @@ function assert(condition, label) {
     assert(retries[2] === 40, 'third delay = 40');
   }
 
+  // Test 6: custom multiplier (3x backoff for Bedrock retries)
+  console.log('Test 6: custom multiplier (3x)');
+  {
+    const retries = [];
+    try {
+      await withRetry('t6', async () => { throw new Error('fail'); }, {
+        maxRetries: 4,
+        baseDelayMs: 100,
+        multiplier: 3,
+        onRetry: (err, attempt, delay) => retries.push(delay),
+      });
+    } catch (e) { /* expected */ }
+    assert(retries.length === 3, '3 retries before final throw');
+    assert(retries[0] === 100, 'first delay = 100 (100*3^0)');
+    assert(retries[1] === 300, 'second delay = 300 (100*3^1)');
+    assert(retries[2] === 900, 'third delay = 900 (100*3^2)');
+  }
+
+  // Test 7: isRetryable stops retry on non-retryable errors
+  console.log('Test 7: isRetryable — non-retryable error fails immediately');
+  {
+    let calls = 0;
+    let threw = false;
+    try {
+      await withRetry('t7', async () => { calls++; throw new Error('bad input'); }, {
+        maxRetries: 4,
+        baseDelayMs: 1,
+        isRetryable: (err) => err.message.includes('timeout'),
+      });
+    } catch (err) {
+      threw = true;
+      assert(err.message === 'bad input', 'preserves error');
+    }
+    assert(threw, 'threw');
+    assert(calls === 1, 'only 1 attempt (no retries)');
+  }
+
+  // Test 8: isRetryable allows retry on matching errors
+  console.log('Test 8: isRetryable — retryable error retries normally');
+  {
+    let calls = 0;
+    try {
+      await withRetry('t8', async () => { calls++; throw new Error('timeout exceeded'); }, {
+        maxRetries: 3,
+        baseDelayMs: 1,
+        isRetryable: (err) => err.message.includes('timeout'),
+      });
+    } catch (e) { /* expected */ }
+    assert(calls === 3, 'retried all 3 attempts');
+  }
+
+  // Test 9: isRetryable with recovery on retryable error
+  console.log('Test 9: isRetryable — recovers after retryable failures');
+  {
+    let calls = 0;
+    const result = await withRetry('t9', async () => {
+      calls++;
+      if (calls < 3) throw new Error('ThrottlingException');
+      return 'recovered';
+    }, {
+      maxRetries: 4,
+      baseDelayMs: 1,
+      isRetryable: (err) => err.message.includes('Throttling'),
+    });
+    assert(result === 'recovered', 'recovered after retries');
+    assert(calls === 3, 'took 3 attempts');
+  }
+
   console.log('');
   if (failures === 0) {
     console.log('All retry tests passed.');

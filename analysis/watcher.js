@@ -25,7 +25,7 @@
 'use strict';
 
 const http = require('http');
-const { listSessions, isSessionComplete, isAlreadyClaimed, writeMarker } = require('./lib/s3');
+const { listSessions, isSessionComplete, isAlreadyClaimed, writeMarker, updateMetadata } = require('./lib/s3');
 const { triggerPipeline } = require('./lib/pipeline');
 const { sendNotification } = require('./lib/notify');
 const { withRetry } = require('./lib/retry');
@@ -71,7 +71,10 @@ let sessionsProcessed = 0;
 const BUCKET = process.env.S3_BUCKET;
 const REGION = process.env.AWS_REGION || 'us-east-1';
 const POLL_INTERVAL_MS = (parseInt(process.env.POLL_INTERVAL_SECONDS, 10) || 30) * 1000;
-const PIPELINE_MAX_RETRIES = 2;
+// 4 total attempts = 1 initial + 3 retries, with 3x backoff: 5s, 15s, 45s
+const PIPELINE_MAX_RETRIES = 4;
+const PIPELINE_BASE_DELAY_MS = 5000;
+const PIPELINE_BACKOFF_MULTIPLIER = 3;
 
 // In-memory set of sessions already dispatched this process run.
 // S3 marker (output/.analysis-claimed) handles cross-restart deduplication.
@@ -79,6 +82,29 @@ const dispatched = new Set();
 
 function log(msg) {
   console.log(`[watcher] ${new Date().toISOString()} ${msg}`);
+}
+
+// Bedrock/timeout errors worth retrying. Other failures (bad input, missing
+// files) won't recover on retry so we fail them immediately.
+function isBedrockRetryable(err) {
+  const msg = (err.message || '').toLowerCase();
+  const name = err.name || '';
+
+  // AWS SDK Bedrock throttling / service errors
+  if (name === 'ThrottlingException' || name === 'ServiceUnavailableException') return true;
+  if (name === 'ModelTimeoutException' || name === 'ModelErrorException') return true;
+  if (name === 'InternalServerException') return true;
+
+  // Pipeline timeout (set in pipeline.js)
+  if (msg.includes('timeout')) return true;
+
+  // Generic Bedrock / rate limit indicators
+  if (msg.includes('bedrock') && (msg.includes('rate') || msg.includes('limit'))) return true;
+  if (msg.includes('too many requests')) return true;
+  if (msg.includes('econnreset') || msg.includes('econnrefused')) return true;
+  if (msg.includes('socket hang up')) return true;
+
+  return false;
 }
 
 async function pollOnce() {
@@ -135,21 +161,35 @@ async function pollOnce() {
       sessionsProcessed++;
       health.recordProcessed(sessionId);
 
-      // Trigger pipeline with retry (up to 2 attempts). On final failure,
-      // write error.json to S3 so downstream consumers know what happened.
+      // Trigger pipeline with retry. Bedrock API errors and timeouts get up to
+      // 3 retries with exponential backoff (5s, 15s, 45s). Non-retryable errors
+      // fail immediately. On final failure, write error.json AND update
+      // metadata.json with analysis_status:'failed' so the dashboard can show it.
       withRetry(`pipeline:${sessionId}`, () => triggerPipeline(sessionId, BUCKET), {
         maxRetries: PIPELINE_MAX_RETRIES,
-        baseDelayMs: 2000,
+        baseDelayMs: PIPELINE_BASE_DELAY_MS,
+        multiplier: PIPELINE_BACKOFF_MULTIPLIER,
+        isRetryable: isBedrockRetryable,
         onRetry: (err, attempt, delay) => {
-          log(`  ${sessionId}: pipeline attempt ${attempt}/${PIPELINE_MAX_RETRIES} failed (${err.message}), retrying in ${delay}ms...`);
+          log(`  ${sessionId}: pipeline attempt ${attempt}/${PIPELINE_MAX_RETRIES} failed (${err.message}), retrying in ${Math.round(delay / 1000)}s...`);
         },
       })
         .then((result) => log(`  ${sessionId}: pipeline finished — ${result.status}`))
         .catch((err) => {
           health.recordFailed(sessionId);
-          log(`  ${sessionId}: pipeline FAILED after ${PIPELINE_MAX_RETRIES} attempts — ${err.message}`);
-          writeErrorJson(sessionId, err).catch((writeErr) => {
-            log(`  ${sessionId}: could not write error.json — ${writeErr.message}`);
+          const retryable = isBedrockRetryable(err);
+          log(`  ${sessionId}: pipeline FAILED${retryable ? ` after retries` : ' (non-retryable)'} — ${err.message}`);
+          // Write both error.json (detailed) and metadata update (dashboard-queryable)
+          Promise.all([
+            writeErrorJson(sessionId, err),
+            updateMetadata(BUCKET, sessionId, {
+              analysis_status: 'failed',
+              analysis_error: err.message,
+              analysis_failed_at: new Date().toISOString(),
+              analysis_retryable: retryable,
+            }),
+          ]).catch((writeErr) => {
+            log(`  ${sessionId}: could not write failure status to S3 — ${writeErr.message}`);
           });
         });
 

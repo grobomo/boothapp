@@ -161,6 +161,28 @@ async function listObjects(bucket, prefix) {
   return results;
 }
 
+// Merge fields into an existing metadata.json for a session.
+// Reads the current metadata, merges the updates, and writes it back.
+async function updateMetadata(bucket, sessionId, updates) {
+  const client = getClient();
+  const key = `sessions/${sessionId}/metadata.json`;
+  let metadata = {};
+  try {
+    metadata = await getJson(bucket, key);
+  } catch (err) {
+    if (err.name !== 'NoSuchKey' && err.$metadata?.httpStatusCode !== 404) {
+      throw err;
+    }
+  }
+  Object.assign(metadata, updates);
+  await client.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: JSON.stringify(metadata, null, 2),
+    ContentType: 'application/json',
+  }));
+}
+
 module.exports = {
   listSessions,
   isSessionComplete,
@@ -168,4 +190,5 @@ module.exports = {
   writeMarker,
   getJson,
   listObjects,
+  updateMetadata,
 };
