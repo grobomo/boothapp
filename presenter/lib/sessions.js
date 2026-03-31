@@ -18,13 +18,19 @@ function createRouter(opts) {
 
   const s3cache = new S3Cache({ bucket, ttl });
 
-  // Response time header middleware
+  // Response time logging middleware
+  // Note: cannot set headers in 'finish' event (headers already sent).
+  // Instead, intercept res.end to set header before flushing.
   router.use((req, res, next) => {
     const start = Date.now();
-    res.on('finish', () => {
+    const origEnd = res.end;
+    res.end = function (...args) {
       const duration = Date.now() - start;
-      res.set('X-Response-Time', `${duration}ms`);
-    });
+      if (!res.headersSent) {
+        res.set('X-Response-Time', `${duration}ms`);
+      }
+      return origEnd.apply(this, args);
+    };
     next();
   });
 
