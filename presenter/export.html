@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Data Export Dashboard</title>
+    <style>
+        /* ============================================================
+           RESET & BASE (matches demo.html)
+           ============================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --red-dark:  #A8131A;
+            --red-light: #FF4D52;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ============================================================
+           BACKGROUND
+           ============================================================ */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(rgba(215,25,32,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(215,25,32,.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+            opacity: .4;
+        }
+        .bg-glow {
+            position: fixed; z-index: 0;
+            border-radius: 50%;
+            filter: blur(180px);
+            opacity: .10;
+        }
+        .bg-glow--1 { top: -300px; left: -200px; width: 800px; height: 800px; background: var(--red); }
+        .bg-glow--2 { bottom: -300px; right: -200px; width: 700px; height: 700px; background: var(--red); }
+
+        /* ============================================================
+           LAYOUT
+           ============================================================ */
+        .container {
+            position: relative; z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 32px 40px 64px;
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logo-icon {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 30px var(--red-glow);
+        }
+        .logo-icon svg { width: 28px; height: 28px; fill: #fff; }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .header h1 span { color: var(--red); }
+        .header-subtitle {
+            font-size: 13px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .header-right {
+            display: flex; gap: 10px;
+        }
+        .back-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all .2s;
+        }
+        .back-link:hover {
+            color: var(--text);
+            border-color: var(--text-dim);
+        }
+
+        /* ============================================================
+           TOOLBAR
+           ============================================================ */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toolbar-sep {
+            width: 1px;
+            height: 28px;
+            background: var(--border);
+            margin: 0 8px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+        .btn:hover { border-color: var(--text-dim); background: var(--surface2); }
+        .btn:disabled { opacity: .35; cursor: not-allowed; }
+        .btn:disabled:hover { border-color: var(--border); background: var(--surface); }
+        .btn--red {
+            background: var(--red);
+            border-color: var(--red);
+            color: #fff;
+        }
+        .btn--red:hover { background: var(--red-dark); border-color: var(--red-dark); }
+        .btn--red:disabled:hover { background: var(--red); border-color: var(--red); }
+        .btn svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
+        .select-info {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-left: 4px;
+        }
+
+        /* ============================================================
+           PROGRESS BAR
+           ============================================================ */
+        .progress-wrap {
+            display: none;
+            margin-bottom: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+        }
+        .progress-wrap.active { display: block; }
+        .progress-label {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress-bar {
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--red), var(--red-light));
+            border-radius: 3px;
+            width: 0%;
+            transition: width .3s;
+        }
+
+        /* ============================================================
+           TABLE
+           ============================================================ */
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: var(--surface2);
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+        }
+        th:first-child, td:first-child { padding-left: 20px; }
+        th:last-child, td:last-child { padding-right: 20px; }
+        tbody tr {
+            transition: background .15s;
+        }
+        tbody tr:hover { background: rgba(255,255,255,.02); }
+        tbody tr:last-child td { border-bottom: none; }
+
+        .cb-cell { width: 40px; }
+        input[type="checkbox"] {
+            width: 16px; height: 16px;
+            accent-color: var(--red);
+            cursor: pointer;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .badge--high   { background: rgba(45,147,108,.15); color: #2D936C; }
+        .badge--medium { background: rgba(233,196,106,.15); color: #E9C46A; }
+        .badge--low    { background: rgba(230,57,70,.15);   color: #E63946; }
+
+        .topics-cell {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .topic-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(68,138,255,.1);
+            color: var(--blue);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .session-id {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .visitor-name { font-weight: 600; }
+        .visitor-company { font-size: 12px; color: var(--text-dim); }
+        .duration { font-family: 'Consolas', monospace; font-size: 13px; }
+        .actions-cell { display: flex; gap: 6px; }
+        .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+
+        /* ============================================================
+           STATS ROW
+           ============================================================ */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .stat-value--red { color: var(--red); }
+
+        /* ============================================================
+           TOAST
+           ============================================================ */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 22px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 8px 32px rgba(0,0,0,.5);
+            z-index: 1000;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all .3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-icon { font-size: 18px; }
+
+        /* ============================================================
+           PRINT / PDF CSS
+           ============================================================ */
+        @media print {
+            :root {
+                --bg: #fff;
+                --surface: #fff;
+                --surface2: #f5f5f5;
+                --border: #ddd;
+                --text: #222;
+                --text-dim: #666;
+            }
+            body { background: #fff; color: #222; }
+            .bg-grid, .bg-glow, .bg-glow--1, .bg-glow--2 { display: none; }
+            .toolbar, .header-right, .progress-wrap, .actions-cell, .cb-cell,
+            th:first-child, td:first-child { display: none !important; }
+            .container { padding: 0 16px; }
+            .table-wrap { border: 1px solid #ccc; }
+            th, td { border-bottom: 1px solid #ddd; color: #222; }
+            th { background: #f0f0f0; color: #444; }
+            .badge { border: 1px solid currentColor; }
+            .topic-tag { background: #eef; color: #336; border: 1px solid #cce; }
+            .stat-card { border: 1px solid #ccc; }
+            .stat-value--red { color: #D71920; }
+            .header { border-bottom: 2px solid #D71920; }
+            .header h1 span { color: #D71920; }
+            .logo-icon { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .print-title {
+                display: block !important;
+                text-align: center;
+                font-size: 20px;
+                font-weight: 700;
+                margin: 16px 0;
+                color: #222;
+            }
+            table { font-size: 12px; }
+            .toast { display: none !important; }
+        }
+        .print-title { display: none; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow--1"></div>
+    <div class="bg-glow bg-glow--2"></div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <div>
+                    <h1>Booth<span>App</span> Export</h1>
+                    <div class="header-subtitle">Data Export Dashboard</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="sessions.html" class="back-link">&larr; Sessions</a>
+                <a href="demo.html" class="back-link">&larr; Dashboard</a>
+            </div>
+        </div>
+
+        <div class="print-title">BoothApp -- Session Export Report</div>
+
+        <!-- STATS -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Sessions</div>
+                <div class="stat-value stat-value--red" id="stat-total">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Duration</div>
+                <div class="stat-value" id="stat-duration">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">High Interest</div>
+                <div class="stat-value" id="stat-high">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Selected</div>
+                <div class="stat-value stat-value--red" id="stat-selected">0</div>
+            </div>
+        </div>
+
+        <!-- TOOLBAR -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn" id="btn-select-all" onclick="toggleSelectAll()">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    Select All
+                </button>
+                <span class="select-info" id="select-info">0 selected</span>
+            </div>
+
+            <div class="toolbar-sep"></div>
+
+            <div class="toolbar-group">
+                <button class="btn" id="btn-csv" onclick="exportCSV()">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                    CSV
+                </button>
+                <button class="btn" id="btn-json" onclick="exportJSON()">
+                    <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                    JSON
+                </button>
+                <button class="btn" id="btn-pdf" onclick="exportPDF()">
+                    <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>
+                    PDF
+                </button>
+                <button class="btn" id="btn-emails" onclick="exportEmails()">
+                    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    Emails
+                </button>
+            </div>
+
+            <div class="toolbar-sep"></div>
+
+            <div class="toolbar-group">
+                <button class="btn btn--red" id="btn-export-all" onclick="exportAllFormats()">
+                    <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Export All Formats
+                </button>
+            </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="progress-wrap" id="progress">
+            <div class="progress-label">
+                <span id="progress-text">Preparing export...</span>
+                <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="cb-cell"><input type="checkbox" id="cb-all" onchange="toggleSelectAll()"></th>
+                        <th>Session</th>
+                        <th>Visitor</th>
+                        <th>Duration</th>
+                        <th>Topics</th>
+                        <th>Top Interest</th>
+                        <th>Engagement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="session-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toast-icon">[OK]</span>
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+    /* ==================================================================
+       SAMPLE SESSION DATA
+       In production, fetched from /api/sessions + per-session S3 data.
+       Each session matches the structure from the analysis pipeline.
+       ================================================================== */
+    const SESSIONS = [
+        {
+            session_id: "SES-2026-0331-0042",
+            report_id: "RPT-2026-0331-0042",
+            generated_at: "2026-03-31 14:22",
+            visitor: {
+                name: "Sarah Chen",
+                title: "VP of Information Security",
+                company: "Acme Financial Corp",
+                email: "schen@acmefin.example.com",
+                industry: "Financial Services",
+                company_size: "5,000 - 10,000 employees",
+                visit_duration: "28 minutes"
+            },
+            products_demonstrated: [
+                { name: "Vision One XDR", timestamp: "14:02", note: "Asked about SOC integration" },
+                { name: "Cloud Security", timestamp: "14:10", note: "K8s runtime protection" },
+                { name: "Zero Trust Secure Access", timestamp: "14:18", note: "Evaluating ZTNA" },
+                { name: "Email Security", timestamp: "14:24", note: "BEC detection" }
+            ],
+            interests: [
+                { topic: "XDR / SOC Modernization", confidence: "high", detail: "Primary driver" },
+                { topic: "Cloud Workload Security", confidence: "high", detail: "Active K8s deployment" },
+                { topic: "Zero Trust Network Access", confidence: "medium", detail: "Comparing vendors" },
+                { topic: "Email Threat Protection", confidence: "medium", detail: "Recent BEC incident" }
+            ],
+            recommendations: [
+                { action: "Schedule XDR deep-dive with SOC team", priority: "high" },
+                { action: "Send container protection datasheet", priority: "high" },
+                { action: "Connect with ZTNA SE for PoC", priority: "medium" }
+            ],
+            follow_up_email: "Hi Sarah,\n\nGreat connecting at our booth today. We covered Vision One XDR, Cloud Security for your K8s environment, ZTSA, and Email Security.\n\nNext steps:\n- Schedule XDR deep-dive with your SOC team\n- Send container protection datasheet\n- Connect with ZTNA SE for PoC\n\nLooking forward to continuing the conversation.\n\nBest,\nYour Trend Micro SE"
+        },
+        {
+            session_id: "SES-2026-0331-0067",
+            report_id: "RPT-2026-0331-0067",
+            generated_at: "2026-03-31 15:05",
+            visitor: {
+                name: "Marcus Rivera",
+                title: "CISO",
+                company: "Pacific Health Systems",
+                email: "mrivera@pacifichealth.example.com",
+                industry: "Healthcare",
+                company_size: "10,000+ employees",
+                visit_duration: "35 minutes"
+            },
+            products_demonstrated: [
+                { name: "Vision One XDR", timestamp: "14:45", note: "HIPAA compliance integration" },
+                { name: "Email Security", timestamp: "14:55", note: "Phishing simulation interest" },
+                { name: "Managed XDR", timestamp: "15:05", note: "24/7 SOC coverage" }
+            ],
+            interests: [
+                { topic: "XDR Platform", confidence: "high", detail: "Consolidating 7 point products" },
+                { topic: "Managed Detection & Response", confidence: "high", detail: "Understaffed SOC" },
+                { topic: "Email Security", confidence: "medium", detail: "O365 migration" }
+            ],
+            recommendations: [
+                { action: "Send HIPAA compliance whitepaper", priority: "high" },
+                { action: "Arrange Managed XDR demo with SOC team", priority: "high" },
+                { action: "Follow up with healthcare case studies", priority: "medium" }
+            ],
+            follow_up_email: "Hi Marcus,\n\nThank you for the in-depth discussion at our booth. Your insight into the challenges of consolidating security tools in healthcare was valuable.\n\nWe discussed:\n- Vision One XDR with HIPAA compliance\n- Email Security for your O365 migration\n- Managed XDR for 24/7 coverage\n\nI'll send the HIPAA whitepaper and arrange a Managed XDR demo.\n\nBest,\nYour Trend Micro SE"
+        },
+        {
+            session_id: "SES-2026-0331-0089",
+            report_id: "RPT-2026-0331-0089",
+            generated_at: "2026-03-31 15:40",
+            visitor: {
+                name: "Yuki Tanaka",
+                title: "Security Architect",
+                company: "NeoTech Solutions",
+                email: "ytanaka@neotech.example.com",
+                industry: "Technology",
+                company_size: "1,000 - 5,000 employees",
+                visit_duration: "22 minutes"
+            },
+            products_demonstrated: [
+                { name: "Cloud Security", timestamp: "15:22", note: "Multi-cloud posture management" },
+                { name: "Zero Trust Secure Access", timestamp: "15:32", note: "API-first architecture" }
+            ],
+            interests: [
+                { topic: "Cloud Security Posture", confidence: "high", detail: "AWS + Azure multi-cloud" },
+                { topic: "Zero Trust", confidence: "medium", detail: "Exploring ZTNA for dev teams" },
+                { topic: "API Security", confidence: "low", detail: "Mentioned briefly" }
+            ],
+            recommendations: [
+                { action: "Send multi-cloud security architecture guide", priority: "high" },
+                { action: "Demo CSPM dashboard", priority: "medium" }
+            ],
+            follow_up_email: "Hi Yuki,\n\nGreat conversation about your multi-cloud security architecture. Your approach to CSPM across AWS and Azure is impressive.\n\nNext steps:\n- Send multi-cloud security architecture guide\n- Schedule CSPM dashboard demo\n\nBest,\nYour Trend Micro SE"
+        },
+        {
+            session_id: "SES-2026-0331-0112",
+            report_id: "RPT-2026-0331-0112",
+            generated_at: "2026-03-31 16:15",
+            visitor: {
+                name: "Priya Sharma",
+                title: "Director of IT Security",
+                company: "Global Logistics Inc",
+                email: "psharma@globallog.example.com",
+                industry: "Transportation & Logistics",
+                company_size: "5,000 - 10,000 employees",
+                visit_duration: "18 minutes"
+            },
+            products_demonstrated: [
+                { name: "Network Security", timestamp: "16:00", note: "OT/IT convergence" },
+                { name: "Vision One XDR", timestamp: "16:10", note: "IoT device visibility" }
+            ],
+            interests: [
+                { topic: "OT Security", confidence: "high", detail: "Warehouse IoT devices unprotected" },
+                { topic: "Network Detection", confidence: "medium", detail: "East-west traffic monitoring" },
+                { topic: "XDR", confidence: "low", detail: "Exploratory stage" }
+            ],
+            recommendations: [
+                { action: "Send OT security solution brief", priority: "high" },
+                { action: "Introduce OT security specialist", priority: "high" }
+            ],
+            follow_up_email: "Hi Priya,\n\nThank you for sharing the challenges around OT/IT convergence in your logistics operations.\n\nNext steps:\n- Send OT security solution brief\n- Introduce you to our OT security specialist\n\nBest,\nYour Trend Micro SE"
+        },
+        {
+            session_id: "SES-2026-0331-0134",
+            report_id: "RPT-2026-0331-0134",
+            generated_at: "2026-03-31 16:50",
+            visitor: {
+                name: "David Kim",
+                title: "SOC Manager",
+                company: "Summit Retail Group",
+                email: "dkim@summitretail.example.com",
+                industry: "Retail",
+                company_size: "1,000 - 5,000 employees",
+                visit_duration: "42 minutes"
+            },
+            products_demonstrated: [
+                { name: "Vision One XDR", timestamp: "16:15", note: "Alert fatigue reduction" },
+                { name: "Email Security", timestamp: "16:30", note: "POS phishing campaigns" },
+                { name: "Managed XDR", timestamp: "16:40", note: "Weekend/holiday coverage" },
+                { name: "Cloud Security", timestamp: "16:48", note: "AWS workload protection" }
+            ],
+            interests: [
+                { topic: "XDR / Alert Reduction", confidence: "high", detail: "90% false positive rate currently" },
+                { topic: "Managed XDR", confidence: "high", detail: "No weekend SOC staff" },
+                { topic: "Email Security", confidence: "high", detail: "POS credential phishing" },
+                { topic: "Cloud Workload", confidence: "medium", detail: "Migrating to AWS" }
+            ],
+            recommendations: [
+                { action: "Schedule XDR POC with alert reduction metrics", priority: "high" },
+                { action: "Send Managed XDR SLA and pricing", priority: "high" },
+                { action: "POS security case study from retail vertical", priority: "high" },
+                { action: "AWS migration security checklist", priority: "medium" }
+            ],
+            follow_up_email: "Hi David,\n\nWhat a great 42-minute deep-dive! Tackling 90% false positives and weekend coverage gaps are exactly what Vision One + Managed XDR solve.\n\nNext steps:\n- Schedule XDR POC focused on alert reduction\n- Send Managed XDR SLA and pricing\n- Share POS security case study\n- AWS migration security checklist\n\nBest,\nYour Trend Micro SE"
+        }
+    ];
+
+    /* ==================================================================
+       STATE
+       ================================================================== */
+    let selected = new Set();
+
+    /* ==================================================================
+       INIT
+       ================================================================== */
+    function init() {
+        renderTable();
+        updateStats();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('session-tbody');
+        tbody.innerHTML = SESSIONS.map((s, i) => {
+            const topInterest = s.interests[0] || {};
+            const topics = s.products_demonstrated.map(p => p.name);
+            const dur = s.visitor.visit_duration || '--';
+            const engagement = getEngagement(s);
+            return `
+                <tr data-idx="${i}">
+                    <td class="cb-cell">
+                        <input type="checkbox" data-idx="${i}"
+                            ${selected.has(i) ? 'checked' : ''}
+                            onchange="toggleSelect(${i}, this.checked)">
+                    </td>
+                    <td>
+                        <div class="session-id">${esc(s.session_id)}</div>
+                        <div style="font-size:12px;color:var(--text-dim)">${esc(s.generated_at)}</div>
+                    </td>
+                    <td>
+                        <div class="visitor-name">${esc(s.visitor.name)}</div>
+                        <div class="visitor-company">${esc(s.visitor.title)}, ${esc(s.visitor.company)}</div>
+                    </td>
+                    <td><span class="duration">${esc(dur)}</span></td>
+                    <td>
+                        <div class="topics-cell">
+                            ${topics.map(t => `<span class="topic-tag">${esc(t)}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge--${topInterest.confidence || 'low'}">
+                            ${esc(topInterest.topic || '--')}
+                        </span>
+                    </td>
+                    <td>${engagementBar(engagement)}</td>
+                    <td class="actions-cell">
+                        <button class="btn btn-sm" onclick="exportSessionZip(${i})" title="Download session zip">
+                            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="currentColor"/></svg>
+                            Zip
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function getEngagement(s) {
+        const highCount = s.interests.filter(i => i.confidence === 'high').length;
+        const medCount = s.interests.filter(i => i.confidence === 'medium').length;
+        const dur = parseInt(s.visitor.visit_duration) || 0;
+        return Math.min(100, (highCount * 25) + (medCount * 10) + (dur * 1.2));
+    }
+
+    function engagementBar(pct) {
+        const rounded = Math.round(pct);
+        const color = rounded >= 70 ? 'var(--success)' : rounded >= 40 ? 'var(--amber)' : 'var(--red-light)';
+        return `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;min-width:60px;">
+                    <div style="width:${rounded}%;height:100%;background:${color};border-radius:3px;"></div>
+                </div>
+                <span style="font-size:12px;font-weight:700;color:${color};min-width:30px;">${rounded}%</span>
+            </div>
+        `;
+    }
+
+    function esc(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    /* ==================================================================
+       SELECTION
+       ================================================================== */
+    function toggleSelect(idx, checked) {
+        if (checked) selected.add(idx); else selected.delete(idx);
+        updateStats();
+    }
+
+    function toggleSelectAll() {
+        const allSelected = selected.size === SESSIONS.length;
+        selected.clear();
+        if (!allSelected) {
+            SESSIONS.forEach((_, i) => selected.add(i));
+        }
+        document.getElementById('cb-all').checked = !allSelected;
+        renderTable();
+        updateStats();
+    }
+
+    function getSelectedSessions() {
+        if (selected.size === 0) return SESSIONS;
+        return [...selected].sort().map(i => SESSIONS[i]);
+    }
+
+    function updateStats() {
+        document.getElementById('stat-total').textContent = SESSIONS.length;
+        const durations = SESSIONS.map(s => parseInt(s.visitor.visit_duration) || 0);
+        const avg = durations.length ? Math.round(durations.reduce((a,b) => a+b, 0) / durations.length) : 0;
+        document.getElementById('stat-duration').textContent = avg + 'm';
+        const highCount = SESSIONS.filter(s =>
+            s.interests.some(i => i.confidence === 'high')
+        ).length;
+        document.getElementById('stat-high').textContent = highCount;
+        document.getElementById('stat-selected').textContent = selected.size;
+        document.getElementById('select-info').textContent =
+            selected.size === 0 ? 'None selected (exports all)' : selected.size + ' selected';
+    }
+
+    /* ==================================================================
+       PROGRESS INDICATOR
+       ================================================================== */
+    function showProgress(text, pct) {
+        const wrap = document.getElementById('progress');
+        wrap.classList.add('active');
+        document.getElementById('progress-text').textContent = text;
+        document.getElementById('progress-pct').textContent = Math.round(pct) + '%';
+        document.getElementById('progress-fill').style.width = pct + '%';
+    }
+
+    function hideProgress() {
+        document.getElementById('progress').classList.remove('active');
+    }
+
+    async function animateProgress(label, steps) {
+        for (let i = 0; i <= steps; i++) {
+            showProgress(label, (i / steps) * 100);
+            await new Promise(r => setTimeout(r, 30));
+        }
+    }
+
+    /* ==================================================================
+       TOAST
+       ================================================================== */
+    function toast(text, icon) {
+        const el = document.getElementById('toast');
+        document.getElementById('toast-text').textContent = text;
+        document.getElementById('toast-icon').textContent = icon || '[OK]';
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    /* ==================================================================
+       DOWNLOAD HELPER
+       ================================================================== */
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    /* ==================================================================
+       EXPORT: CSV
+       ================================================================== */
+    async function exportCSV() {
+        const sessions = getSelectedSessions();
+        await animateProgress('Generating CSV...', 20);
+
+        const headers = [
+            'Session ID', 'Report ID', 'Date', 'Visitor Name', 'Title',
+            'Company', 'Email', 'Industry', 'Company Size', 'Duration',
+            'Products Demonstrated', 'Top Interest', 'Top Confidence',
+            'Interest Count (High)', 'Interest Count (Medium)', 'Interest Count (Low)',
+            'Engagement Score', 'Recommendation Count'
+        ];
+
+        const rows = sessions.map(s => {
+            const highC = s.interests.filter(i => i.confidence === 'high').length;
+            const medC = s.interests.filter(i => i.confidence === 'medium').length;
+            const lowC = s.interests.filter(i => i.confidence === 'low').length;
+            const topI = s.interests[0] || {};
+            return [
+                s.session_id,
+                s.report_id,
+                s.generated_at,
+                s.visitor.name,
+                s.visitor.title,
+                s.visitor.company,
+                s.visitor.email,
+                s.visitor.industry || '',
+                s.visitor.company_size || '',
+                s.visitor.visit_duration || '',
+                s.products_demonstrated.map(p => p.name).join('; '),
+                topI.topic || '',
+                topI.confidence || '',
+                highC,
+                medC,
+                lowC,
+                Math.round(getEngagement(s)),
+                s.recommendations.length
+            ];
+        });
+
+        const csvContent = [headers, ...rows]
+            .map(row => row.map(cell => {
+                const str = String(cell);
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return '"' + str.replace(/"/g, '""') + '"';
+                }
+                return str;
+            }).join(','))
+            .join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        downloadBlob(blob, 'boothapp-sessions-export.csv');
+
+        hideProgress();
+        toast('CSV downloaded (' + sessions.length + ' sessions)', '[CSV]');
+    }
+
+    /* ==================================================================
+       EXPORT: JSON
+       ================================================================== */
+    async function exportJSON() {
+        const sessions = getSelectedSessions();
+        await animateProgress('Generating JSON...', 15);
+
+        const exportData = {
+            exported_at: new Date().toISOString(),
+            session_count: sessions.length,
+            sessions: sessions
+        };
+
+        const blob = new Blob(
+            [JSON.stringify(exportData, null, 2)],
+            { type: 'application/json;charset=utf-8;' }
+        );
+        downloadBlob(blob, 'boothapp-sessions-export.json');
+
+        hideProgress();
+        toast('JSON downloaded (' + sessions.length + ' sessions)', '{ }');
+    }
+
+    /* ==================================================================
+       EXPORT: PDF (via browser print)
+       ================================================================== */
+    async function exportPDF() {
+        await animateProgress('Preparing print view...', 10);
+        hideProgress();
+        toast('Opening print dialog -- use "Save as PDF"', '[PDF]');
+        setTimeout(() => window.print(), 300);
+    }
+
+    /* ==================================================================
+       EXPORT: BULK EMAILS
+       ================================================================== */
+    async function exportEmails() {
+        const sessions = getSelectedSessions();
+        await animateProgress('Compiling follow-up emails...', 20);
+
+        const divider = '='.repeat(72);
+        const emailText = sessions.map((s, i) => {
+            const header = [
+                `TO: ${s.visitor.email}`,
+                `SUBJECT: Follow-up: Trend Micro Vision One Demo - ${s.visitor.company}`,
+                `DATE: ${s.generated_at}`,
+                `SESSION: ${s.session_id}`,
+            ].join('\n');
+
+            return [
+                divider,
+                `  EMAIL ${i + 1} of ${sessions.length}`,
+                divider,
+                '',
+                header,
+                '',
+                '-'.repeat(40),
+                '',
+                s.follow_up_email || '(No follow-up email generated for this session)',
+                '',
+            ].join('\n');
+        }).join('\n');
+
+        const header = [
+            'BOOTHAPP -- BULK FOLLOW-UP EMAIL EXPORT',
+            `Generated: ${new Date().toISOString()}`,
+            `Sessions: ${sessions.length}`,
+            '',
+            '',
+        ].join('\n');
+
+        const blob = new Blob(
+            [header + emailText],
+            { type: 'text/plain;charset=utf-8;' }
+        );
+        downloadBlob(blob, 'boothapp-followup-emails.txt');
+
+        hideProgress();
+        toast('Email drafts downloaded (' + sessions.length + ' emails)', '[@]');
+    }
+
+    /* ==================================================================
+       EXPORT: SESSION ZIP
+       Uses JSZip (loaded dynamically) to package all session data.
+       ================================================================== */
+    async function exportSessionZip(idx) {
+        const s = SESSIONS[idx];
+        showProgress('Packaging session ' + s.session_id + '...', 10);
+
+        if (typeof JSZip === 'undefined') {
+            showProgress('Loading zip library...', 5);
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+        }
+
+        showProgress('Building zip archive...', 30);
+
+        const zip = new JSZip();
+        const folder = zip.folder(s.session_id);
+
+        folder.file('badge.json', JSON.stringify(s.visitor, null, 2));
+
+        showProgress('Adding analysis data...', 50);
+
+        const result = {
+            report_id: s.report_id,
+            generated_at: s.generated_at,
+            visitor: s.visitor,
+            products_demonstrated: s.products_demonstrated,
+            interests: s.interests,
+            recommendations: s.recommendations
+        };
+        const outputFolder = folder.folder('output');
+        outputFolder.file('result.json', JSON.stringify(result, null, 2));
+
+        showProgress('Adding email draft...', 70);
+
+        if (s.follow_up_email) {
+            outputFolder.file('follow-up-email.txt', s.follow_up_email);
+        }
+
+        const csvLine = [
+            s.session_id, s.visitor.name, s.visitor.company,
+            s.visitor.visit_duration,
+            s.products_demonstrated.map(p => p.name).join('; '),
+            Math.round(getEngagement(s)) + '%'
+        ].join(',');
+        folder.file('summary.csv', 'Session ID,Visitor,Company,Duration,Products,Engagement\n' + csvLine);
+
+        showProgress('Compressing...', 90);
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+
+        showProgress('Done!', 100);
+        downloadBlob(blob, s.session_id + '.zip');
+
+        setTimeout(hideProgress, 500);
+        toast('Session zip downloaded: ' + s.session_id, '[ZIP]');
+    }
+
+    /* ==================================================================
+       EXPORT: ALL FORMATS
+       ================================================================== */
+    async function exportAllFormats() {
+        await exportCSV();
+        await new Promise(r => setTimeout(r, 300));
+        await exportJSON();
+        await new Promise(r => setTimeout(r, 300));
+        await exportEmails();
+        await new Promise(r => setTimeout(r, 300));
+        toast('All exports complete!', '[OK]');
+    }
+
+    /* ==================================================================
+       DYNAMIC SCRIPT LOADER
+       ================================================================== */
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    /* ==================================================================
+       BOOT
+       ================================================================== */
+    init();
+    </script>
+</body>
+</html>
