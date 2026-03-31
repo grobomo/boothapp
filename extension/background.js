@@ -58,11 +58,25 @@ async function clearAllScreenshots() {
   });
 }
 
+// ─── Screenshot Quality Settings ──────────────────────────────────────────────
+// Configurable via popup: low=480p, medium=720p, high=1080p
+
+const QUALITY_PRESETS = {
+  low:    { maxW: 854,  maxH: 480,  jpegQuality: 0.4 },
+  medium: { maxW: 1280, maxH: 720,  jpegQuality: 0.6 },
+  high:   { maxW: 1920, maxH: 1080, jpegQuality: 0.8 },
+};
+
+async function getQualitySettings() {
+  const { screenshotQuality } = await chrome.storage.local.get(['screenshotQuality']);
+  return QUALITY_PRESETS[screenshotQuality] || QUALITY_PRESETS.medium;
+}
+
 // ─── Image Resize ─────────────────────────────────────────────────────────────
 // Resize dataURL to fit within maxW x maxH using OffscreenCanvas.
 // Returns original dataURL unchanged if already within bounds.
 
-async function resizeIfNeeded(dataUrl, maxW, maxH) {
+async function resizeIfNeeded(dataUrl, maxW, maxH, jpegQuality) {
   const response = await fetch(dataUrl);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -81,7 +95,7 @@ async function resizeIfNeeded(dataUrl, maxW, maxH) {
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
 
-  const resizedBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.6 });
+  const resizedBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: jpegQuality || 0.6 });
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result);
@@ -98,8 +112,9 @@ async function captureAndStore({ clickIndex = null, timestamp = null, type = 'cl
   const filename = `screenshot_${label}_${safeTs}.jpg`;
 
   try {
-    const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'jpeg', quality: 60 });
-    const resized = await resizeIfNeeded(dataUrl, 1920, 1080);
+    const qs = await getQualitySettings();
+    const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'jpeg', quality: Math.round(qs.jpegQuality * 100) });
+    const resized = await resizeIfNeeded(dataUrl, qs.maxW, qs.maxH, qs.jpegQuality);
 
     await saveScreenshot({
       click_index: clickIndex,

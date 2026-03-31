@@ -536,6 +536,47 @@
       color: #e0e0e0;
     }
 
+    /* ── Screenshot Quality Selector ── */
+
+    .quality-group {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .quality-btn {
+      flex: 1;
+      padding: 7px 4px;
+      border-radius: 6px;
+      border: 1px solid #2a2a4a;
+      background: #1a1a2e;
+      color: #757575;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .quality-btn:hover {
+      border-color: #3a3a5a;
+      color: #9e9e9e;
+    }
+
+    .quality-btn.active {
+      border-color: #D32F2F;
+      color: #ef5350;
+      background: rgba(211,47,47,0.1);
+    }
+
+    .quality-hint {
+      font-size: 9px;
+      color: #4a4a6a;
+      display: block;
+      margin-top: 2px;
+    }
+
     /* ── QR Overlay ── */
 
     .qr-overlay {
@@ -774,6 +815,14 @@
       <div class="s3-field">
         <label class="s3-label" for="awsSessionToken">Session Token <span style="color:#4a4a6a">(optional)</span></label>
         <input class="s3-input" id="awsSessionToken" type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label">Screenshot Quality</label>
+        <div class="quality-group" id="qualityGroup">
+          <button class="quality-btn" data-quality="low">Low<span class="quality-hint">480p</span></button>
+          <button class="quality-btn active" data-quality="medium">Medium<span class="quality-hint">720p</span></button>
+          <button class="quality-btn" data-quality="high">High<span class="quality-hint">1080p</span></button>
+        </div>
       </div>
       <div class="s3-actions">
         <button class="s3-btn s3-btn-save" id="s3SaveBtn">Save</button>

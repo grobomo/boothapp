@@ -242,6 +242,27 @@ chrome.storage.local.get(S3_KEYS, function(config) {
   if (config.awsSessionToken)     document.getElementById('awsSessionToken').value = config.awsSessionToken;
 });
 
+// ─── Screenshot Quality ──────────────────────────────────────────────────────
+
+// Load saved quality
+chrome.storage.local.get(['screenshotQuality'], function(result) {
+  var quality = result.screenshotQuality || 'medium';
+  var btns = document.querySelectorAll('#qualityGroup .quality-btn');
+  btns.forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-quality') === quality);
+  });
+});
+
+// Quality button clicks
+document.getElementById('qualityGroup').addEventListener('click', function(e) {
+  var btn = e.target.closest('.quality-btn');
+  if (!btn) return;
+  var quality = btn.getAttribute('data-quality');
+  chrome.storage.local.set({ screenshotQuality: quality });
+  var btns = document.querySelectorAll('#qualityGroup .quality-btn');
+  btns.forEach(function(b) { b.classList.toggle('active', b === btn); });
+});
+
 // Save
 document.getElementById('s3SaveBtn').addEventListener('click', function() {
   var config = {

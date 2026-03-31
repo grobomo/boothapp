@@ -37,13 +37,71 @@ function buildDomPath(el) {
 // ─── Element Info Extractor ──────────────────────────────────────────────────
 
 function extractElementInfo(el) {
-  return {
-    tag: el.tagName.toLowerCase(),
+  const tag = el.tagName.toLowerCase();
+  const info = {
+    tag,
     id: el.id || '',
     class: el.className || '',
-    text: (el.innerText || el.textContent || '').trim().slice(0, 100),
+    text: (el.innerText || el.textContent || '').trim().slice(0, 200),
     href: el.href || el.getAttribute('href') || '',
   };
+
+  // For select/dropdown elements, capture the selected option text
+  if (tag === 'select') {
+    const selected = el.options[el.selectedIndex];
+    info.selected_option = selected ? selected.text : '';
+  } else if (tag === 'option') {
+    info.selected_option = el.text || '';
+  }
+
+  // For form inputs, capture the field label (not value, for privacy)
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+    info.field_label = getFieldLabel(el);
+  }
+
+  return info;
+}
+
+/**
+ * Find the label associated with a form field.
+ * Checks: explicit <label for="...">, wrapping <label>, aria-label, placeholder.
+ */
+function getFieldLabel(el) {
+  if (el.id) {
+    const label = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+    if (label) return label.textContent.trim().slice(0, 100);
+  }
+  const parentLabel = el.closest('label');
+  if (parentLabel) {
+    const clone = parentLabel.cloneNode(true);
+    clone.querySelectorAll('input, select, textarea').forEach(i => i.remove());
+    const text = clone.textContent.trim();
+    if (text) return text.slice(0, 100);
+  }
+  if (el.getAttribute('aria-label')) return el.getAttribute('aria-label').trim().slice(0, 100);
+  const labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const ref = document.getElementById(labelledBy);
+    if (ref) return ref.textContent.trim().slice(0, 100);
+  }
+  if (el.placeholder) return el.placeholder.trim().slice(0, 100);
+  return el.name || '';
+}
+
+/**
+ * Detect if a click is a navigation click (element has href or is likely to trigger routing).
+ */
+function isNavigationClick(el) {
+  // Direct link
+  if (el.tagName === 'A' && el.href) return true;
+  // Button/element inside a link
+  const anchor = el.closest('a[href]');
+  if (anchor) return true;
+  // Elements with router-link or onclick navigation patterns
+  if (el.getAttribute('routerlink') || el.getAttribute('data-href')) return true;
+  // Role=link
+  if (el.getAttribute('role') === 'link') return true;
+  return false;
 }
 
 // ─── Storage Helpers ─────────────────────────────────────────────────────────
@@ -107,6 +165,8 @@ function handleClick(event) {
       dom_path: domPath,
       element,
       coordinates: { x: event.clientX, y: event.clientY },
+      viewport_scroll: { x: window.scrollX || 0, y: window.scrollY || 0 },
+      is_navigation: isNavigationClick(el),
       page_url: pageUrl,
       page_title: pageTitle,
       screenshot_file: null, // populated by screenshot workstream

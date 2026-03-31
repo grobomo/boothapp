@@ -59,9 +59,13 @@ sessions/<session-id>/
         "id": "ep-nav",
         "class": "endpoint-security",
         "text": "Endpoint Security",
-        "href": "/app/endpoint-security"
+        "href": "/app/endpoint-security",
+        "selected_option": "",
+        "field_label": ""
       },
       "coordinates": {"x": 450, "y": 120},
+      "viewport_scroll": {"x": 0, "y": 0},
+      "is_navigation": true,
       "page_url": "https://portal.xdr.trendmicro.com/app/dashboard",
       "page_title": "Vision One - Dashboard",
       "screenshot_file": "screenshots/click-001.jpg"
@@ -69,6 +73,17 @@ sessions/<session-id>/
   ]
 }
 ```
+
+### Click Event Field Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `element.text` | string | Visible innerText of clicked element, truncated to 200 chars |
+| `element.selected_option` | string | For select/dropdown: text of the selected option (omitted for non-select elements) |
+| `element.field_label` | string | For form inputs: associated label text, not the value (omitted for non-form elements) |
+| `viewport_scroll` | object | `{x, y}` scroll position at time of click |
+| `is_navigation` | boolean | True if click target has href or triggers route change |
+| `page_title` | string | Document title at time of click |
 
 ## Schema: transcript.json
 ```json
