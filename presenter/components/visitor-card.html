@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Visitor Summary</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, 0.35);
+            --red-dark:  #A8131A;
+            --red-light: #FF4D52;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --text-muted:#5A6170;
+            --success:   #00E676;
+            --blue:      #448AFF;
+            --amber:     #FFAB00;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+
+        /* -- Card Shell -- */
+        .visitor-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow:
+                0 4px 24px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(215, 25, 32, 0.08);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* -- Red accent bar at top -- */
+        .card-accent {
+            height: 4px;
+            background: linear-gradient(90deg, var(--red), var(--red-light));
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* -- Header: photo + name/company -- */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .badge-photo {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        /* Placeholder when no photo */
+        .badge-photo-placeholder {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--surface2), var(--border));
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .visitor-identity h1 {
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.3px;
+        }
+
+        .visitor-identity .company {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* -- Metrics row -- */
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .metric-value.duration { color: var(--blue); }
+        .metric-value.clicks   { color: var(--amber); }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        /* -- Section headings -- */
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* -- Products list -- */
+        .products {
+            margin-bottom: 20px;
+        }
+
+        .product-tag {
+            display: inline-block;
+            background: rgba(215, 25, 32, 0.10);
+            border: 1px solid rgba(215, 25, 32, 0.25);
+            color: var(--red-light);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin: 0 6px 6px 0;
+        }
+
+        /* -- AI Summary -- */
+        .ai-summary {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .ai-summary .section-title {
+            margin-bottom: 8px;
+        }
+
+        .ai-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--blue);
+            background: rgba(68, 138, 255, 0.10);
+            border: 1px solid rgba(68, 138, 255, 0.20);
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .summary-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+
+        /* -- Footer -- */
+        .card-footer {
+            padding: 12px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-footer .branding {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .card-footer .timestamp {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'SF Mono', 'Consolas', monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="visitor-card" id="visitorCard">
+    <div class="card-accent"></div>
+    <div class="card-body">
+
+        <!-- Header: Photo + Name -->
+        <div class="card-header">
+            <div class="badge-photo-placeholder" id="badgePhoto">SC</div>
+            <div class="visitor-identity">
+                <h1 id="visitorName">Sarah Chen</h1>
+                <div class="company" id="visitorCompany">VP of Information Security &mdash; Acme Financial Corp</div>
+            </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value duration" id="sessionDuration">28m</div>
+                <div class="metric-label">Session Duration</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value clicks" id="clickCount">47</div>
+                <div class="metric-label">Clicks Tracked</div>
+            </div>
+        </div>
+
+        <!-- Products Demonstrated -->
+        <div class="products">
+            <div class="section-title">Products Demonstrated</div>
+            <div id="productTags">
+                <span class="product-tag">Vision One XDR</span>
+                <span class="product-tag">Cloud Security</span>
+                <span class="product-tag">Zero Trust Secure Access</span>
+                <span class="product-tag">Email Security</span>
+            </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="ai-summary">
+            <div class="section-title">
+                Summary
+                <span class="ai-badge">AI Generated</span>
+            </div>
+            <p class="summary-text" id="aiSummary">
+                Sarah showed strong interest in consolidating her security stack around Vision One XDR,
+                with SOC integration as the primary driver for her team of 12 analysts.
+                Her active Kubernetes deployment on AWS EKS makes container runtime protection an
+                immediate opportunity worth fast-tracking.
+                A follow-up technical deep-dive within two weeks, paired with a consolidated
+                XDR + Cloud Security proposal, has the highest close probability.
+            </p>
+        </div>
+
+    </div>
+
+    <div class="card-footer">
+        <span class="branding">BoothApp</span>
+        <span class="timestamp" id="visitTimestamp">2026-03-31 14:22</span>
+    </div>
+</div>
+
+<script>
+    /**
+     * Visitor Card Component
+     *
+     * Populate by calling renderVisitorCard(data) where data matches:
+     * {
+     *   name:       "Sarah Chen",
+     *   title:      "VP of Information Security",
+     *   company:    "Acme Financial Corp",
+     *   photoUrl:   null | "https://...",   // badge photo URL
+     *   duration:   "28m",                  // formatted session duration
+     *   clicks:     47,                     // total clicks tracked
+     *   products:   ["Vision One XDR", ...],// derived from click data
+     *   summary:    "Three sentence AI summary...",
+     *   timestamp:  "2026-03-31 14:22"
+     * }
+     */
+    function renderVisitorCard(data) {
+        var el = function(id) { return document.getElementById(id); };
+
+        // Name
+        el('visitorName').textContent = data.name || 'Unknown Visitor';
+
+        // Company + title
+        var parts = [];
+        if (data.title) parts.push(data.title);
+        if (data.company) parts.push(data.company);
+        el('visitorCompany').textContent = parts.join(' \u2014 ');
+
+        // Badge photo
+        var photoContainer = el('badgePhoto');
+        if (data.photoUrl) {
+            var img = document.createElement('img');
+            img.src = data.photoUrl;
+            img.alt = data.name;
+            img.className = 'badge-photo';
+            photoContainer.replaceWith(img);
+        } else {
+            // Initials
+            var initials = (data.name || 'U')
+                .split(' ')
+                .map(function(w) { return w[0]; })
+                .slice(0, 2)
+                .join('');
+            photoContainer.textContent = initials;
+        }
+
+        // Metrics
+        el('sessionDuration').textContent = data.duration || '--';
+        el('clickCount').textContent = data.clicks != null ? data.clicks : 0;
+
+        // Products
+        var tagContainer = el('productTags');
+        tagContainer.innerHTML = '';
+        (data.products || []).forEach(function(product) {
+            var span = document.createElement('span');
+            span.className = 'product-tag';
+            span.textContent = product;
+            tagContainer.appendChild(span);
+        });
+
+        // AI Summary
+        el('aiSummary').textContent = data.summary || 'Summary not yet generated.';
+
+        // Timestamp
+        el('visitTimestamp').textContent = data.timestamp || new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+</script>
+
+</body>
+</html>
