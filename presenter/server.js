@@ -131,6 +131,17 @@ app.get('/api/errors', (req, res) => {
   res.json({ errors: clientErrors, count: clientErrors.length });
 });
 
+// --- Share link API (public, no auth) ---
+app.get('/api/share/:sessionId', (req, res) => {
+  const sid = req.params.sessionId.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!sid) return res.status(400).json({ error: 'Invalid session ID' });
+  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  res.json({
+    session_id: sid,
+    share_url: `${baseUrl}/share.html?session=${encodeURIComponent(sid)}`
+  });
+});
+
 // --- Batch analysis API ---
 const { createRouter: batchAnalyzeRouter } = require('./lib/batch-analyze');
 app.use(batchAnalyzeRouter({ bucket: S3_BUCKET }));

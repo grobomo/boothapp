@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Demo Summary — BoothApp</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-card: #f8f9fa;
+    --bg-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --border: #e1e4e8;
+    --text: #24292f;
+    --text-muted: #57606a;
+    --text-light: #8b949e;
+    --accent: #5a67d8;
+    --accent-light: #eef0ff;
+    --accent-dark: #434eaa;
+    --green: #2da44e;
+    --green-light: #dafbe1;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+    --radius: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* -- Hero banner -- */
+  .hero {
+    background: var(--bg-hero);
+    color: #fff;
+    padding: 3rem 2rem 2.5rem;
+    text-align: center;
+  }
+
+  .hero-logo {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+  }
+
+  .hero .date-line {
+    font-size: 0.95rem;
+    opacity: 0.8;
+  }
+
+  /* -- Main content -- */
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+  }
+
+  /* -- Section -- */
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--accent-light);
+  }
+
+  /* -- Products cards -- */
+  .product-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .product-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .product-card .product-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+
+  .product-card .product-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* -- Discussion points -- */
+  .discussion-list {
+    list-style: none;
+  }
+
+  .discussion-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .discussion-list li:last-child {
+    border-bottom: none;
+  }
+
+  .discussion-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 0.1rem;
+  }
+
+  .discussion-text {
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  .discussion-evidence {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-top: 0.2rem;
+  }
+
+  /* -- Next steps -- */
+  .steps-list {
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps-list li {
+    padding: 0.6rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    counter-increment: step;
+  }
+
+  .steps-list li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-top: 0.15rem;
+  }
+
+  /* -- Contact card -- */
+  .contact-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .contact-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .contact-info .contact-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+
+  .contact-info .contact-role {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  /* -- CTA button -- */
+  .cta-wrap {
+    text-align: center;
+    margin-top: 2rem;
+  }
+
+  .cta-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.85rem 2.2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-md);
+    transition: background 0.2s;
+  }
+
+  .cta-btn:hover {
+    background: var(--accent-dark);
+  }
+
+  /* -- V1 tenant link -- */
+  .tenant-link {
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  .tenant-link a {
+    color: var(--accent);
+    font-size: 0.9rem;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .tenant-link a:hover {
+    text-decoration: underline;
+  }
+
+  /* -- Footer -- */
+  .share-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 0.78rem;
+    color: var(--text-light);
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+
+  /* -- Loading / Error -- */
+  .loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .loading-state .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .error-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    display: none;
+  }
+
+  .error-state h2 {
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .error-state p {
+    color: var(--text-muted);
+  }
+
+  .content-loaded { display: none; }
+
+  /* -- Responsive -- */
+  @media (max-width: 600px) {
+    .hero { padding: 2rem 1rem 1.5rem; }
+    .hero h1 { font-size: 1.5rem; }
+    .container { padding: 1.25rem 1rem 2rem; }
+    .product-list { grid-template-columns: 1fr; }
+    .contact-card { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading state -->
+<div id="loading" class="loading-state">
+  <div class="spinner"></div>
+  <p style="color: var(--text-muted);">Loading your demo summary...</p>
+</div>
+
+<!-- Error state -->
+<div id="error" class="error-state">
+  <h2>Session Not Found</h2>
+  <p>This link may have expired or the session ID is invalid.</p>
+</div>
+
+<!-- Main content (hidden until data loads) -->
+<div id="content" class="content-loaded">
+
+  <div class="hero">
+    <div class="hero-logo">BoothApp &mdash; Demo Summary</div>
+    <h1 id="greeting">Welcome</h1>
+    <div class="date-line" id="date-line"></div>
+  </div>
+
+  <div class="container">
+
+    <!-- Products Demonstrated -->
+    <div class="section">
+      <div class="section-title">Products Demonstrated</div>
+      <div class="product-list" id="products"></div>
+    </div>
+
+    <!-- Key Discussion Points -->
+    <div class="section">
+      <div class="section-title">Key Discussion Points</div>
+      <ul class="discussion-list" id="discussions"></ul>
+    </div>
+
+    <!-- Recommended Next Steps -->
+    <div class="section">
+      <div class="section-title">Recommended Next Steps</div>
+      <ol class="steps-list" id="steps"></ol>
+    </div>
+
+    <!-- V1 Tenant Link -->
+    <div class="tenant-link" id="tenant-section" style="display:none;">
+      <a id="tenant-link" href="#" target="_blank">Explore your Vision One demo environment &rarr;</a>
+    </div>
+
+    <!-- SE Contact Card -->
+    <div class="section">
+      <div class="section-title">Your Solutions Engineer</div>
+      <div class="contact-card" id="contact-card">
+        <div class="contact-avatar" id="contact-avatar">?</div>
+        <div class="contact-info">
+          <div class="contact-name" id="contact-name">--</div>
+          <div class="contact-role">Solutions Engineer &mdash; Trend Micro</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-wrap">
+      <a class="cta-btn" id="followup-btn" href="#">Schedule a Follow-Up</a>
+    </div>
+
+  </div>
+
+  <footer class="share-footer">
+    Powered by BoothApp &mdash; Trend Micro Hackathon 2026
+  </footer>
+</div>
+
+<script>
+(function () {
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+
+  // Product descriptions for common V1 products
+  var PRODUCT_DESCRIPTIONS = {
+    "Endpoint Security":         "Advanced endpoint protection with behavioral analysis and machine learning threat detection.",
+    "XDR":                       "Cross-layered detection and response correlating data across endpoints, email, servers, and networks.",
+    "Risk Insights":             "Continuous risk assessment and prioritized remediation across your attack surface.",
+    "Cloud Security":            "Comprehensive protection for cloud workloads, containers, and serverless environments.",
+    "Email Security":            "AI-powered email threat defense against phishing, BEC, and advanced malware.",
+    "Network Security":          "Network-layer threat detection and intrusion prevention for east-west and north-south traffic.",
+    "Zero Trust":                "Zero Trust Secure Access with continuous identity verification and least-privilege policies.",
+    "Attack Surface Management": "Discover and monitor internet-facing assets to reduce your external attack surface.",
+    "Companion":                 "AI-powered security assistant for investigation guidance and response recommendations.",
+    "Detection & Response":      "Advanced threat hunting and automated investigation across your security stack."
+  };
+
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get("session");
+
+  var loadingEl = document.getElementById("loading");
+  var errorEl   = document.getElementById("error");
+  var contentEl = document.getElementById("content");
+
+  if (!sessionId) {
+    showError();
+    return;
+  }
+
+  function s3Url(key) {
+    return "https://" + BUCKET + ".s3." + REGION + ".amazonaws.com/" + key;
+  }
+
+  function showError() {
+    loadingEl.style.display = "none";
+    errorEl.style.display = "block";
+  }
+
+  function showContent() {
+    loadingEl.style.display = "none";
+    contentEl.style.display = "block";
+  }
+
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function fetchJson(key) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", s3Url(key), true);
+      xhr.responseType = "json";
+      xhr.onload = function () {
+        if (xhr.status === 200) resolve(xhr.response);
+        else reject("HTTP " + xhr.status);
+      };
+      xhr.onerror = function () { reject("Network error"); };
+      xhr.send();
+    });
+  }
+
+  function getInitials(name) {
+    if (!name) return "?";
+    return name.split(/\s+/).map(function (w) { return w[0]; }).join("").toUpperCase().slice(0, 2);
+  }
+
+  function getProductDescription(name) {
+    if (PRODUCT_DESCRIPTIONS[name]) return PRODUCT_DESCRIPTIONS[name];
+    // Fuzzy match: check if product name is contained in known keys
+    var keys = Object.keys(PRODUCT_DESCRIPTIONS);
+    for (var i = 0; i < keys.length; i++) {
+      if (name.toLowerCase().indexOf(keys[i].toLowerCase()) >= 0 ||
+          keys[i].toLowerCase().indexOf(name.toLowerCase()) >= 0) {
+        return PRODUCT_DESCRIPTIONS[keys[i]];
+      }
+    }
+    return "Explore this capability in your demo environment.";
+  }
+
+  function formatDate(isoStr) {
+    if (!isoStr) return "";
+    var d = new Date(isoStr);
+    return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  }
+
+  // Fetch summary.json (main data source)
+  fetchJson("sessions/" + sessionId + "/output/summary.json")
+    .then(function (summary) {
+      render(summary);
+      showContent();
+    })
+    .catch(function () {
+      showError();
+    });
+
+  function render(s) {
+    // Greeting
+    var name = s.visitor_name || "Visitor";
+    document.getElementById("greeting").textContent = "Thank you, " + name + "!";
+    document.title = "Your Demo Summary — " + name;
+
+    // Date
+    var dateStr = formatDate(s.generated_at);
+    if (dateStr) {
+      document.getElementById("date-line").textContent = "Demo session on " + dateStr;
+    }
+
+    // Products
+    var productsEl = document.getElementById("products");
+    var products = s.products_demonstrated || [];
+    products.forEach(function (p) {
+      var card = document.createElement("div");
+      card.className = "product-card";
+      card.innerHTML =
+        '<div class="product-name">' + esc(p) + '</div>' +
+        '<div class="product-desc">' + esc(getProductDescription(p)) + '</div>';
+      productsEl.appendChild(card);
+    });
+
+    // Discussion points (from key_interests, filtered to high/medium confidence)
+    var discussionsEl = document.getElementById("discussions");
+    var interests = (s.key_interests || []).filter(function (ki) {
+      return ki.confidence !== "low";
+    });
+    if (interests.length === 0) interests = s.key_interests || [];
+
+    interests.forEach(function (ki, idx) {
+      var li = document.createElement("li");
+      var iconDiv = document.createElement("div");
+      iconDiv.className = "discussion-icon";
+      iconDiv.textContent = idx + 1;
+      var textDiv = document.createElement("div");
+      textDiv.innerHTML =
+        '<div class="discussion-text">' + esc(ki.topic) + '</div>' +
+        (ki.evidence ? '<div class="discussion-evidence">' + esc(ki.evidence) + '</div>' : '');
+      li.appendChild(iconDiv);
+      li.appendChild(textDiv);
+      discussionsEl.appendChild(li);
+    });
+
+    // Next steps (from follow_up_actions)
+    var stepsEl = document.getElementById("steps");
+    var actions = s.follow_up_actions || [];
+    actions.forEach(function (action) {
+      var li = document.createElement("li");
+      li.textContent = action;
+      stepsEl.appendChild(li);
+    });
+
+    // V1 tenant link
+    if (s.v1_tenant_link) {
+      var tenantSection = document.getElementById("tenant-section");
+      tenantSection.style.display = "block";
+      document.getElementById("tenant-link").href = s.v1_tenant_link;
+    }
+
+    // SE contact card
+    var seName = s.se_name || "Your Solutions Engineer";
+    document.getElementById("contact-name").textContent = seName;
+    document.getElementById("contact-avatar").textContent = getInitials(seName);
+
+    // Follow-up mailto button
+    var subject = encodeURIComponent("Follow-up: Vision One Demo — " + name);
+    var body = encodeURIComponent(
+      "Hi " + seName.split(" ")[0] + ",\n\n" +
+      "Thank you for the Vision One demo. I'd like to schedule a follow-up to discuss:\n\n" +
+      "- \n\n" +
+      "Please let me know your availability.\n\n" +
+      "Best regards,\n" + name
+    );
+    document.getElementById("followup-btn").href = "mailto:?subject=" + subject + "&body=" + body;
+  }
+})();
+</script>
+</body>
+</html>

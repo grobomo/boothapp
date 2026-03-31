@@ -36,6 +36,12 @@ check "cors loads" node -e "require('cors')"
 # Presenter server.js has valid syntax (don't require -- it starts listening)
 check "server.js valid syntax" node --check "$REPO_ROOT/presenter/server.js"
 
+# Share page exists and has required elements
+check "share.html exists" test -f "$REPO_ROOT/presenter/share.html"
+check "share.html has no auth" node -e "var h=require('fs').readFileSync('$REPO_ROOT/presenter/share.html','utf8'); if(h.includes('auth.js')) process.exit(1)"
+check "share.html has no transcript" node -e "var h=require('fs').readFileSync('$REPO_ROOT/presenter/share.html','utf8'); if(h.includes('transcript')) process.exit(1)"
+check "share.html has no session_score" node -e "var h=require('fs').readFileSync('$REPO_ROOT/presenter/share.html','utf8'); if(h.includes('session_score')) process.exit(1)"
+
 echo ""
 echo "Results: $passed passed, $failed failed"
 [ "$failed" -eq 0 ] || exit 1
