@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/tm_dark">
+    android:background="@color/tm_bg">
 
     <!-- Top bar -->
     <LinearLayout
@@ -15,26 +15,24 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:padding="16dp"
-        android:background="@color/tm_dark"
+        android:background="@color/tm_bg"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
+        <ImageView
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="28dp"
             android:layout_weight="1"
-            android:text="TREND MICRO"
-            android:textColor="@color/tm_red"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.15" />
+            android:src="@drawable/trendai_logo"
+            android:scaleType="fitStart"
+            android:contentDescription="TrendAI" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="BoothApp"
-            android:textColor="@color/tm_white"
+            android:textColor="@color/tm_text_primary"
             android:textSize="16sp"
             android:layout_marginEnd="12dp" />
 
@@ -45,7 +43,7 @@
             android:src="@android:drawable/ic_menu_preferences"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/settings"
-            app:tint="@color/tm_gray_light" />
+            app:tint="@color/tm_text_primary" />
     </LinearLayout>
 
     <!-- Status card -->
@@ -55,11 +53,11 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="8dp"
-        app:cardBackgroundColor="@color/tm_dark_card"
-        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/tm_card"
+        app:cardCornerRadius="16dp"
         app:cardElevation="0dp"
         app:strokeWidth="1dp"
-        app:strokeColor="@color/tm_gray_dark"
+        app:strokeColor="@color/tm_border"
         app:layout_constraintTop_toBottomOf="@id/topBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -75,14 +73,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/no_session"
-                android:textColor="@color/tm_gray"
+                android:textColor="@color/tm_text_secondary"
                 android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvSessionId"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/tm_white"
+                android:textColor="@color/tm_text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:visibility="gone"
@@ -92,7 +90,7 @@
                 android:id="@+id/tvVisitorInfo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/tm_gray_light"
+                android:textColor="@color/tm_text_primary"
                 android:textSize="14sp"
                 android:visibility="gone"
                 tools:text="Jane Doe - Acme Corp" />
@@ -117,9 +115,11 @@
         android:layout_height="0dp"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="12dp"
-        app:cardBackgroundColor="@color/tm_dark_card"
-        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/tm_card"
+        app:cardCornerRadius="16dp"
         app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/tm_border"
         app:layout_constraintTop_toBottomOf="@id/statusCard"
         app:layout_constraintBottom_toTopOf="@id/inputCard"
         app:layout_constraintStart_toStartOf="parent"
@@ -155,13 +155,14 @@
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="6dp" />
 
-            <ProgressBar
+            <ImageView
                 android:id="@+id/progressBar"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_gravity="center"
                 android:visibility="gone"
-                android:indeterminateTint="@color/tm_red" />
+                android:src="@drawable/spark_icon"
+                android:contentDescription="Loading" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -172,11 +173,11 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="12dp"
-        app:cardBackgroundColor="@color/tm_dark_card"
-        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/tm_card"
+        app:cardCornerRadius="16dp"
         app:cardElevation="0dp"
         app:strokeWidth="1dp"
-        app:strokeColor="@color/tm_gray_dark"
+        app:strokeColor="@color/tm_border"
         app:layout_constraintBottom_toTopOf="@id/buttonBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -191,7 +192,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/visitor_name"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -199,7 +200,7 @@
                     android:id="@+id/etVisitorName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:inputType="textPersonName" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -208,7 +209,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:hint="@string/visitor_company"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -216,7 +217,7 @@
                     android:id="@+id/etVisitorCompany"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:inputType="textCapWords" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -232,7 +233,7 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
                     android:hint="@string/demo_pc"
-                    app:hintTextColor="@color/tm_gray"
+                    app:hintTextColor="@color/tm_text_secondary"
                     app:boxStrokeColor="@color/tm_red"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -240,7 +241,7 @@
                         android:id="@+id/etDemoPc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/tm_white"
+                        android:textColor="@color/tm_text_primary"
                         android:text="booth-pc-1"
                         android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -251,7 +252,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
                     android:hint="@string/se_name"
-                    app:hintTextColor="@color/tm_gray"
+                    app:hintTextColor="@color/tm_text_secondary"
                     app:boxStrokeColor="@color/tm_red"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -259,7 +260,7 @@
                         android:id="@+id/etSeName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/tm_white"
+                        android:textColor="@color/tm_text_primary"
                         android:inputType="textPersonName" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
@@ -285,9 +286,11 @@
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
             android:text="@string/capture_badge"
-            android:textSize="14sp"
+            android:textSize="13sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.06"
             app:backgroundTint="@color/tm_red"
-            app:cornerRadius="12dp"
+            app:cornerRadius="10dp"
             app:icon="@android:drawable/ic_menu_camera"
             app:iconGravity="textStart" />
 
@@ -298,10 +301,12 @@
             android:layout_weight="1"
             android:layout_marginHorizontal="6dp"
             android:text="@string/start_session"
-            android:textSize="14sp"
+            android:textSize="13sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.06"
             android:enabled="false"
             app:backgroundTint="@color/tm_green"
-            app:cornerRadius="12dp" />
+            app:cornerRadius="10dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEndSession"
@@ -310,11 +315,13 @@
             android:layout_weight="1"
             android:layout_marginStart="6dp"
             android:text="@string/end_session"
-            android:textSize="14sp"
+            android:textSize="13sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.06"
             android:enabled="false"
             android:visibility="gone"
             app:backgroundTint="@color/tm_amber"
-            app:cornerRadius="12dp" />
+            app:cornerRadius="10dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,25 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Trend Micro Brand Colors -->
-    <color name="tm_red">#D40020</color>
-    <color name="tm_red_dark">#B8001B</color>
-    <color name="tm_red_light">#FF1744</color>
-    <color name="tm_dark">#1A1A2E</color>
-    <color name="tm_dark_surface">#222240</color>
-    <color name="tm_dark_card">#2A2A4A</color>
+    <!-- TrendAI Brand Colors (from brand guide) -->
+    <color name="tm_red">#D71920</color>
+    <color name="tm_red_dark">#B81419</color>
+    <color name="tm_amber">#FF9500</color>
+    <color name="tm_signal">#2E0FE4</color>
+    <color name="tm_black">#000000</color>
     <color name="tm_white">#FFFFFF</color>
-    <color name="tm_gray_light">#E0E0E0</color>
-    <color name="tm_gray">#9E9E9E</color>
-    <color name="tm_gray_dark">#616161</color>
-    <color name="tm_green">#4CAF50</color>
-    <color name="tm_amber">#FFC107</color>
 
-    <!-- Theme colors -->
+    <!-- Dark Theme (brand guide digital) -->
+    <color name="tm_bg">#000000</color>
+    <color name="tm_card">#0A0A0A</color>
+    <color name="tm_input">#111111</color>
+    <color name="tm_border">#1A1A1A</color>
+    <color name="tm_input_border">#333333</color>
+
+    <!-- Text Colors -->
+    <color name="tm_text_primary">#E5E5E5</color>
+    <color name="tm_text_secondary">#888888</color>
+    <color name="tm_text_muted">#666666</color>
+    <color name="tm_text_placeholder">#444444</color>
+
+    <!-- Status Colors -->
+    <color name="tm_green">#22C55E</color>
+    <color name="tm_error">#FF6B6F</color>
+
+    <!-- Theme aliases -->
     <color name="colorPrimary">@color/tm_red</color>
     <color name="colorPrimaryDark">@color/tm_red_dark</color>
-    <color name="colorAccent">@color/tm_red_light</color>
-    <color name="colorBackground">@color/tm_dark</color>
-    <color name="colorSurface">@color/tm_dark_surface</color>
+    <color name="colorAccent">@color/tm_amber</color>
+    <color name="colorBackground">@color/tm_bg</color>
+    <color name="colorSurface">@color/tm_card</color>
     <color name="colorOnPrimary">@color/tm_white</color>
-    <color name="colorOnSurface">@color/tm_white</color>
+    <color name="colorOnSurface">@color/tm_text_primary</color>
 </resources>

@@ -3,12 +3,12 @@
     <style name="Theme.BoothApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/tm_red</item>
         <item name="colorPrimaryVariant">@color/tm_red_dark</item>
-        <item name="colorSecondary">@color/tm_red_light</item>
+        <item name="colorSecondary">@color/tm_amber</item>
         <item name="colorOnPrimary">@color/tm_white</item>
-        <item name="android:colorBackground">@color/tm_dark</item>
-        <item name="colorSurface">@color/tm_dark_surface</item>
-        <item name="colorOnSurface">@color/tm_white</item>
-        <item name="android:statusBarColor">@color/tm_dark</item>
-        <item name="android:navigationBarColor">@color/tm_dark</item>
+        <item name="android:colorBackground">@color/tm_bg</item>
+        <item name="colorSurface">@color/tm_card</item>
+        <item name="colorOnSurface">@color/tm_text_primary</item>
+        <item name="android:statusBarColor">@color/tm_black</item>
+        <item name="android:navigationBarColor">@color/tm_black</item>
     </style>
 </resources>

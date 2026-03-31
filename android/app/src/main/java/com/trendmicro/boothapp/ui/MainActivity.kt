@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -336,7 +337,7 @@ class MainActivity : AppCompatActivity() {
         capturedBitmap = null
 
         binding.tvStatus.text = getString(R.string.no_session)
-        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.tm_gray))
+        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.tm_text_secondary))
         binding.tvSessionId.visibility = View.GONE
         binding.tvVisitorInfo.visibility = View.GONE
         binding.tvDuration.visibility = View.GONE
@@ -355,7 +356,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProgress(show: Boolean) {
-        binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) {
+            binding.progressBar.visibility = View.VISIBLE
+            binding.progressBar.startAnimation(
+                AnimationUtils.loadAnimation(this, R.anim.spin)
+            )
+        } else {
+            binding.progressBar.clearAnimation()
+            binding.progressBar.visibility = View.GONE
+        }
     }
 
     private fun toast(msg: String) {

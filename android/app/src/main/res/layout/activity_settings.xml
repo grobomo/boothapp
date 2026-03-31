@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/tm_dark">
+    android:background="@color/tm_bg">
 
     <!-- Top bar with back button -->
     <LinearLayout
@@ -22,14 +22,14 @@
             android:src="@android:drawable/ic_menu_revert"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/back"
-            app:tint="@color/tm_gray_light" />
+            app:tint="@color/tm_text_primary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:text="@string/settings"
-            android:textColor="@color/tm_white"
+            android:textColor="@color/tm_text_primary"
             android:textSize="24sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -52,10 +52,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/orchestrator_url"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 app:helperText="@string/orchestrator_url_hint"
-                app:helperTextTextColor="@color/tm_gray"
+                app:helperTextTextColor="@color/tm_text_secondary"
                 app:errorEnabled="true"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -63,7 +63,7 @@
                     android:id="@+id/etOrchestratorUrl"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:inputType="textUri" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -72,7 +72,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/default_demo_pc"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -80,7 +80,7 @@
                     android:id="@+id/etDefaultDemoPc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:text="booth-pc-1"
                     android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -90,7 +90,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/default_se_name"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -98,7 +98,7 @@
                     android:id="@+id/etDefaultSeName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:inputType="textPersonName" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -107,17 +107,17 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/aws_access_key"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 app:helperText="@string/aws_key_hint"
-                app:helperTextTextColor="@color/tm_gray"
+                app:helperTextTextColor="@color/tm_text_secondary"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAwsAccessKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:inputType="textVisiblePassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -126,7 +126,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/aws_secret_key"
-                app:hintTextColor="@color/tm_gray"
+                app:hintTextColor="@color/tm_text_secondary"
                 app:boxStrokeColor="@color/tm_red"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 app:endIconMode="password_toggle">
@@ -135,7 +135,7 @@
                     android:id="@+id/etAwsSecretKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/tm_white"
+                    android:textColor="@color/tm_text_primary"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -145,8 +145,10 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
                 android:text="@string/save"
+                android:textAllCaps="true"
+                android:letterSpacing="0.06"
                 app:backgroundTint="@color/tm_red"
-                app:cornerRadius="12dp" />
+                app:cornerRadius="10dp" />
 
         </LinearLayout>
     </ScrollView>
