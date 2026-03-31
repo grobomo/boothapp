@@ -16,6 +16,8 @@ const startDemoBtn = document.getElementById('startDemoBtn');
 const endDemoBtn = document.getElementById('endDemoBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const s3Config = document.getElementById('s3Config');
+const queueWarning = document.getElementById('queueWarning');
+const queueWarningText = document.getElementById('queueWarningText');
 
 // ─── Session Status ───────────────────────────────────────────────────────────
 
@@ -80,9 +82,27 @@ function updateCounters() {
   });
 }
 
-// Poll counters while popup is open
+// ─── Queue Status ─────────────────────────────────────────────────────────────
+
+function updateQueueStatus() {
+  chrome.runtime.sendMessage({ type: 'get_queue_status' }, (response) => {
+    if (response && response.queueLength > 0) {
+      const n = response.queueLength;
+      queueWarningText.textContent = n + ' upload' + (n > 1 ? 's' : '') + ' queued for retry';
+      queueWarning.classList.add('visible');
+    } else {
+      queueWarning.classList.remove('visible');
+    }
+  });
+}
+
+// Poll counters and queue status while popup is open
 updateCounters();
-const counterInterval = setInterval(updateCounters, 2000);
+updateQueueStatus();
+const counterInterval = setInterval(() => {
+  updateCounters();
+  updateQueueStatus();
+}, 2000);
 
 // ─── S3 Config Status ─────────────────────────────────────────────────────────
 
@@ -221,6 +241,10 @@ endDemoBtn.addEventListener('click', () => {
           });
           // Return to idle after 3s
           setTimeout(() => setSessionState('idle'), 3000);
+        } else if (response && response.status === 'queued') {
+          // Upload failed but data is queued for retry
+          setSessionState('idle');
+          updateQueueStatus();
         } else {
           setSessionState('idle');
         }
@@ -232,6 +256,9 @@ endDemoBtn.addEventListener('click', () => {
 // ─── Listen for storage changes (session state from background) ───────────────
 
 chrome.storage.onChanged.addListener((changes) => {
+  if (changes.v1helper_upload_queue) {
+    updateQueueStatus();
+  }
   if (changes.v1helper_session) {
     const session = changes.v1helper_session.newValue;
     if (session && session.active) {

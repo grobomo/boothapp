@@ -335,33 +335,53 @@ async function pollActiveSession() {
 
 setInterval(pollActiveSession, 2000);
 
-// ─── Session Upload ───────────────────────────────────────────────────────────
+// ─── Upload Retry Queue ───────────────────────────────────────────────────────
 
-async function uploadSessionData(sessionId, clickBuffer) {
+const UPLOAD_QUEUE_KEY = 'v1helper_upload_queue';
+const RETRY_STATE_KEY = 'v1helper_retry_state';
+const MAX_BACKOFF_MS = 30000;
+
+async function getUploadQueue() {
+  const result = await chrome.storage.local.get([UPLOAD_QUEUE_KEY]);
+  return result[UPLOAD_QUEUE_KEY] || [];
+}
+
+async function saveUploadQueue(queue) {
+  await chrome.storage.local.set({ [UPLOAD_QUEUE_KEY]: queue });
+}
+
+async function getRetryState() {
+  const result = await chrome.storage.local.get([RETRY_STATE_KEY]);
+  return result[RETRY_STATE_KEY] || { nextRetryTime: 0, attempt: 0 };
+}
+
+async function saveRetryState(state) {
+  await chrome.storage.local.set({ [RETRY_STATE_KEY]: state });
+}
+
+async function enqueueFailedUpload(sessionId, clickBuffer, screenshots) {
+  const queue = await getUploadQueue();
+  const screenshotData = screenshots.map(s => ({ filename: s.filename, data_url: s.data_url }));
+  queue.push({ sessionId, clickBuffer, screenshots: screenshotData, enqueuedAt: Date.now() });
+  await saveUploadQueue(queue);
+  const retryState = await getRetryState();
+  if (retryState.attempt === 0) {
+    await saveRetryState({ nextRetryTime: Date.now() + 1000, attempt: 1 });
+  }
+}
+
+// Upload clicks + screenshots to S3 without side effects (no clearing local data)
+async function uploadDirect(sessionId, clickBuffer, screenshots) {
   const config = await chrome.storage.local.get([
     's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
   ]);
-
   const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
-
   if (!s3Bucket || !s3Region || !awsAccessKeyId || !awsSecretAccessKey) {
     throw new Error('S3 credentials not configured');
   }
-
   const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
-
-  // 30-second timeout for the entire upload
   const deadline = Date.now() + 30_000;
 
-  const screenshots = await getAllScreenshots();
-
-  // Build a map from filename -> data_url for quick lookup
-  const screenshotMap = {};
-  for (const s of screenshots) {
-    screenshotMap[s.filename] = s.data_url;
-  }
-
-  // Fix screenshot_file paths in clicks buffer (prepend 'screenshots/')
   const buffer = clickBuffer || { session_id: sessionId, events: [] };
   buffer.session_id = sessionId;
   for (const evt of buffer.events) {
@@ -370,12 +390,10 @@ async function uploadSessionData(sessionId, clickBuffer) {
     }
   }
 
-  // Upload clicks.json
   const clicksKey = `sessions/${sessionId}/clicks/clicks.json`;
   const clicksBody = JSON.stringify(buffer, null, 2);
   await s3Put(s3Bucket, clicksKey, s3Region, clicksBody, 'application/json', credentials);
 
-  // Upload screenshots in batches of 10
   const BATCH_SIZE = 10;
   for (let i = 0; i < screenshots.length; i += BATCH_SIZE) {
     if (Date.now() > deadline) {
@@ -389,10 +407,55 @@ async function uploadSessionData(sessionId, clickBuffer) {
       await s3Put(s3Bucket, imgKey, s3Region, imgBytes, 'image/jpeg', credentials);
     }));
   }
+}
 
-  // Clear local data after upload (success or partial)
-  await clearAllScreenshots();
-  await chrome.storage.local.remove(['v1helper_clicks']);
+// Process one queued upload if the backoff timer has elapsed
+async function processRetryQueue() {
+  const queue = await getUploadQueue();
+  if (queue.length === 0) return;
+
+  const retryState = await getRetryState();
+  if (Date.now() < retryState.nextRetryTime) return;
+
+  const item = queue[0];
+  try {
+    await uploadDirect(item.sessionId, item.clickBuffer, item.screenshots);
+    queue.shift();
+    await saveUploadQueue(queue);
+    if (queue.length === 0) {
+      await saveRetryState({ nextRetryTime: 0, attempt: 0 });
+    } else {
+      await saveRetryState({ nextRetryTime: Date.now() + 1000, attempt: 1 });
+    }
+  } catch (err) {
+    console.warn('V1-Helper: retry failed:', err.message);
+    const nextAttempt = retryState.attempt + 1;
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s, 30s, ...
+    const delay = Math.min(1000 * Math.pow(2, retryState.attempt), MAX_BACKOFF_MS);
+    await saveRetryState({ nextRetryTime: Date.now() + delay, attempt: nextAttempt });
+  }
+}
+
+// ─── Session Upload ───────────────────────────────────────────────────────────
+
+async function uploadSessionData(sessionId, clickBuffer) {
+  const screenshots = await getAllScreenshots();
+
+  try {
+    await uploadDirect(sessionId, clickBuffer, screenshots);
+    // Success -- clear local data
+    await clearAllScreenshots();
+    await chrome.storage.local.remove(['v1helper_clicks']);
+    // Drain queued retries in the background
+    processRetryQueue().catch(() => {});
+  } catch (err) {
+    console.error('V1-Helper upload failed, queuing for retry:', err.message);
+    await enqueueFailedUpload(sessionId, clickBuffer, screenshots);
+    // Data is preserved in the queue, safe to clear working copies
+    await clearAllScreenshots();
+    await chrome.storage.local.remove(['v1helper_clicks']);
+    throw err;
+  }
 }
 
 // ─── Keepalive Port ───────────────────────────────────────────────────────────
@@ -421,6 +484,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { index, timestamp } = message.event;
 
     captureAndStore({ clickIndex: index, timestamp }).then((filename) => {
+      // Try to drain retry queue on each click (best-effort)
+      processRetryQueue().catch(() => {});
       sendResponse({ status: 'ok', filename });
     });
 
@@ -477,10 +542,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ status: 'ok' });
     }).catch((err) => {
       console.error('V1-Helper upload failed:', err);
-      // Still clear local data even on error
-      clearAllScreenshots().catch(() => {});
-      chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});
-      sendResponse({ status: 'error', error: err.message });
+      // Data is already queued for retry by uploadSessionData
+      sendResponse({ status: 'queued', error: err.message });
+    });
+    return true;
+  }
+
+  if (message.type === 'get_queue_status') {
+    getUploadQueue().then((queue) => {
+      sendResponse({ status: 'ok', queueLength: queue.length });
+    }).catch(() => {
+      sendResponse({ status: 'ok', queueLength: 0 });
     });
     return true;
   }
