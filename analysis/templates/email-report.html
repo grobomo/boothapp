@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Booth Session Report</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+<!-- Outer wrapper -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6f9;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+
+      <!-- Main container -->
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+        <!-- ============ HEADER ============ -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:32px 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>
+                  <!-- Logo area -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="width:40px;height:40px;background-color:#ef4444;border-radius:8px;text-align:center;vertical-align:middle;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-1px;">
+                        BA
+                      </td>
+                      <td style="padding-left:12px;">
+                        <span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">BoothApp</span>
+                        <br>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Session Intelligence</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td align="right" style="vertical-align:top;">
+                  <span style="display:inline-block;background-color:rgba(255,255,255,0.15);border-radius:6px;padding:8px 14px;font-size:13px;color:#ffffff;">
+                    {{session_date}}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ============ GREETING ============ -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <p style="margin:0 0 8px 0;font-size:18px;font-weight:600;color:#1a1a2e;">
+              Session Report: {{visitor_name}}
+            </p>
+            <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
+              {{session_summary}}
+            </p>
+          </td>
+        </tr>
+
+        <!-- ============ EXECUTIVE SUMMARY / KEY METRICS ============ -->
+        <tr>
+          <td style="padding:28px 40px 0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+              <!-- Section header -->
+              <tr>
+                <td colspan="3" style="background-color:#f8fafc;padding:14px 20px;border-bottom:1px solid #e5e7eb;">
+                  <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Executive Summary</span>
+                </td>
+              </tr>
+              <!-- Metrics row -->
+              <tr>
+                <td width="33%" style="padding:20px;text-align:center;border-right:1px solid #e5e7eb;">
+                  <span style="display:block;font-size:32px;font-weight:700;color:#ef4444;line-height:1;">{{engagement_score}}</span>
+                  <span style="display:block;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">Engagement Score</span>
+                </td>
+                <td width="34%" style="padding:20px;text-align:center;border-right:1px solid #e5e7eb;">
+                  <span style="display:block;font-size:32px;font-weight:700;color:#0f3460;line-height:1;">{{products_shown}}</span>
+                  <span style="display:block;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">Products Shown</span>
+                </td>
+                <td width="33%" style="padding:20px;text-align:center;">
+                  <span style="display:block;font-size:32px;font-weight:700;color:#16a34a;line-height:1;">{{session_duration}}</span>
+                  <span style="display:block;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">Minutes</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Key Interests -->
+        <tr>
+          <td style="padding:20px 40px 0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <span style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1px;">Key Interests</span>
+                  <p style="margin:8px 0 0 0;font-size:14px;color:#1a1a2e;line-height:1.6;">{{key_interests}}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ============ DETAILED FINDINGS ============ -->
+        <tr>
+          <td style="padding:28px 40px 0 40px;">
+            <p style="margin:0 0 16px 0;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Detailed Findings</p>
+
+            {{#findings}}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <p style="margin:0 0 4px 0;font-size:14px;font-weight:600;color:#1a1a2e;">{{finding_title}}</p>
+                  <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;">{{finding_detail}}</p>
+                </td>
+              </tr>
+              {{#visitor_quote}}
+              <tr>
+                <td style="padding:0 20px 16px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="border-left:3px solid #ef4444;padding:10px 16px;background-color:#fef2f2;border-radius:0 6px 6px 0;">
+                        <p style="margin:0;font-size:13px;font-style:italic;color:#6b7280;">"{{visitor_quote}}"</p>
+                        <p style="margin:4px 0 0 0;font-size:11px;color:#9ca3af;">-- {{visitor_name}}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              {{/visitor_quote}}
+            </table>
+            {{/findings}}
+          </td>
+        </tr>
+
+        <!-- ============ RECOMMENDED FOLLOW-UP ACTIONS ============ -->
+        <tr>
+          <td style="padding:28px 40px 0 40px;">
+            <p style="margin:0 0 16px 0;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Recommended Follow-Up Actions</p>
+
+            {{#actions}}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
+              <tr>
+                <!-- Priority badge -->
+                <td width="70" style="vertical-align:top;padding-right:12px;">
+                  {{#priority_high}}
+                  <span style="display:inline-block;background-color:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;border:1px solid #fecaca;text-transform:uppercase;">High</span>
+                  {{/priority_high}}
+                  {{#priority_medium}}
+                  <span style="display:inline-block;background-color:#fffbeb;color:#d97706;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;border:1px solid #fde68a;text-transform:uppercase;">Medium</span>
+                  {{/priority_medium}}
+                  {{#priority_low}}
+                  <span style="display:inline-block;background-color:#f0fdf4;color:#16a34a;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;border:1px solid #bbf7d0;text-transform:uppercase;">Low</span>
+                  {{/priority_low}}
+                </td>
+                <!-- Action text -->
+                <td style="vertical-align:top;padding:4px 0;">
+                  <p style="margin:0;font-size:14px;color:#1a1a2e;font-weight:500;">{{action_title}}</p>
+                  <p style="margin:2px 0 0 0;font-size:12px;color:#6b7280;">{{action_detail}}</p>
+                </td>
+              </tr>
+            </table>
+            {{/actions}}
+          </td>
+        </tr>
+
+        <!-- ============ CTA BUTTON ============ -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;" align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="background-color:#ef4444;border-radius:6px;">
+                  <a href="{{report_url}}" target="_blank" style="display:inline-block;padding:12px 32px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">View Full Analysis</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ============ DIVIDER ============ -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-top:1px solid #e5e7eb;font-size:1px;line-height:1px;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ============ FOOTER ============ -->
+        <tr>
+          <td style="padding:24px 40px 32px 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>
+                  <p style="margin:0 0 4px 0;font-size:12px;color:#9ca3af;">
+                    Generated by <span style="font-weight:600;color:#6b7280;">BoothApp</span> &middot; Booth Session Intelligence
+                  </p>
+                  <p style="margin:0;font-size:11px;color:#d1d5db;">
+                    Powered by <span style="font-weight:600;color:#ef4444;">Trend Micro</span>
+                  </p>
+                </td>
+                <td align="right" style="vertical-align:bottom;">
+                  <p style="margin:0;font-size:11px;color:#d1d5db;">
+                    {{session_id}} &middot; {{generated_at}}
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Main container -->
+
+    </td>
+  </tr>
+</table>
+<!-- /Outer wrapper -->
+
+</body>
+</html>
