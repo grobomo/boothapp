@@ -139,17 +139,50 @@
             padding: 3rem;
             color: var(--text-dim);
         }
+
+        /* i18n switcher */
+        .lang-bar { position: absolute; top: 2rem; right: 2rem; z-index: 10; }
+        .i18n-switcher { position: relative; display: inline-block; }
+        .i18n-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background .2s;
+        }
+        .i18n-btn:hover { background: var(--border); }
+        .i18n-flag { font-weight: 800; letter-spacing: 1px; }
+        .i18n-menu {
+            position: absolute; top: 100%; right: 0; margin-top: 4px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; overflow: hidden; min-width: 140px;
+            z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+        }
+        .i18n-menu-item {
+            padding: 10px 16px; font-size: 13px; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: background .15s;
+        }
+        .i18n-menu-item:hover { background: var(--surface2); }
     </style>
 </head>
-<body>
+<body style="position:relative;">
+    <div class="lang-bar" id="langSwitcher"></div>
+
     <div class="header">
-        <h1>Sessions</h1>
-        <a href="/demo.html">&larr; Back to Dashboard</a>
+        <h1 data-i18n="sessions.title">Sessions</h1>
+        <a href="/demo.html" data-i18n="sessions.backToDashboard">&larr; Back to Dashboard</a>
     </div>
 
     <div class="status-bar">
-        <span>Total: <span class="count" id="total-count">--</span></span>
-        <span>With Analysis: <span class="count" id="analysis-count">--</span></span>
+        <span><span data-i18n="sessions.total">Total</span>: <span class="count" id="total-count">--</span></span>
+        <span><span data-i18n="sessions.withAnalysis">With Analysis</span>: <span class="count" id="analysis-count">--</span></span>
     </div>
 
     <div id="error-msg"></div>
@@ -157,26 +190,35 @@
     <table>
         <thead>
             <tr>
-                <th>Session ID</th>
-                <th>Visitor</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Analysis</th>
-                <th>Summary</th>
+                <th data-i18n="table.sessionId">Session ID</th>
+                <th data-i18n="table.visitor">Visitor</th>
+                <th data-i18n="table.status">Status</th>
+                <th data-i18n="table.created">Created</th>
+                <th data-i18n="table.analysis">Analysis</th>
+                <th data-i18n="table.summary">Summary</th>
             </tr>
         </thead>
         <tbody id="sessions-body">
-            <tr><td colspan="6" class="loading">Loading sessions...</td></tr>
+            <tr><td colspan="6" class="loading" data-i18n="sessions.loading">Loading sessions...</td></tr>
         </tbody>
     </table>
 
+    <script src="../infra/i18n/translations.js"></script>
+    <script>
+    i18n.register('en', {"app.title":"BoothApp","app.tagline":"AI-Powered Trade Show Demo Capture","app.live":"Live","app.footer":"Powered by Trend Micro Vision One","nav.dashboard":"Dashboard","nav.sessions":"Sessions","nav.language":"Language","card.activeSessions":"Active Sessions","card.totalDemos":"Total Demos","card.reportsGenerated":"Reports Generated","feed.title":"Live Activity Feed","feed.refreshing":"Refreshing in {n}s","sessions.title":"Sessions","sessions.backToDashboard":"Back to Dashboard","sessions.total":"Total","sessions.withAnalysis":"With Analysis","sessions.loading":"Loading sessions...","sessions.empty":"No sessions found","sessions.loadError":"Could not load sessions","table.sessionId":"Session ID","table.visitor":"Visitor","table.status":"Status","table.created":"Created","table.analysis":"Analysis","table.summary":"Summary","table.viewSummary":"View","status.complete":"complete","status.active":"active","status.pending":"pending","status.unknown":"unknown","analysis.yes":"Yes","analysis.no":"No"});
+    i18n.register('ja', {"app.title":"BoothApp","app.tagline":"AI搭載 展示会デモキャプチャ","app.live":"ライブ","app.footer":"Trend Micro Vision One 搭載","nav.dashboard":"ダッシュボード","nav.sessions":"セッション","nav.language":"言語","card.activeSessions":"アクティブセッション","card.totalDemos":"デモ合計","card.reportsGenerated":"レポート生成数","feed.title":"リアルタイム アクティビティ","feed.refreshing":"{n}秒後に更新","sessions.title":"セッション","sessions.backToDashboard":"ダッシュボードに戻る","sessions.total":"合計","sessions.withAnalysis":"分析済み","sessions.loading":"セッションを読み込み中...","sessions.empty":"セッションが見つかりません","sessions.loadError":"セッションの読み込みに失敗しました","table.sessionId":"セッションID","table.visitor":"来場者","table.status":"ステータス","table.created":"作成日時","table.analysis":"分析","table.summary":"概要","table.viewSummary":"表示","status.complete":"完了","status.active":"進行中","status.pending":"待機中","status.unknown":"不明","analysis.yes":"はい","analysis.no":"いいえ"});
+    i18n.init();
+    i18n.applyAll();
+    i18n.createSwitcher('langSwitcher');
+    </script>
     <script>
         function statusBadge(status) {
             var cls = 'badge-unknown';
             if (status === 'complete') cls = 'badge-complete';
             else if (status === 'active') cls = 'badge-active';
             else if (status === 'pending') cls = 'badge-pending';
-            return '<span class="badge ' + cls + '">' + escHtml(status) + '</span>';
+            var statusKey = 'status.' + status;
+            return '<span class="badge ' + cls + '">' + escHtml(i18n.t(statusKey)) + '</span>';
         }
 
         function escHtml(str) {
@@ -204,16 +246,16 @@
                 var tbody = document.getElementById('sessions-body');
 
                 if (sessions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty">No sessions found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty">' + escHtml(i18n.t('sessions.empty')) + '</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = sessions.map(function(s) {
                     var analysisCell = s.has_analysis
-                        ? '<span class="analysis-yes">Yes</span>'
-                        : '<span class="analysis-no">No</span>';
+                        ? '<span class="analysis-yes">' + escHtml(i18n.t('analysis.yes')) + '</span>'
+                        : '<span class="analysis-no">' + escHtml(i18n.t('analysis.no')) + '</span>';
                     var summaryCell = s.summary_link
-                        ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
+                        ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">' + escHtml(i18n.t('table.viewSummary')) + '</a>'
                         : '--';
                     return '<tr>' +
                         '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
@@ -229,7 +271,7 @@
                 errEl.style.display = 'block';
                 errEl.textContent = 'Failed to load sessions: ' + err.message;
                 document.getElementById('sessions-body').innerHTML =
-                    '<tr><td colspan="6" class="empty">Could not load sessions</td></tr>';
+                    '<tr><td colspan="6" class="empty">' + escHtml(i18n.t('sessions.loadError')) + '</td></tr>';
             }
         }
 

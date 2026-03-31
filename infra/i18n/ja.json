@@ -1,0 +1,41 @@
+{
+  "app.title": "BoothApp",
+  "app.tagline": "AI搭載 展示会デモキャプチャ",
+  "app.live": "ライブ",
+  "app.footer": "Trend Micro Vision One 搭載",
+
+  "nav.dashboard": "ダッシュボード",
+  "nav.sessions": "セッション",
+  "nav.language": "言語",
+
+  "card.activeSessions": "アクティブセッション",
+  "card.totalDemos": "デモ合計",
+  "card.reportsGenerated": "レポート生成数",
+
+  "feed.title": "リアルタイム アクティビティ",
+  "feed.refreshing": "{n}秒後に更新",
+
+  "sessions.title": "セッション",
+  "sessions.backToDashboard": "ダッシュボードに戻る",
+  "sessions.total": "合計",
+  "sessions.withAnalysis": "分析済み",
+  "sessions.loading": "セッションを読み込み中...",
+  "sessions.empty": "セッションが見つかりません",
+  "sessions.loadError": "セッションの読み込みに失敗しました",
+
+  "table.sessionId": "セッションID",
+  "table.visitor": "来場者",
+  "table.status": "ステータス",
+  "table.created": "作成日時",
+  "table.analysis": "分析",
+  "table.summary": "概要",
+  "table.viewSummary": "表示",
+
+  "status.complete": "完了",
+  "status.active": "進行中",
+  "status.pending": "待機中",
+  "status.unknown": "不明",
+
+  "analysis.yes": "はい",
+  "analysis.no": "いいえ"
+}

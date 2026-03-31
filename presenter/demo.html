@@ -320,6 +320,56 @@
         }
 
         /* ============================================================
+           i18n LANGUAGE SWITCHER
+           ============================================================ */
+        .lang-bar {
+            position: absolute;
+            top: 16px;
+            right: 48px;
+            z-index: 10;
+        }
+        .i18n-switcher { position: relative; display: inline-block; }
+        .i18n-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background .2s;
+        }
+        .i18n-btn:hover { background: var(--border); }
+        .i18n-flag { font-weight: 800; letter-spacing: 1px; }
+        .i18n-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            min-width: 140px;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0,0,0,.4);
+        }
+        .i18n-menu-item {
+            padding: 10px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+        }
+        .i18n-menu-item:hover { background: var(--surface2); }
+
+        /* ============================================================
            RESPONSIVE
            ============================================================ */
         @media (max-width: 900px) {
@@ -327,6 +377,7 @@
             .container { padding: 24px 20px; }
             .logo-text { font-size: 36px; }
             .tagline { font-size: 16px; letter-spacing: 2px; }
+            .lang-bar { top: 12px; right: 20px; }
         }
     </style>
 </head>
@@ -339,18 +390,21 @@
 
 <div class="container">
 
+    <!-- ============ LANGUAGE SWITCHER ============ -->
+    <div class="lang-bar" id="langSwitcher"></div>
+
     <!-- ============ HEADER ============ -->
     <header class="header">
         <div class="logo-mark">
             <div class="logo-icon">
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
             </div>
-            <span class="logo-text">BoothApp</span>
+            <span class="logo-text" data-i18n="app.title">BoothApp</span>
         </div>
-        <p class="tagline">AI-Powered Trade Show Demo Capture</p>
+        <p class="tagline" data-i18n="app.tagline">AI-Powered Trade Show Demo Capture</p>
         <div class="live-badge">
             <span class="live-dot"></span>
-            Live
+            <span data-i18n="app.live">Live</span>
         </div>
     </header>
 
@@ -361,21 +415,21 @@
                 <svg viewBox="0 0 24 24" fill="#D71920"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
             </div>
             <div class="card-value" id="activeSessions">0</div>
-            <div class="card-label">Active Sessions</div>
+            <div class="card-label" data-i18n="card.activeSessions">Active Sessions</div>
         </div>
         <div class="card card--demos">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="#3498DB"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
             </div>
             <div class="card-value" id="totalDemos">0</div>
-            <div class="card-label">Total Demos</div>
+            <div class="card-label" data-i18n="card.totalDemos">Total Demos</div>
         </div>
         <div class="card card--reports">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="#2ECC71"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
             <div class="card-value" id="reportsGenerated">0</div>
-            <div class="card-label">Reports Generated</div>
+            <div class="card-label" data-i18n="card.reportsGenerated">Reports Generated</div>
         </div>
     </div>
 
@@ -384,7 +438,7 @@
         <div class="feed-header">
             <div class="feed-title">
                 <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-                Live Activity Feed
+                <span data-i18n="feed.title">Live Activity Feed</span>
             </div>
             <div class="feed-refresh" id="refreshTimer">Refreshing in 5s</div>
         </div>
@@ -395,13 +449,22 @@
 
     <!-- ============ FOOTER ============ -->
     <div class="footer">
-        <span>Powered by Trend Micro Vision One</span>
+        <span data-i18n="app.footer">Powered by Trend Micro Vision One</span>
         <span>|</span>
         <span id="clock"></span>
     </div>
 
 </div>
 
+<script src="../infra/i18n/translations.js"></script>
+<script>
+// Register translation catalogs inline (loaded from JSON at build time or via fetch)
+i18n.register('en', {"app.title":"BoothApp","app.tagline":"AI-Powered Trade Show Demo Capture","app.live":"Live","app.footer":"Powered by Trend Micro Vision One","nav.dashboard":"Dashboard","nav.sessions":"Sessions","nav.language":"Language","card.activeSessions":"Active Sessions","card.totalDemos":"Total Demos","card.reportsGenerated":"Reports Generated","feed.title":"Live Activity Feed","feed.refreshing":"Refreshing in {n}s","sessions.title":"Sessions","sessions.backToDashboard":"Back to Dashboard","sessions.total":"Total","sessions.withAnalysis":"With Analysis","sessions.loading":"Loading sessions...","sessions.empty":"No sessions found","sessions.loadError":"Could not load sessions","table.sessionId":"Session ID","table.visitor":"Visitor","table.status":"Status","table.created":"Created","table.analysis":"Analysis","table.summary":"Summary","table.viewSummary":"View","status.complete":"complete","status.active":"active","status.pending":"pending","status.unknown":"unknown","analysis.yes":"Yes","analysis.no":"No"});
+i18n.register('ja', {"app.title":"BoothApp","app.tagline":"AI搭載 展示会デモキャプチャ","app.live":"ライブ","app.footer":"Trend Micro Vision One 搭載","nav.dashboard":"ダッシュボード","nav.sessions":"セッション","nav.language":"言語","card.activeSessions":"アクティブセッション","card.totalDemos":"デモ合計","card.reportsGenerated":"レポート生成数","feed.title":"リアルタイム アクティビティ","feed.refreshing":"{n}秒後に更新","sessions.title":"セッション","sessions.backToDashboard":"ダッシュボードに戻る","sessions.total":"合計","sessions.withAnalysis":"分析済み","sessions.loading":"セッションを読み込み中...","sessions.empty":"セッションが見つかりません","sessions.loadError":"セッションの読み込みに失敗しました","table.sessionId":"セッションID","table.visitor":"来場者","table.status":"ステータス","table.created":"作成日時","table.analysis":"分析","table.summary":"概要","table.viewSummary":"表示","status.complete":"完了","status.active":"進行中","status.pending":"待機中","status.unknown":"不明","analysis.yes":"はい","analysis.no":"いいえ"});
+i18n.init();
+i18n.applyAll();
+i18n.createSwitcher('langSwitcher');
+</script>
 <script>
 (function () {
     'use strict';
@@ -573,7 +636,7 @@
             fetchData();
             countdown = 5;
         }
-        document.getElementById('refreshTimer').textContent = 'Refreshing in ' + countdown + 's';
+        document.getElementById('refreshTimer').textContent = i18n.t('feed.refreshing', { n: countdown });
     }
 
     // ------------------------------------------------------------------

@@ -1,0 +1,41 @@
+{
+  "app.title": "BoothApp",
+  "app.tagline": "AI-Powered Trade Show Demo Capture",
+  "app.live": "Live",
+  "app.footer": "Powered by Trend Micro Vision One",
+
+  "nav.dashboard": "Dashboard",
+  "nav.sessions": "Sessions",
+  "nav.language": "Language",
+
+  "card.activeSessions": "Active Sessions",
+  "card.totalDemos": "Total Demos",
+  "card.reportsGenerated": "Reports Generated",
+
+  "feed.title": "Live Activity Feed",
+  "feed.refreshing": "Refreshing in {n}s",
+
+  "sessions.title": "Sessions",
+  "sessions.backToDashboard": "Back to Dashboard",
+  "sessions.total": "Total",
+  "sessions.withAnalysis": "With Analysis",
+  "sessions.loading": "Loading sessions...",
+  "sessions.empty": "No sessions found",
+  "sessions.loadError": "Could not load sessions",
+
+  "table.sessionId": "Session ID",
+  "table.visitor": "Visitor",
+  "table.status": "Status",
+  "table.created": "Created",
+  "table.analysis": "Analysis",
+  "table.summary": "Summary",
+  "table.viewSummary": "View",
+
+  "status.complete": "complete",
+  "status.active": "active",
+  "status.pending": "pending",
+  "status.unknown": "unknown",
+
+  "analysis.yes": "Yes",
+  "analysis.no": "No"
+}
