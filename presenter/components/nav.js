@@ -6,6 +6,7 @@
     { label: 'Sessions', href: '/sessions.html' },
     { label: 'Analytics', href: '/analytics.html' },
     { label: 'Live Monitor', href: '/live-dashboard.html' },
+    { label: 'Highlights', href: '/highlights.html' },
     { label: 'Admin', href: '/admin.html' },
     { label: 'API Docs', href: '/api-docs.html' },
     { label: 'Setup', href: '/quick-setup.html' }

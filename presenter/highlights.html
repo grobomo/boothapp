@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="components/error-boundary.js"></script>
+<script src="components/nav.js"></script>
+<title>BoothApp — Demo Highlights Reel</title>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1692.0.min.js"></script>
+<script src="auth.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* --- Loading screen --- */
+  #loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: #0d1117;
+  }
+  #loading .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading .label {
+    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    color: #8b949e;
+  }
+  #progress-text {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #484f58;
+    font-family: monospace;
+  }
+
+  /* --- Slide container --- */
+  #slides {
+    display: none;
+    position: fixed;
+    inset: 0;
+    top: 56px; /* below nav */
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 3rem 4rem 2rem;
+    overflow-y: auto;
+  }
+  .slide.active {
+    display: flex;
+  }
+
+  /* --- Slide header --- */
+  .slide-header {
+    margin-bottom: 2rem;
+    flex-shrink: 0;
+  }
+  .slide-header .slide-number {
+    font-size: 0.85rem;
+    color: #484f58;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+    font-family: monospace;
+  }
+  .slide-header h2 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #58a6ff, #a371f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.15;
+  }
+  .slide-header .subtitle {
+    font-size: 1.1rem;
+    color: #8b949e;
+    margin-top: 0.5rem;
+  }
+
+  /* --- Navigation bar --- */
+  #slide-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    background: rgba(13, 17, 23, 0.85);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid #30363d;
+    z-index: 50;
+  }
+  #slide-nav .nav-dots {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .nav-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #30363d;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-dot.active {
+    background: #58a6ff;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+    transform: scale(1.3);
+  }
+  .nav-dot:hover { background: #8b949e; }
+  #slide-nav .nav-hint {
+    font-size: 0.75rem;
+    color: #484f58;
+    font-family: monospace;
+  }
+  #slide-nav .slide-counter {
+    font-size: 0.85rem;
+    color: #8b949e;
+    font-family: monospace;
+    min-width: 4rem;
+    text-align: center;
+  }
+
+  /* --- Card grids --- */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    flex: 1;
+  }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover {
+    border-color: #58a6ff;
+    transform: translateY(-2px);
+  }
+  .card .card-rank {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #58a6ff;
+    font-family: monospace;
+    margin-bottom: 0.5rem;
+  }
+  .card .card-rank.gold { color: #f0c000; }
+  .card .card-rank.silver { color: #8b949e; }
+  .card .card-rank.bronze { color: #da7b39; }
+  .card .visitor-name {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 0.3rem;
+  }
+  .card .se-name {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-bottom: 0.75rem;
+  }
+  .card .score-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: monospace;
+    margin-bottom: 0.75rem;
+  }
+  .score-high { background: rgba(63, 185, 80, 0.15); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.3); }
+  .score-mid { background: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.3); }
+  .score-low { background: rgba(139, 148, 158, 0.15); color: #8b949e; border: 1px solid rgba(139, 148, 158, 0.3); }
+
+  .card .products-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+  .product-tag {
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    background: rgba(88, 166, 255, 0.1);
+    color: #58a6ff;
+    border: 1px solid rgba(88, 166, 255, 0.2);
+  }
+
+  .card .summary-text {
+    font-size: 0.9rem;
+    color: #8b949e;
+    line-height: 1.5;
+    margin-top: 0.5rem;
+  }
+
+  .card .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #21262d;
+    font-size: 0.9rem;
+  }
+  .card .stat-row:last-child { border-bottom: none; }
+  .card .stat-label { color: #8b949e; }
+  .card .stat-value { color: #e6edf3; font-family: monospace; font-weight: 600; }
+
+  /* --- Screenshot grid --- */
+  .screenshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    flex: 1;
+  }
+  .screenshot-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .screenshot-card:hover { border-color: #58a6ff; }
+  .screenshot-card img {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    display: block;
+    background: #0d1117;
+  }
+  .screenshot-card .screenshot-info {
+    padding: 1rem 1.2rem;
+  }
+  .screenshot-card .click-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #58a6ff;
+    font-family: monospace;
+  }
+  .screenshot-card .screenshot-label {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-top: 0.25rem;
+  }
+
+  /* --- Email preview --- */
+  .email-preview {
+    flex: 1;
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+  .email-frame {
+    flex: 1;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    overflow: hidden;
+    max-height: calc(100vh - 240px);
+  }
+  .email-frame .email-header-bar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .email-frame .email-header-bar .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .email-frame .email-header-bar .dot-r { background: #f85149; }
+  .email-frame .email-header-bar .dot-y { background: #f0c000; }
+  .email-frame .email-header-bar .dot-g { background: #3fb950; }
+  .email-frame .email-header-bar .email-title {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-left: 0.5rem;
+    flex: 1;
+  }
+  .email-frame iframe {
+    width: 100%;
+    height: calc(100vh - 320px);
+    border: none;
+    background: #fff;
+  }
+  .email-meta {
+    width: 320px;
+    flex-shrink: 0;
+  }
+  .email-meta .card { margin-bottom: 1rem; }
+
+  /* --- Stat hero --- */
+  .stat-hero {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 4rem;
+  }
+  .stat-hero .big-number {
+    font-size: 8rem;
+    font-weight: 800;
+    font-family: monospace;
+    background: linear-gradient(135deg, #58a6ff, #a371f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+  .stat-hero .big-label {
+    font-size: 1.6rem;
+    color: #8b949e;
+    margin-top: 0.5rem;
+  }
+  .stat-hero .hero-detail {
+    max-width: 500px;
+  }
+  .stat-hero .hero-detail .visitor-name {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 0.5rem;
+  }
+  .stat-hero .hero-detail .detail-text {
+    font-size: 1.1rem;
+    color: #8b949e;
+    line-height: 1.6;
+  }
+
+  /* --- Competitive mentions table --- */
+  .mentions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.1rem;
+  }
+  .mentions-table th {
+    text-align: left;
+    padding: 1rem 1.5rem;
+    color: #8b949e;
+    border-bottom: 2px solid #30363d;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .mentions-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #21262d;
+    color: #e6edf3;
+  }
+  .mentions-table tr:hover td { background: rgba(88, 166, 255, 0.04); }
+  .mention-count {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 1.3rem;
+    color: #58a6ff;
+  }
+  .mention-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #58a6ff, #a371f7);
+    margin-top: 0.4rem;
+    transition: width 0.5s ease;
+  }
+
+  /* --- Title slide --- */
+  .title-slide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1;
+  }
+  .title-slide h1 {
+    font-size: 4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #58a6ff, #a371f7, #f78166);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+    line-height: 1.1;
+  }
+  .title-slide .team-name {
+    font-size: 1.4rem;
+    color: #8b949e;
+    margin-bottom: 2rem;
+  }
+  .title-slide .kpi-row {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 2rem;
+  }
+  .title-slide .kpi {
+    text-align: center;
+  }
+  .title-slide .kpi .kpi-val {
+    font-size: 3rem;
+    font-weight: 800;
+    font-family: monospace;
+    color: #e6edf3;
+  }
+  .title-slide .kpi .kpi-label {
+    font-size: 0.85rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.25rem;
+  }
+
+  /* --- No data state --- */
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: #484f58;
+    font-size: 1.2rem;
+  }
+  .no-data .icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  /* --- Fullscreen button --- */
+  #fullscreen-btn {
+    position: fixed;
+    top: 70px;
+    right: 1.5rem;
+    z-index: 60;
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #8b949e;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: monospace;
+    display: none;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #fullscreen-btn:hover { border-color: #58a6ff; color: #e6edf3; }
+
+  /* --- Fullscreen mode adjustments --- */
+  :fullscreen body,
+  :-webkit-full-screen body {
+    padding-top: 0 !important;
+  }
+  :fullscreen #ba-nav,
+  :-webkit-full-screen #ba-nav {
+    display: none !important;
+  }
+  :fullscreen #slides,
+  :-webkit-full-screen #slides {
+    top: 0;
+  }
+  :fullscreen .slide,
+  :-webkit-full-screen .slide {
+    padding: 4rem 5rem 3rem;
+  }
+  :fullscreen #fullscreen-btn,
+  :-webkit-full-screen #fullscreen-btn {
+    top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="label">Loading highlights...</div>
+  <div id="progress-text"></div>
+</div>
+
+<button id="fullscreen-btn" title="Toggle fullscreen (F)">[ ] Fullscreen</button>
+
+<div id="slides">
+  <!-- Slide 0: Title -->
+  <div class="slide" id="slide-title"></div>
+  <!-- Slide 1: Top 5 by engagement -->
+  <div class="slide" id="slide-engagement"></div>
+  <!-- Slide 2: Best screenshots -->
+  <div class="slide" id="slide-screenshots"></div>
+  <!-- Slide 3: Best follow-up email -->
+  <div class="slide" id="slide-email"></div>
+  <!-- Slide 4: Most products in a single session -->
+  <div class="slide" id="slide-products"></div>
+  <!-- Slide 5: Longest transcript -->
+  <div class="slide" id="slide-transcript"></div>
+  <!-- Slide 6: Competitive mentions -->
+  <div class="slide" id="slide-competitive"></div>
+</div>
+
+<div id="slide-nav">
+  <div class="nav-hint">&larr;</div>
+  <div class="nav-dots" id="nav-dots"></div>
+  <div class="slide-counter" id="slide-counter"></div>
+  <div class="nav-hint">&rarr;</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var BUCKET = "boothapp-sessions-752266476357";
+  var REGION = "us-east-1";
+  var COMPETITORS = [
+    "CrowdStrike", "Palo Alto", "SentinelOne", "Microsoft Defender",
+    "Fortinet", "Sophos", "Carbon Black", "Cylance", "Symantec",
+    "McAfee", "Trellix", "Wiz", "Orca", "Lacework", "Prisma"
+  ];
+
+  var ak = localStorage.getItem("boothapp_aws_ak");
+  var sk = localStorage.getItem("boothapp_aws_sk");
+  if (!ak || !sk) {
+    window.location.href = "sessions.html";
+    return;
+  }
+  AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
+  var s3 = new AWS.S3({ params: { Bucket: BUCKET } });
+
+  var allSessions = []; // {id, metadata, summary, clicks, transcript, emailHtml}
+  var currentSlide = 0;
+  var totalSlides = 7;
+
+  // ── S3 Loading ──────────────────────────────────────────────────────────
+
+  function loadAllSessions() {
+    var allPrefixes = [];
+    function listAll(token) {
+      var params = { Prefix: "sessions/", Delimiter: "/", MaxKeys: 1000 };
+      if (token) params.ContinuationToken = token;
+      s3.listObjectsV2(params, function (err, data) {
+        if (err) {
+          showError("S3 error: " + err.message);
+          return;
+        }
+        var prefixes = (data.CommonPrefixes || []).map(function (p) { return p.Prefix; });
+        allPrefixes = allPrefixes.concat(prefixes);
+        if (data.IsTruncated) {
+          listAll(data.NextContinuationToken);
+        } else {
+          fetchAllDetails(allPrefixes);
+        }
+      });
+    }
+    listAll(null);
+  }
+
+  function fetchAllDetails(prefixes) {
+    var total = prefixes.length;
+    var loaded = 0;
+    var progressEl = document.getElementById("progress-text");
+
+    if (total === 0) {
+      hideLoading();
+      renderAllSlides();
+      return;
+    }
+
+    var pending = total;
+    prefixes.forEach(function (prefix) {
+      var sessionId = prefix.replace("sessions/", "").replace(/\/$/, "");
+      var session = { id: sessionId, metadata: null, summary: null, clicks: null, transcript: null, emailHtml: null };
+
+      var parts = { meta: false, summary: false, clicks: false, transcript: false, email: false };
+
+      function checkDone() {
+        if (parts.meta && parts.summary && parts.clicks && parts.transcript && parts.email) {
+          if (session.metadata || session.summary) {
+            allSessions.push(session);
+          }
+          loaded++;
+          progressEl.textContent = loaded + " / " + total + " sessions";
+          pending--;
+          if (pending === 0) {
+            hideLoading();
+            renderAllSlides();
+          }
+        }
+      }
+
+      s3.getObject({ Key: prefix + "metadata.json" }, function (err, data) {
+        if (!err && data.Body) {
+          try { session.metadata = JSON.parse(data.Body.toString()); } catch (e) {}
+        }
+        parts.meta = true;
+        checkDone();
+      });
+
+      s3.getObject({ Key: prefix + "output/summary.json" }, function (err, data) {
+        if (!err && data.Body) {
+          try { session.summary = JSON.parse(data.Body.toString()); } catch (e) {}
+        }
+        parts.summary = true;
+        checkDone();
+      });
+
+      s3.getObject({ Key: prefix + "clicks/clicks.json" }, function (err, data) {
+        if (!err && data.Body) {
+          try { session.clicks = JSON.parse(data.Body.toString()); } catch (e) {}
+        }
+        parts.clicks = true;
+        checkDone();
+      });
+
+      s3.getObject({ Key: prefix + "transcript/transcript.json" }, function (err, data) {
+        if (!err && data.Body) {
+          try { session.transcript = JSON.parse(data.Body.toString()); } catch (e) {}
+        }
+        parts.transcript = true;
+        checkDone();
+      });
+
+      s3.getObject({ Key: prefix + "output/follow-up-email.html" }, function (err, data) {
+        if (!err && data.Body) {
+          try { session.emailHtml = data.Body.toString(); } catch (e) {}
+        }
+        parts.email = true;
+        checkDone();
+      });
+    });
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  function showError(msg) {
+    document.getElementById("loading").innerHTML =
+      '<div style="color:#f85149;font-size:1.2rem;">' + escapeHtml(msg) + '</div>';
+  }
+
+  function hideLoading() {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("slides").style.display = "block";
+    document.getElementById("slide-nav").style.display = "flex";
+    document.getElementById("fullscreen-btn").style.display = "block";
+    goToSlide(0);
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  function formatDuration(sec) {
+    if (!sec || sec <= 0) return "--";
+    var m = Math.floor(sec / 60);
+    var s = Math.floor(sec % 60);
+    return m + "m " + (s < 10 ? "0" : "") + s + "s";
+  }
+
+  function getScore(session) {
+    return (session.summary && typeof session.summary.session_score === "number")
+      ? session.summary.session_score : 0;
+  }
+
+  function getVisitorName(session) {
+    if (session.summary && session.summary.visitor_name) return session.summary.visitor_name;
+    if (session.metadata && session.metadata.visitor_name) return session.metadata.visitor_name;
+    return session.id;
+  }
+
+  function getSeName(session) {
+    return (session.metadata && session.metadata.se_name) || "";
+  }
+
+  function getProducts(session) {
+    return (session.summary && session.summary.products_demonstrated) || [];
+  }
+
+  function getClickCount(session) {
+    if (!session.clicks || !session.clicks.events) return 0;
+    return session.clicks.events.length;
+  }
+
+  function getTranscriptLength(session) {
+    if (!session.transcript || !session.transcript.entries) return 0;
+    return session.transcript.entries.length;
+  }
+
+  function getTranscriptDuration(session) {
+    return (session.transcript && session.transcript.duration_seconds) || 0;
+  }
+
+  function scoreClass(score) {
+    if (score >= 7) return "score-high";
+    if (score >= 4) return "score-mid";
+    return "score-low";
+  }
+
+  function rankClass(i) {
+    if (i === 0) return "gold";
+    if (i === 1) return "silver";
+    if (i === 2) return "bronze";
+    return "";
+  }
+
+  function getScreenshotUrl(sessionId, screenshotFile) {
+    var key = "sessions/" + sessionId + "/screenshots/" + screenshotFile;
+    return s3.getSignedUrl("getObject", { Key: key, Expires: 3600 });
+  }
+
+  // ── Slide Navigation ───────────────────────────────────────────────────
+
+  function buildNavDots() {
+    var container = document.getElementById("nav-dots");
+    container.innerHTML = "";
+    for (var i = 0; i < totalSlides; i++) {
+      var dot = document.createElement("div");
+      dot.className = "nav-dot" + (i === 0 ? " active" : "");
+      dot.setAttribute("data-slide", i);
+      dot.addEventListener("click", function () {
+        goToSlide(parseInt(this.getAttribute("data-slide"), 10));
+      });
+      container.appendChild(dot);
+    }
+  }
+
+  function goToSlide(index) {
+    if (index < 0) index = totalSlides - 1;
+    if (index >= totalSlides) index = 0;
+    currentSlide = index;
+
+    var slides = document.querySelectorAll(".slide");
+    for (var i = 0; i < slides.length; i++) {
+      slides[i].classList.toggle("active", i === index);
+    }
+
+    var dots = document.querySelectorAll(".nav-dot");
+    for (var j = 0; j < dots.length; j++) {
+      dots[j].classList.toggle("active", j === index);
+    }
+
+    document.getElementById("slide-counter").textContent = (index + 1) + " / " + totalSlides;
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === " ") {
+      e.preventDefault();
+      goToSlide(currentSlide + 1);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      goToSlide(currentSlide - 1);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      goToSlide(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      goToSlide(totalSlides - 1);
+    } else if (e.key === "f" || e.key === "F") {
+      toggleFullscreen();
+    }
+  });
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  document.getElementById("fullscreen-btn").addEventListener("click", toggleFullscreen);
+
+  // ── Render Slides ──────────────────────────────────────────────────────
+
+  function renderAllSlides() {
+    buildNavDots();
+    renderTitleSlide();
+    renderEngagementSlide();
+    renderScreenshotsSlide();
+    renderEmailSlide();
+    renderProductsSlide();
+    renderTranscriptSlide();
+    renderCompetitiveSlide();
+  }
+
+  // --- Slide 0: Title ---
+  function renderTitleSlide() {
+    var el = document.getElementById("slide-title");
+    var totalSessions = allSessions.length;
+    var analyzed = allSessions.filter(function (s) { return s.summary; }).length;
+    var avgScore = 0;
+    var scored = allSessions.filter(function (s) { return getScore(s) > 0; });
+    if (scored.length > 0) {
+      var sum = scored.reduce(function (a, s) { return a + getScore(s); }, 0);
+      avgScore = (sum / scored.length).toFixed(1);
+    }
+    var totalProducts = {};
+    allSessions.forEach(function (s) {
+      getProducts(s).forEach(function (p) { totalProducts[p] = true; });
+    });
+
+    el.innerHTML =
+      '<div class="title-slide">' +
+        '<h1>Demo Highlights</h1>' +
+        '<div class="team-name">Smells Like Machine Learning</div>' +
+        '<div class="kpi-row">' +
+          '<div class="kpi"><div class="kpi-val">' + totalSessions + '</div><div class="kpi-label">Sessions</div></div>' +
+          '<div class="kpi"><div class="kpi-val">' + analyzed + '</div><div class="kpi-label">Analyzed</div></div>' +
+          '<div class="kpi"><div class="kpi-val">' + avgScore + '</div><div class="kpi-label">Avg Score</div></div>' +
+          '<div class="kpi"><div class="kpi-val">' + Object.keys(totalProducts).length + '</div><div class="kpi-label">Products Shown</div></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // --- Slide 1: Top 5 by engagement ---
+  function renderEngagementSlide() {
+    var el = document.getElementById("slide-engagement");
+    var sorted = allSessions.slice().sort(function (a, b) { return getScore(b) - getScore(a); });
+    var top5 = sorted.slice(0, 5);
+
+    var html =
+      '<div class="slide-header">' +
+        '<div class="slide-number">Slide 2 of ' + totalSlides + '</div>' +
+        '<h2>Top Sessions by Engagement</h2>' +
+        '<div class="subtitle">Highest engagement scores from all demos</div>' +
+      '</div>';
+
+    if (top5.length === 0) {
+      html += '<div class="no-data"><div class="icon">[--]</div>No scored sessions yet</div>';
+    } else {
+      html += '<div class="card-grid">';
+      top5.forEach(function (s, i) {
+        var score = getScore(s);
+        var products = getProducts(s);
+        var duration = s.summary ? s.summary.demo_duration_seconds : 0;
+        html +=
+          '<div class="card">' +
+            '<div class="card-rank ' + rankClass(i) + '">#' + (i + 1) + '</div>' +
+            '<div class="visitor-name">' + escapeHtml(getVisitorName(s)) + '</div>' +
+            '<div class="se-name">SE: ' + escapeHtml(getSeName(s) || "N/A") + '</div>' +
+            '<span class="score-badge ' + scoreClass(score) + '">' + score + ' / 10</span>' +
+            (s.summary && s.summary.executive_summary
+              ? '<div class="summary-text">' + escapeHtml(s.summary.executive_summary.slice(0, 200)) + '</div>'
+              : '') +
+            '<div class="products-list">' +
+              products.map(function (p) { return '<span class="product-tag">' + escapeHtml(p) + '</span>'; }).join("") +
+            '</div>' +
+            '<div class="stat-row"><span class="stat-label">Duration</span><span class="stat-value">' + formatDuration(duration) + '</span></div>' +
+            '<div class="stat-row"><span class="stat-label">Clicks</span><span class="stat-value">' + getClickCount(s) + '</span></div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // --- Slide 2: Best screenshots ---
+  function renderScreenshotsSlide() {
+    var el = document.getElementById("slide-screenshots");
+    // Rank sessions by click count (most interactions = most annotated screenshots)
+    var withClicks = allSessions.filter(function (s) { return getClickCount(s) > 0; });
+    withClicks.sort(function (a, b) { return getClickCount(b) - getClickCount(a); });
+    var top4 = withClicks.slice(0, 4);
+
+    var html =
+      '<div class="slide-header">' +
+        '<div class="slide-number">Slide 3 of ' + totalSlides + '</div>' +
+        '<h2>Most Interactive Demos</h2>' +
+        '<div class="subtitle">Sessions with the most click interactions and screenshots</div>' +
+      '</div>';
+
+    if (top4.length === 0) {
+      html += '<div class="no-data"><div class="icon">[--]</div>No click data available</div>';
+    } else {
+      html += '<div class="screenshot-grid">';
+      top4.forEach(function (s) {
+        var clickCount = getClickCount(s);
+        // Try to show the last screenshot from this session (usually the most interesting)
+        var lastClick = s.clicks.events[s.clicks.events.length - 1];
+        var screenshotFile = lastClick && lastClick.screenshot_file
+          ? lastClick.screenshot_file.replace("screenshots/", "")
+          : null;
+        var imgUrl = screenshotFile ? getScreenshotUrl(s.id, screenshotFile) : "";
+        var lastPage = lastClick ? (lastClick.page_title || lastClick.page_url || "") : "";
+
+        html +=
+          '<div class="screenshot-card">' +
+            (imgUrl
+              ? '<img src="' + imgUrl + '" alt="Screenshot" onerror="this.style.display=\'none\'">'
+              : '<div style="height:250px;display:flex;align-items:center;justify-content:center;background:#161b22;color:#484f58;">No screenshot</div>') +
+            '<div class="screenshot-info">' +
+              '<div class="click-count">' + clickCount + ' clicks</div>' +
+              '<div class="screenshot-label">' + escapeHtml(getVisitorName(s)) +
+                (lastPage ? ' -- ' + escapeHtml(lastPage.slice(0, 60)) : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // --- Slide 3: Best follow-up email ---
+  function renderEmailSlide() {
+    var el = document.getElementById("slide-email");
+    // Pick the session with highest score that has an email
+    var withEmail = allSessions.filter(function (s) { return s.emailHtml; });
+    withEmail.sort(function (a, b) { return getScore(b) - getScore(a); });
+    var best = withEmail[0] || null;
+
+    var html =
+      '<div class="slide-header">' +
+        '<div class="slide-number">Slide 4 of ' + totalSlides + '</div>' +
+        '<h2>Best Follow-Up Email</h2>' +
+        '<div class="subtitle">AI-generated personalized follow-up for the highest-scored session</div>' +
+      '</div>';
+
+    if (!best) {
+      html += '<div class="no-data"><div class="icon">[--]</div>No follow-up emails generated yet</div>';
+    } else {
+      html +=
+        '<div class="email-preview">' +
+          '<div class="email-frame">' +
+            '<div class="email-header-bar">' +
+              '<span class="dot dot-r"></span>' +
+              '<span class="dot dot-y"></span>' +
+              '<span class="dot dot-g"></span>' +
+              '<span class="email-title">Follow-Up Email -- ' + escapeHtml(getVisitorName(best)) + '</span>' +
+            '</div>' +
+            '<iframe id="email-iframe" sandbox="allow-same-origin"></iframe>' +
+          '</div>' +
+          '<div class="email-meta">' +
+            '<div class="card">' +
+              '<div class="visitor-name">' + escapeHtml(getVisitorName(best)) + '</div>' +
+              '<div class="se-name">SE: ' + escapeHtml(getSeName(best) || "N/A") + '</div>' +
+              '<span class="score-badge ' + scoreClass(getScore(best)) + '">' + getScore(best) + ' / 10</span>' +
+              '<div class="stat-row"><span class="stat-label">Products</span><span class="stat-value">' + getProducts(best).length + '</span></div>' +
+              '<div class="stat-row"><span class="stat-label">Clicks</span><span class="stat-value">' + getClickCount(best) + '</span></div>' +
+            '</div>' +
+            '<div class="card">' +
+              '<div style="font-size:0.85rem;color:#8b949e;margin-bottom:0.5rem;">Key Interests</div>' +
+              (best.summary && best.summary.key_interests
+                ? best.summary.key_interests.map(function (k) {
+                    return '<div style="padding:0.3rem 0;color:#e6edf3;font-size:0.9rem;">' +
+                      escapeHtml(k.topic || k) + '</div>';
+                  }).join("")
+                : '<div style="color:#484f58;">N/A</div>') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    el.innerHTML = html;
+
+    // Load email HTML into iframe after DOM update
+    if (best && best.emailHtml) {
+      setTimeout(function () {
+        var iframe = document.getElementById("email-iframe");
+        if (iframe) {
+          var doc = iframe.contentDocument || iframe.contentWindow.document;
+          doc.open();
+          doc.write(best.emailHtml);
+          doc.close();
+        }
+      }, 50);
+    }
+  }
+
+  // --- Slide 4: Most products demonstrated ---
+  function renderProductsSlide() {
+    var el = document.getElementById("slide-products");
+    var withProducts = allSessions.filter(function (s) { return getProducts(s).length > 0; });
+    withProducts.sort(function (a, b) { return getProducts(b).length - getProducts(a).length; });
+    var winner = withProducts[0] || null;
+
+    var html =
+      '<div class="slide-header">' +
+        '<div class="slide-number">Slide 5 of ' + totalSlides + '</div>' +
+        '<h2>Most Products in One Demo</h2>' +
+        '<div class="subtitle">The session that covered the widest range of capabilities</div>' +
+      '</div>';
+
+    if (!winner) {
+      html += '<div class="no-data"><div class="icon">[--]</div>No product data available</div>';
+    } else {
+      var products = getProducts(winner);
+      html +=
+        '<div class="stat-hero">' +
+          '<div style="text-align:center;">' +
+            '<div class="big-number">' + products.length + '</div>' +
+            '<div class="big-label">Products Demonstrated</div>' +
+          '</div>' +
+          '<div class="hero-detail">' +
+            '<div class="visitor-name">' + escapeHtml(getVisitorName(winner)) + '</div>' +
+            '<div class="detail-text">SE: ' + escapeHtml(getSeName(winner) || "N/A") +
+              '<br>Score: ' + getScore(winner) + '/10' +
+              '<br>Duration: ' + formatDuration(winner.summary ? winner.summary.demo_duration_seconds : 0) +
+            '</div>' +
+            '<div class="products-list" style="margin-top:1.5rem;">' +
+              products.map(function (p) { return '<span class="product-tag" style="font-size:1rem;padding:0.4rem 1rem;">' + escapeHtml(p) + '</span>'; }).join("") +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // --- Slide 5: Longest transcript ---
+  function renderTranscriptSlide() {
+    var el = document.getElementById("slide-transcript");
+    var withTranscript = allSessions.filter(function (s) { return getTranscriptLength(s) > 0; });
+    withTranscript.sort(function (a, b) { return getTranscriptLength(b) - getTranscriptLength(a); });
+    var winner = withTranscript[0] || null;
+
+    var html =
+      '<div class="slide-header">' +
+        '<div class="slide-number">Slide 6 of ' + totalSlides + '</div>' +
+        '<h2>Most Engaged Visitor</h2>' +
+        '<div class="subtitle">Longest conversation -- the visitor who asked the most questions</div>' +
+      '</div>';
+
+    if (!winner) {
+      html += '<div class="no-data"><div class="icon">[--]</div>No transcript data available</div>';
+    } else {
+      var entries = winner.transcript.entries || [];
+      var visitorLines = entries.filter(function (e) { return e.speaker === "Visitor"; });
+      var duration = getTranscriptDuration(winner);
+
+      html +=
+        '<div class="stat-hero">' +
+          '<div style="text-align:center;">' +
+            '<div class="big-number">' + entries.length + '</div>' +
+            '<div class="big-label">Transcript Lines</div>' +
+          '</div>' +
+          '<div class="hero-detail">' +
+            '<div class="visitor-name">' + escapeHtml(getVisitorName(winner)) + '</div>' +
+            '<div class="detail-text">' +
+              'SE: ' + escapeHtml(getSeName(winner) || "N/A") +
+              '<br>Visitor spoke ' + visitorLines.length + ' times' +
+              '<br>Duration: ' + formatDuration(duration) +
+              '<br>Score: ' + getScore(winner) + '/10' +
+            '</div>' +
+            (entries.length > 0
+              ? '<div style="margin-top:1.5rem;max-height:300px;overflow-y:auto;">' +
+                entries.slice(0, 10).map(function (e) {
+                  var isVisitor = e.speaker === "Visitor";
+                  return '<div style="padding:0.4rem 0;border-bottom:1px solid #21262d;">' +
+                    '<span style="color:' + (isVisitor ? "#a371f7" : "#58a6ff") + ';font-weight:600;font-size:0.85rem;">' +
+                      escapeHtml(e.speaker) + '</span> ' +
+                    '<span style="color:#8b949e;font-size:0.75rem;font-family:monospace;">' + escapeHtml(e.timestamp || "") + '</span>' +
+                    '<div style="color:#e6edf3;font-size:0.95rem;margin-top:0.15rem;">' + escapeHtml(e.text) + '</div>' +
+                  '</div>';
+                }).join("") +
+                (entries.length > 10 ? '<div style="color:#484f58;padding:0.5rem 0;font-size:0.85rem;">... and ' + (entries.length - 10) + ' more lines</div>' : '') +
+                '</div>'
+              : '') +
+          '</div>' +
+        '</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // --- Slide 6: Competitive mentions ---
+  function renderCompetitiveSlide() {
+    var el = document.getElementById("slide-competitive");
+    var mentionCounts = {};
+    var mentionSessions = {};
+
+    COMPETITORS.forEach(function (c) {
+      mentionCounts[c] = 0;
+      mentionSessions[c] = [];
+    });
+
+    allSessions.forEach(function (session) {
+      var textBlob = "";
+
+      // Check transcript
+      if (session.transcript && session.transcript.entries) {
+        session.transcript.entries.forEach(function (e) {
+          textBlob += " " + e.text;
+        });
+      }
+
+      // Check summary
+      if (session.summary) {
+        if (session.summary.executive_summary) textBlob += " " + session.summary.executive_summary;
+        if (session.summary.key_interests) {
+          session.summary.key_interests.forEach(function (k) {
+            textBlob += " " + (k.topic || "") + " " + (k.evidence || "");
+          });
+        }
+      }
+
+      var lowerBlob = textBlob.toLowerCase();
+      COMPETITORS.forEach(function (c) {
+        if (lowerBlob.indexOf(c.toLowerCase()) !== -1) {
+          mentionCounts[c]++;
+          mentionSessions[c].push(getVisitorName(session));
+        }
+      });
+    });
+
+    // Sort by count descending, filter to those with mentions
+    var ranked = COMPETITORS
+      .filter(function (c) { return mentionCounts[c] > 0; })
+      .sort(function (a, b) { return mentionCounts[b] - mentionCounts[a]; });
+
+    var maxCount = ranked.length > 0 ? mentionCounts[ranked[0]] : 1;
+
+    var html =
+      '<div class="slide-header">' +
+        '<div class="slide-number">Slide 7 of ' + totalSlides + '</div>' +
+        '<h2>Competitive Landscape</h2>' +
+        '<div class="subtitle">Competitors mentioned by visitors across all sessions</div>' +
+      '</div>';
+
+    if (ranked.length === 0) {
+      html += '<div class="no-data"><div class="icon">[--]</div>No competitive mentions detected</div>';
+    } else {
+      html +=
+        '<div style="flex:1;overflow-y:auto;">' +
+        '<table class="mentions-table">' +
+          '<thead><tr>' +
+            '<th>Competitor</th>' +
+            '<th>Mentions</th>' +
+            '<th>Sessions</th>' +
+          '</tr></thead>' +
+          '<tbody>';
+
+      ranked.forEach(function (c) {
+        var pct = Math.round((mentionCounts[c] / maxCount) * 100);
+        html +=
+          '<tr>' +
+            '<td style="font-weight:600;">' + escapeHtml(c) + '</td>' +
+            '<td>' +
+              '<span class="mention-count">' + mentionCounts[c] + '</span>' +
+              '<div class="mention-bar" style="width:' + pct + '%;"></div>' +
+            '</td>' +
+            '<td style="color:#8b949e;font-size:0.9rem;">' +
+              mentionSessions[c].slice(0, 3).map(escapeHtml).join(", ") +
+              (mentionSessions[c].length > 3 ? " + " + (mentionSessions[c].length - 3) + " more" : "") +
+            '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────
+
+  if (!BoothAuth.requireLogin()) return;
+  loadAllSessions();
+})();
+</script>
+</body>
+</html>
