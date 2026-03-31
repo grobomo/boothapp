@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Session Viewer</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-glow:  rgba(215, 25, 32, .35);
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --blue:      #448AFF;
+            --green:     #00E676;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ---- header ---- */
+        .header {
+            display: flex; align-items: center; gap: 16px;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header .badge {
+            font-size: 11px; padding: 3px 10px; border-radius: 99px;
+            background: rgba(215,25,32,.15); color: var(--red);
+            font-weight: 600; letter-spacing: .5px;
+        }
+        .header .spacer { flex: 1; }
+
+        /* ---- toolbar ---- */
+        .toolbar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            flex-wrap: wrap;
+        }
+        .toolbar label { font-size: 13px; color: var(--text-dim); }
+        .toolbar select, .toolbar input[type="file"] {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: 4px;
+            padding: 6px 10px; font-size: 13px;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 16px; border-radius: 6px; border: none;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: background .15s, box-shadow .15s;
+        }
+        .btn--primary {
+            background: var(--red); color: #fff;
+            box-shadow: 0 0 20px var(--red-glow);
+        }
+        .btn--primary:hover { background: #ff3038; }
+        .btn--secondary {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn--secondary:hover { background: var(--border); }
+        .btn--active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+        /* ---- layout ---- */
+        .main { display: flex; gap: 0; min-height: calc(100vh - 110px); }
+        .sidebar {
+            width: 280px; min-width: 280px;
+            border-right: 1px solid var(--border);
+            background: var(--surface);
+            overflow-y: auto;
+        }
+        .viewer { flex: 1; padding: 24px; overflow: auto; display: flex; flex-direction: column; align-items: center; }
+
+        /* ---- session list ---- */
+        .session-list-title {
+            padding: 14px 16px 10px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+        }
+        .session-item {
+            padding: 10px 16px; cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background .1s;
+        }
+        .session-item:hover { background: var(--surface2); }
+        .session-item.active { background: rgba(215,25,32,.08); border-left: 3px solid var(--red); }
+        .session-item .name { font-size: 14px; font-weight: 600; }
+        .session-item .meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+        /* ---- canvas area ---- */
+        .canvas-wrap {
+            position: relative; display: inline-block;
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0,0,0,.5);
+            border: 1px solid var(--border);
+        }
+
+        /* ---- stats row ---- */
+        .stats {
+            display: flex; gap: 24px; margin-top: 16px;
+            font-size: 13px; color: var(--text-dim);
+        }
+        .stats strong { color: var(--text); }
+
+        /* ---- click table ---- */
+        .click-table-wrap {
+            margin-top: 24px; width: 100%; max-width: 900px;
+        }
+        .click-table-wrap h3 {
+            font-size: 14px; margin-bottom: 8px;
+        }
+        table.clicks {
+            width: 100%; border-collapse: collapse;
+            font-size: 12px;
+        }
+        table.clicks th {
+            text-align: left; padding: 6px 10px;
+            background: var(--surface2); color: var(--text-dim);
+            font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+            border-bottom: 1px solid var(--border);
+        }
+        table.clicks td {
+            padding: 5px 10px; border-bottom: 1px solid var(--border);
+            max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        table.clicks tr:hover td { background: var(--surface2); }
+
+        /* ---- empty state ---- */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 12px; height: 400px;
+            color: var(--text-dim); font-size: 14px;
+        }
+        .empty-state .icon { font-size: 48px; opacity: .3; }
+    </style>
+</head>
+<body>
+
+<!-- ============================================================ HEADER -->
+<div class="header">
+    <h1>BoothApp Session Viewer</h1>
+    <span class="badge">HEATMAP</span>
+    <div class="spacer"></div>
+    <button class="btn btn--secondary" onclick="loadDemoData()">Load Demo Data</button>
+    <label class="btn btn--secondary" style="cursor:pointer">
+        Import JSON
+        <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleFileImport(event)">
+    </label>
+</div>
+
+<!-- ============================================================ TOOLBAR -->
+<div class="toolbar">
+    <label>Session:</label>
+    <select id="sessionSelect" onchange="onSessionChange()"></select>
+
+    <label style="margin-left:16px">Screenshot:</label>
+    <select id="screenshotSelect" onchange="onScreenshotChange()"></select>
+
+    <div style="flex:1"></div>
+
+    <button class="btn btn--primary" id="toggleHeatmap" onclick="toggleHeatmap()">
+        Heatmap: ON
+    </button>
+    <button class="btn btn--secondary" id="toggleAggregate" onclick="toggleAggregate()">
+        Aggregate: OFF
+    </button>
+</div>
+
+<!-- ============================================================ MAIN -->
+<div class="main">
+    <!-- sidebar: session list -->
+    <div class="sidebar">
+        <div class="session-list-title">Sessions</div>
+        <div id="sessionList">
+            <div class="empty-state" style="height:200px">
+                <div style="font-size:12px">No sessions loaded</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- viewer -->
+    <div class="viewer">
+        <div class="canvas-wrap" id="canvasWrap">
+            <!-- heatmap component mounts here -->
+        </div>
+
+        <div class="stats" id="statsRow">
+            <span>Clicks: <strong id="statClicks">0</strong></span>
+            <span>URLs visited: <strong id="statUrls">0</strong></span>
+            <span>Duration: <strong id="statDuration">--</strong></span>
+            <span>Mode: <strong id="statMode">Single</strong></span>
+        </div>
+
+        <div class="click-table-wrap" id="clickTableWrap" style="display:none">
+            <h3>Click Events</h3>
+            <table class="clicks">
+                <thead>
+                    <tr><th>#</th><th>Time</th><th>X</th><th>Y</th><th>Element</th><th>URL</th></tr>
+                </thead>
+                <tbody id="clickTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ SCRIPTS -->
+<script src="components/heatmap.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    // ---------------------------------------------------------- state
+    var sessions = [];       // [{id, name, clicks, screenshots}]
+    var activeIdx = -1;
+    var heatmap = null;
+    var isAggregate = false;
+
+    window._state = { sessions: sessions }; // expose for debugging
+
+    // ------------------------------------------------- initialization
+    function init() {
+        heatmap = new BoothHeatmap(document.getElementById('canvasWrap'), {
+            width: 900,
+            height: 506   // 16:9
+        });
+    }
+
+    // ------------------------------------------------ demo data loader
+    window.loadDemoData = function () {
+        sessions = generateDemoSessions(5);
+        rebuildUI();
+        selectSession(0);
+    };
+
+    // ------------------------------------------------ file import
+    window.handleFileImport = function (evt) {
+        var file = evt.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                var data = JSON.parse(e.target.result);
+                importData(data);
+            } catch (err) {
+                alert('Invalid JSON: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    function importData(data) {
+        // Support: single clicks array, or {sessions: [...]}
+        if (Array.isArray(data)) {
+            sessions.push({ id: 'import-' + Date.now(), name: 'Imported Session', clicks: data, screenshots: [] });
+        } else if (data.sessions) {
+            for (var i = 0; i < data.sessions.length; i++) {
+                sessions.push(data.sessions[i]);
+            }
+        } else if (data.clicks) {
+            sessions.push({ id: data.id || 'import-' + Date.now(), name: data.name || 'Imported', clicks: data.clicks, screenshots: data.screenshots || [] });
+        }
+        rebuildUI();
+        selectSession(sessions.length - 1);
+    }
+
+    // ------------------------------------------------ session selection
+    window.onSessionChange = function () {
+        var idx = parseInt(document.getElementById('sessionSelect').value, 10);
+        selectSession(idx);
+    };
+
+    window.onScreenshotChange = function () {
+        var src = document.getElementById('screenshotSelect').value;
+        if (src && heatmap) {
+            heatmap.setScreenshot(src, function () { heatmap.render(); });
+        }
+    };
+
+    function selectSession(idx) {
+        if (idx < 0 || idx >= sessions.length) return;
+        activeIdx = idx;
+
+        var sess = sessions[idx];
+        heatmap.setClicks(sess.clicks);
+
+        // Load first screenshot (or placeholder)
+        var ssSelect = document.getElementById('screenshotSelect');
+        ssSelect.innerHTML = '';
+        if (sess.screenshots && sess.screenshots.length) {
+            for (var i = 0; i < sess.screenshots.length; i++) {
+                var opt = document.createElement('option');
+                opt.value = sess.screenshots[i];
+                opt.textContent = 'Screenshot ' + (i + 1);
+                ssSelect.appendChild(opt);
+            }
+            heatmap.setScreenshot(sess.screenshots[0], function () { heatmap.render(); });
+        } else {
+            // Use generated placeholder
+            heatmap.setScreenshot('', function () { heatmap.render(); });
+            heatmap.render();
+        }
+
+        // Feed aggregate data
+        heatmap.clearSessions();
+        for (var s = 0; s < sessions.length; s++) {
+            heatmap.addSession(sessions[s].clicks);
+        }
+
+        updateStats(sess);
+        updateClickTable(sess.clicks);
+        highlightSessionItem(idx);
+    }
+
+    // ------------------------------------------------ heatmap controls
+    window.toggleHeatmap = function () {
+        heatmap.toggle();
+        var btn = document.getElementById('toggleHeatmap');
+        btn.textContent = 'Heatmap: ' + (heatmap.isVisible() ? 'ON' : 'OFF');
+        btn.className = heatmap.isVisible() ? 'btn btn--primary' : 'btn btn--secondary';
+    };
+
+    window.toggleAggregate = function () {
+        isAggregate = !isAggregate;
+        heatmap.setMode(isAggregate ? 'aggregate' : 'single');
+        heatmap.render();
+
+        var btn = document.getElementById('toggleAggregate');
+        btn.textContent = 'Aggregate: ' + (isAggregate ? 'ON' : 'OFF');
+        btn.className = isAggregate ? 'btn btn--active' : 'btn btn--secondary';
+        document.getElementById('statMode').textContent = isAggregate ? 'Aggregate' : 'Single';
+    };
+
+    // ------------------------------------------------ UI updates
+    function rebuildUI() {
+        // Session dropdown
+        var sel = document.getElementById('sessionSelect');
+        sel.innerHTML = '';
+        for (var i = 0; i < sessions.length; i++) {
+            var o = document.createElement('option');
+            o.value = i;
+            o.textContent = sessions[i].name || ('Session ' + (i + 1));
+            sel.appendChild(o);
+        }
+
+        // Sidebar list
+        var list = document.getElementById('sessionList');
+        list.innerHTML = '';
+        for (var j = 0; j < sessions.length; j++) {
+            var div = document.createElement('div');
+            div.className = 'session-item';
+            div.setAttribute('data-idx', j);
+            div.onclick = (function (idx) { return function () { selectSession(idx); }; })(j);
+            div.innerHTML =
+                '<div class="name">' + esc(sessions[j].name || 'Session ' + (j + 1)) + '</div>' +
+                '<div class="meta">' + sessions[j].clicks.length + ' clicks</div>';
+            list.appendChild(div);
+        }
+    }
+
+    function highlightSessionItem(idx) {
+        var items = document.querySelectorAll('.session-item');
+        for (var i = 0; i < items.length; i++) {
+            items[i].className = 'session-item' + (parseInt(items[i].getAttribute('data-idx'), 10) === idx ? ' active' : '');
+        }
+        document.getElementById('sessionSelect').value = idx;
+    }
+
+    function updateStats(sess) {
+        document.getElementById('statClicks').textContent = sess.clicks.length;
+        var urls = {};
+        for (var i = 0; i < sess.clicks.length; i++) {
+            if (sess.clicks[i].url) urls[sess.clicks[i].url] = 1;
+        }
+        document.getElementById('statUrls').textContent = Object.keys(urls).length;
+
+        if (sess.clicks.length > 1) {
+            var first = sess.clicks[0].timestamp;
+            var last = sess.clicks[sess.clicks.length - 1].timestamp;
+            var sec = Math.round((last - first) / 1000);
+            var min = Math.floor(sec / 60);
+            document.getElementById('statDuration').textContent = min + 'm ' + (sec % 60) + 's';
+        } else {
+            document.getElementById('statDuration').textContent = '--';
+        }
+    }
+
+    function updateClickTable(clicks) {
+        var wrap = document.getElementById('clickTableWrap');
+        var tbody = document.getElementById('clickTableBody');
+        tbody.innerHTML = '';
+
+        if (!clicks.length) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'block';
+
+        var baseTs = clicks[0].timestamp;
+        for (var i = 0; i < clicks.length; i++) {
+            var c = clicks[i];
+            var elapsed = ((c.timestamp - baseTs) / 1000).toFixed(1);
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + (i + 1) + '</td>' +
+                '<td>' + elapsed + 's</td>' +
+                '<td>' + (c.x || 0) + '</td>' +
+                '<td>' + (c.y || 0) + '</td>' +
+                '<td>' + esc(c.element || '--') + '</td>' +
+                '<td>' + esc(c.url || '--') + '</td>';
+            tbody.appendChild(tr);
+        }
+    }
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // ------------------------------------------------ demo data generator
+    function generateDemoSessions(count) {
+        var products = [
+            'Vision One XDR', 'Cloud Security', 'Zero Trust Secure Access',
+            'Endpoint Security', 'Email Security', 'Network Defense'
+        ];
+        var elements = [
+            'button.demo-start', 'a.product-link', 'div.feature-card',
+            'button.learn-more', 'input.search-box', 'nav.sidebar-item',
+            'div.chart-area', 'button.export-btn', 'a.documentation-link',
+            'div.dashboard-widget', 'button.filter-toggle', 'span.alert-badge'
+        ];
+        var names = [
+            'Sarah Chen - Acme Financial', 'Mike Rodriguez - TechGlobal',
+            'Priya Sharma - HealthFirst', 'James Wilson - RetailCorp',
+            'Aiko Tanaka - CloudNative Inc'
+        ];
+
+        var result = [];
+        for (var s = 0; s < count; s++) {
+            var clickCount = 20 + Math.floor(Math.random() * 60);
+            var clicks = [];
+            var baseTs = Date.now() - (count - s) * 1800000;
+
+            // Generate clusters (people tend to click in specific regions)
+            var clusters = [];
+            var numClusters = 2 + Math.floor(Math.random() * 4);
+            for (var c = 0; c < numClusters; c++) {
+                clusters.push({
+                    cx: 100 + Math.random() * 700,
+                    cy: 80 + Math.random() * 350,
+                    spread: 30 + Math.random() * 60
+                });
+            }
+
+            for (var i = 0; i < clickCount; i++) {
+                var cluster = clusters[Math.floor(Math.random() * clusters.length)];
+                clicks.push({
+                    timestamp: baseTs + i * (1000 + Math.random() * 4000),
+                    x: Math.round(cluster.cx + (Math.random() - 0.5) * cluster.spread * 2),
+                    y: Math.round(cluster.cy + (Math.random() - 0.5) * cluster.spread * 2),
+                    element: elements[Math.floor(Math.random() * elements.length)],
+                    url: 'https://app.example.com/' + products[Math.floor(Math.random() * products.length)].toLowerCase().replace(/ /g, '-')
+                });
+            }
+
+            result.push({
+                id: 'session-' + (s + 1),
+                name: names[s] || 'Session ' + (s + 1),
+                clicks: clicks,
+                screenshots: []  // demo mode uses placeholder grid
+            });
+        }
+        return result;
+    }
+
+    // ------------------------------------------------ boot
+    init();
+})();
+</script>
+</body>
+</html>
