@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Presenter Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e4e4e7;
+    --text-muted: #71717a;
+    --accent: #3b82f6;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --orange: #f97316;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dashboard {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* --- Header --- */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+  }
+  .header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .session-id {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: monospace;
+  }
+
+  /* --- Status Banner --- */
+  .status-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-recording .status-dot { background: var(--red); animation: pulse 1.5s infinite; }
+  .status-recording { border-color: var(--red); }
+  .status-processing .status-dot { background: var(--yellow); animation: pulse 1s infinite; }
+  .status-processing { border-color: var(--yellow); }
+  .status-complete .status-dot { background: var(--green); }
+  .status-complete { border-color: var(--green); }
+  .status-idle .status-dot { background: var(--text-muted); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* --- Metric Cards --- */
+  .metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .metric-value.clicks { color: var(--accent); }
+  .metric-value.timer { color: var(--text); }
+
+  /* --- Audio Level --- */
+  .audio-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .audio-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .audio-bar-track {
+    width: 100%;
+    height: 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .audio-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--green) 0%, var(--yellow) 60%, var(--red) 100%);
+    transition: width 0.3s ease;
+  }
+
+  /* --- Stop Button --- */
+  .stop-btn {
+    display: block;
+    width: 100%;
+    padding: 22px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    background: var(--red);
+    color: #fff;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .stop-btn:active { transform: scale(0.97); opacity: 0.85; }
+  .stop-btn:disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+    opacity: 1;
+  }
+
+  /* --- Results Panel (shown on complete) --- */
+  .results-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--green);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .results-panel.visible { display: block; }
+  .results-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--green);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .engagement-score {
+    font-size: 3rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .engagement-label {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+  .products-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .product-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 1rem;
+  }
+  .product-item:last-child { border-bottom: none; }
+  .product-rank {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* --- Polling indicator --- */
+  .poll-indicator {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 8px 0;
+  }
+  .poll-indicator .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .poll-indicator .dot.stale { background: var(--yellow); }
+  .poll-indicator .dot.error { background: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <h1>Presenter Dashboard</h1>
+    <span class="session-id" id="sessionId">--</span>
+  </div>
+
+  <!-- Status Banner -->
+  <div class="status-banner status-idle" id="statusBanner">
+    <span class="status-dot"></span>
+    <span id="statusText">Waiting for session...</span>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric-card">
+      <div class="metric-label">Clicks</div>
+      <div class="metric-value clicks" id="clickCount">0</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Elapsed</div>
+      <div class="metric-value timer" id="elapsedTime">00:00</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Status</div>
+      <div class="metric-value" id="statusShort" style="font-size:1rem;color:var(--text-muted)">IDLE</div>
+    </div>
+  </div>
+
+  <!-- Audio Level -->
+  <div class="audio-section">
+    <div class="audio-label">Audio Level</div>
+    <div class="audio-bar-track">
+      <div class="audio-bar-fill" id="audioBar"></div>
+    </div>
+  </div>
+
+  <!-- Stop Button -->
+  <button class="stop-btn" id="stopBtn" onclick="stopSession()">STOP SESSION</button>
+
+  <!-- Results (hidden until complete) -->
+  <div class="results-panel" id="resultsPanel">
+    <div class="results-title">Session Complete</div>
+    <div class="engagement-score" id="engagementScore">--</div>
+    <div class="engagement-label">Engagement Score</div>
+    <div class="products-title">Top Products Demonstrated</div>
+    <div id="productsList"></div>
+  </div>
+
+  <!-- Polling Indicator -->
+  <div class="poll-indicator">
+    <span class="dot" id="pollDot"></span>
+    <span id="pollText">Polling every 5s</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  // ---- Configuration ----
+  // Pass as URL params: ?session_id=xxx&bucket=yyy&region=zzz&api_base=https://...
+  var params = new URLSearchParams(window.location.search);
+  var SESSION_ID  = params.get("session_id") || "";
+  var S3_BUCKET   = params.get("bucket") || "";
+  var S3_REGION   = params.get("region") || "us-east-1";
+  var POLL_INTERVAL = 5000;
+  var API_BASE    = params.get("api_base") || "";
+
+  // ---- DOM refs ----
+  var elSessionId     = document.getElementById("sessionId");
+  var elStatusBanner  = document.getElementById("statusBanner");
+  var elStatusText    = document.getElementById("statusText");
+  var elStatusShort   = document.getElementById("statusShort");
+  var elClickCount    = document.getElementById("clickCount");
+  var elElapsedTime   = document.getElementById("elapsedTime");
+  var elAudioBar      = document.getElementById("audioBar");
+  var elStopBtn       = document.getElementById("stopBtn");
+  var elResultsPanel  = document.getElementById("resultsPanel");
+  var elEngagement    = document.getElementById("engagementScore");
+  var elProductsList  = document.getElementById("productsList");
+  var elPollDot       = document.getElementById("pollDot");
+  var elPollText      = document.getElementById("pollText");
+
+  // ---- State ----
+  var sessionStatus = "idle";
+  var startTime     = null;
+  var timerInterval = null;
+  var pollTimer     = null;
+  var audioSimTimer = null;
+
+  // ---- Init ----
+  elSessionId.textContent = SESSION_ID || "(no session)";
+  if (SESSION_ID) {
+    startPolling();
+  }
+
+  // ---- Elapsed Timer ----
+  function startElapsedTimer() {
+    if (timerInterval) return;
+    startTime = Date.now();
+    timerInterval = setInterval(updateElapsed, 1000);
+    updateElapsed();
+  }
+
+  function stopElapsedTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function updateElapsed() {
+    if (!startTime) return;
+    var secs = Math.floor((Date.now() - startTime) / 1000);
+    var m = Math.floor(secs / 60);
+    var s = secs % 60;
+    elElapsedTime.textContent =
+      (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // ---- Audio Placeholder (simulated bar movement) ----
+  function startAudioSim() {
+    if (audioSimTimer) return;
+    audioSimTimer = setInterval(function() {
+      var level = 20 + Math.random() * 60;
+      elAudioBar.style.width = level + "%";
+    }, 300);
+  }
+
+  function stopAudioSim() {
+    if (audioSimTimer) {
+      clearInterval(audioSimTimer);
+      audioSimTimer = null;
+    }
+    elAudioBar.style.width = "0%";
+  }
+
+  // ---- Status Updates ----
+  function setStatus(status) {
+    if (status === sessionStatus) return;
+    sessionStatus = status;
+
+    elStatusBanner.className = "status-banner status-" + status;
+
+    var labels = {
+      idle: "Waiting for session...",
+      recording: "Recording in progress",
+      processing: "Processing session...",
+      complete: "Session complete"
+    };
+    elStatusText.textContent = labels[status] || status;
+    elStatusShort.textContent = status.toUpperCase();
+
+    var colors = {
+      idle: "var(--text-muted)",
+      recording: "var(--red)",
+      processing: "var(--yellow)",
+      complete: "var(--green)"
+    };
+    elStatusShort.style.color = colors[status] || "var(--text-muted)";
+
+    if (status === "recording") {
+      startElapsedTimer();
+      startAudioSim();
+      elStopBtn.disabled = false;
+    } else if (status === "processing") {
+      stopElapsedTimer();
+      stopAudioSim();
+      elStopBtn.disabled = true;
+    } else if (status === "complete") {
+      stopElapsedTimer();
+      stopAudioSim();
+      elStopBtn.disabled = true;
+      stopPolling();
+      elResultsPanel.classList.add("visible");
+    }
+  }
+
+  // ---- S3 Polling ----
+  function buildStatusUrl() {
+    if (API_BASE) {
+      return API_BASE + "/sessions/" + SESSION_ID + "/status";
+    }
+    if (S3_BUCKET) {
+      return "https://" + S3_BUCKET + ".s3." + S3_REGION +
+        ".amazonaws.com/sessions/" + SESSION_ID + "/status.json";
+    }
+    return "";
+  }
+
+  function poll() {
+    var url = buildStatusUrl();
+    if (!url) {
+      elPollDot.className = "dot stale";
+      elPollText.textContent = "No S3/API configured";
+      return;
+    }
+
+    fetch(url, { cache: "no-store" })
+      .then(function(res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        elPollDot.className = "dot";
+        elPollText.textContent = "Last poll: " + new Date().toLocaleTimeString();
+        applySessionData(data);
+      })
+      .catch(function(err) {
+        elPollDot.className = "dot error";
+        elPollText.textContent = "Poll error: " + err.message;
+      });
+  }
+
+  function applySessionData(data) {
+    // Expected JSON shape from S3:
+    // { status: "recording"|"processing"|"complete",
+    //   click_count: 12,
+    //   elapsed_seconds: 90,
+    //   engagement_score: 87,        (present when complete)
+    //   top_products: ["Apex One", "V1 XDR", "Cloud One"]  (present when complete)
+    // }
+    if (data.status) {
+      setStatus(data.status);
+    }
+    if (typeof data.click_count === "number") {
+      elClickCount.textContent = data.click_count;
+    }
+    if (typeof data.elapsed_seconds === "number" && sessionStatus !== "recording") {
+      var m = Math.floor(data.elapsed_seconds / 60);
+      var s = data.elapsed_seconds % 60;
+      elElapsedTime.textContent =
+        (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    }
+    if (data.status === "complete") {
+      if (typeof data.engagement_score === "number") {
+        elEngagement.textContent = data.engagement_score;
+        if (data.engagement_score >= 80) {
+          elEngagement.style.color = "var(--green)";
+        } else if (data.engagement_score >= 50) {
+          elEngagement.style.color = "var(--yellow)";
+        } else {
+          elEngagement.style.color = "var(--red)";
+        }
+      }
+      if (Array.isArray(data.top_products)) {
+        elProductsList.innerHTML = "";
+        data.top_products.slice(0, 3).forEach(function(name, i) {
+          var item = document.createElement("div");
+          item.className = "product-item";
+          item.innerHTML =
+            '<span class="product-rank">' + (i + 1) + '</span>' +
+            '<span>' + escapeHtml(name) + '</span>';
+          elProductsList.appendChild(item);
+        });
+      }
+    }
+  }
+
+  function startPolling() {
+    poll();
+    pollTimer = setInterval(poll, POLL_INTERVAL);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  // ---- Stop Session ----
+  window.stopSession = function() {
+    if (sessionStatus !== "recording") return;
+
+    elStopBtn.disabled = true;
+    elStopBtn.textContent = "STOPPING...";
+
+    var url = API_BASE
+      ? API_BASE + "/sessions/" + SESSION_ID + "/stop"
+      : "";
+
+    if (url) {
+      fetch(url, { method: "POST" })
+        .then(function(res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          setStatus("processing");
+        })
+        .catch(function() {
+          elStopBtn.textContent = "STOP FAILED - TAP TO RETRY";
+          elStopBtn.disabled = false;
+        });
+    } else {
+      setStatus("processing");
+    }
+  };
+
+  // ---- Utility ----
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  // ---- Demo Mode ----
+  // When no session_id is provided, run an animated demo so the SE can preview the UI
+  if (!SESSION_ID) {
+    elSessionId.textContent = "DEMO-" + Date.now().toString(36).toUpperCase();
+    setStatus("recording");
+    var demoClicks = 0;
+    var demoClickTimer = setInterval(function() {
+      demoClicks += Math.floor(Math.random() * 3);
+      elClickCount.textContent = demoClicks;
+    }, 2000);
+
+    setTimeout(function() {
+      clearInterval(demoClickTimer);
+      setStatus("processing");
+    }, 15000);
+    setTimeout(function() {
+      applySessionData({
+        status: "complete",
+        click_count: demoClicks,
+        elapsed_seconds: 20,
+        engagement_score: 84,
+        top_products: ["Apex One", "Vision One XDR", "Cloud One Conformity"]
+      });
+    }, 20000);
+  }
+
+})();
+</script>
+</body>
+</html>
