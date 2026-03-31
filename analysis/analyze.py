@@ -75,6 +75,10 @@ def write_output(output_dir: str, results: dict):
             key = f"{key_prefix}/{filename}".lstrip("/")
             s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(data, indent=2), ContentType="application/json")
             print(f"  Wrote s3://{bucket}/{key}")
+        if results.get("email_html"):
+            key = f"{key_prefix}/follow-up-email.html".lstrip("/")
+            s3.put_object(Bucket=bucket, Key=key, Body=results["email_html"], ContentType="text/html")
+            print(f"  Wrote s3://{bucket}/{key}")
     else:
         os.makedirs(output_dir, exist_ok=True)
         for filename, data in [("summary.json", results["summary"]), ("follow-up.json", results["follow_up"])]:
@@ -87,6 +91,11 @@ def write_output(output_dir: str, results: dict):
             with open(html_path, "w") as f:
                 f.write(results["html"])
             print(f"  Wrote {html_path}")
+        if results.get("email_html"):
+            email_path = os.path.join(output_dir, "follow-up-email.html")
+            with open(email_path, "w") as f:
+                f.write(results["email_html"])
+            print(f"  Wrote {email_path}")
 
 
 def print_summary(results: dict):

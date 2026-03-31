@@ -15,6 +15,7 @@ from .prompts import (
     RECOMMENDATIONS_PROMPT,
     render_html_report,
 )
+from .email_template import render_follow_up_email
 from .validator import validate_summary_or_raise
 
 MODEL = os.environ.get("ANALYSIS_MODEL", "claude-sonnet-4-6")
@@ -91,10 +92,12 @@ class SessionAnalyzer:
         validate_summary_or_raise(summary)
         follow_up = self._build_follow_up_json(recommendations)
         html = render_html_report(summary, follow_up, factual)
+        email_html = render_follow_up_email(summary, follow_up, self._metadata)
         return {
             "summary": summary,
             "follow_up": follow_up,
             "html": html,
+            "email_html": email_html,
         }
 
     def _build_fallback_result(self, error_msg: str) -> dict:
