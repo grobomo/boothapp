@@ -517,6 +517,9 @@
         </div>
     </header>
 
+    <!-- ============ SEARCH ============ -->
+    <div id="search-mount"></div>
+
     <!-- ============ STATUS CARDS ============ -->
     <div class="cards">
         <div class="card card--sessions">
@@ -944,6 +947,11 @@
     setInterval(tickCountdown, 1000);
 
 })();
+</script>
+
+<script src="components/search.js"></script>
+<script>
+    new BoothSearch({ container: '#search-mount' });
 </script>
 
 </body>
