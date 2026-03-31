@@ -20,7 +20,7 @@
             --surface2:  #151920;
             --border:    #1E2330;
             --text:      #F0F2F5;
-            --text-dim:  #6B7385;
+            --text-dim:  #8B93A5;
             --success:   #00E676;
             --blue:      #448AFF;
             --amber:     #FFAB00;
@@ -487,58 +487,90 @@
             .logo-text { font-size: 36px; }
             .tagline { font-size: 14px; letter-spacing: 3px; }
         }
+
+        /* ============================================================
+           ACCESSIBILITY
+           ============================================================ */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--red);
+            color: #fff;
+            padding: 8px 24px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            z-index: 1000;
+            transition: top .2s;
+        }
+        .skip-link:focus {
+            top: 0;
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+
+        *:focus-visible {
+            outline: 2px solid var(--red);
+            outline-offset: 2px;
+        }
     </style>
 </head>
 <body>
 
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <!-- Particle background -->
-<canvas id="particles"></canvas>
+<canvas id="particles" aria-hidden="true"></canvas>
 
 <!-- Animated background layers -->
-<div class="bg-grid"></div>
-<div class="bg-glow bg-glow--1"></div>
-<div class="bg-glow bg-glow--2"></div>
-<div class="bg-glow bg-glow--3"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-glow bg-glow--1" aria-hidden="true"></div>
+<div class="bg-glow bg-glow--2" aria-hidden="true"></div>
+<div class="bg-glow bg-glow--3" aria-hidden="true"></div>
 
 <div class="container">
 
     <!-- ============ HEADER ============ -->
     <header class="header">
         <div class="logo-mark">
-            <div class="logo-icon">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            <div class="logo-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img" aria-label="BoothApp logo"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
             </div>
             <span class="logo-text">BoothApp</span>
         </div>
         <p class="tagline">AI-Powered Trade Show Demo Capture</p>
-        <div class="live-badge">
-            <span class="live-dot"></span>
+        <div class="live-badge" role="status" aria-live="polite" aria-label="Dashboard is live">
+            <span class="live-dot" aria-hidden="true"></span>
             Live Dashboard
         </div>
     </header>
 
     <!-- ============ STATUS CARDS ============ -->
-    <div class="cards">
-        <div class="card card--sessions">
-            <div class="card-icon">
-                <svg viewBox="0 0 24 24" fill="#D71920"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    <main id="main-content">
+    <div class="cards" role="region" aria-label="Dashboard statistics">
+        <div class="card card--sessions" role="group" aria-label="Active sessions count">
+            <div class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="#D71920"><title>Sessions icon</title><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
             </div>
-            <div class="card-value" id="activeSessions">0</div>
-            <div class="card-label">Active Sessions</div>
+            <div class="card-value" id="activeSessions" aria-live="polite">0</div>
+            <div class="card-label" id="label-sessions">Active Sessions</div>
         </div>
-        <div class="card card--demos">
-            <div class="card-icon">
-                <svg viewBox="0 0 24 24" fill="#448AFF"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+        <div class="card card--demos" role="group" aria-label="Total demos count">
+            <div class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="#448AFF"><title>Demos icon</title><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
             </div>
-            <div class="card-value" id="totalDemos">0</div>
-            <div class="card-label">Total Demos</div>
+            <div class="card-value" id="totalDemos" aria-live="polite">0</div>
+            <div class="card-label" id="label-demos">Total Demos</div>
         </div>
-        <div class="card card--reports">
-            <div class="card-icon">
-                <svg viewBox="0 0 24 24" fill="#00E676"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <div class="card card--reports" role="group" aria-label="Reports generated count">
+            <div class="card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="#00E676"><title>Reports icon</title><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
-            <div class="card-value" id="reportsGenerated">0</div>
-            <div class="card-label">Reports Generated</div>
+            <div class="card-value" id="reportsGenerated" aria-live="polite">0</div>
+            <div class="card-label" id="label-reports">Reports Generated</div>
         </div>
     </div>
 
@@ -546,28 +578,28 @@
     <div class="content-grid">
 
         <!-- Activity Feed -->
-        <section class="feed-section">
+        <section class="feed-section" aria-label="Live activity feed">
             <div class="feed-header">
-                <div class="feed-title">
-                    <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                <h2 class="feed-title">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
                     Live Activity
-                </div>
-                <div class="feed-refresh" id="refreshTimer">Refreshing in 5s</div>
+                </h2>
+                <div class="feed-refresh" id="refreshTimer" aria-live="off" aria-label="Auto-refresh countdown">Refreshing in 5s</div>
             </div>
-            <ul class="feed-list" id="feedList"></ul>
+            <ul class="feed-list" id="feedList" aria-live="polite" aria-relevant="additions"></ul>
         </section>
 
         <!-- Side Panel -->
         <div class="side-panel">
 
             <!-- Conversion Ring Chart -->
-            <div class="panel-box">
-                <div class="panel-box-title">
-                    <svg viewBox="0 0 24 24" fill="var(--text-dim)"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2 0v9h9c-.47-4.68-4.32-8.53-9-9zm0 11v9c4.68-.47 8.53-4.32 9-9h-9z"/></svg>
+            <div class="panel-box" role="region" aria-label="Pipeline breakdown">
+                <h2 class="panel-box-title">
+                    <svg viewBox="0 0 24 24" fill="var(--text-dim)" aria-hidden="true"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2 0v9h9c-.47-4.68-4.32-8.53-9-9zm0 11v9c4.68-.47 8.53-4.32 9-9h-9z"/></svg>
                     Pipeline
-                </div>
+                </h2>
                 <div class="ring-chart">
-                    <svg viewBox="0 0 160 160" id="ringChart">
+                    <svg viewBox="0 0 160 160" id="ringChart" role="img" aria-label="Pipeline ring chart showing sessions, demos, and reports proportions">
                         <circle cx="80" cy="80" r="60" fill="none" stroke="var(--surface2)" stroke-width="14"/>
                         <circle cx="80" cy="80" r="60" fill="none" stroke="var(--red)" stroke-width="14"
                                 stroke-dasharray="0 377" stroke-linecap="round" transform="rotate(-90 80 80)"
@@ -601,23 +633,25 @@
             </div>
 
             <!-- Top Products -->
-            <div class="panel-box">
-                <div class="panel-box-title">
-                    <svg viewBox="0 0 24 24" fill="var(--text-dim)"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+            <div class="panel-box" role="region" aria-label="Top products by demo count">
+                <h2 class="panel-box-title">
+                    <svg viewBox="0 0 24 24" fill="var(--text-dim)" aria-hidden="true"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
                     Top Products
-                </div>
+                </h2>
                 <div class="product-list" id="productList"></div>
             </div>
 
         </div>
     </div>
 
+    </main>
+
     <!-- ============ FOOTER ============ -->
-    <div class="footer">
+    <footer class="footer" role="contentinfo">
         <span>Powered by Trend Micro Vision One</span>
-        <span>|</span>
-        <span id="clock"></span>
-    </div>
+        <span aria-hidden="true">|</span>
+        <span id="clock" aria-label="Current time"></span>
+    </footer>
 
 </div>
 
@@ -859,7 +893,7 @@
             var li = document.createElement('li');
             li.className = 'feed-item';
             li.innerHTML =
-                '<span class="feed-dot feed-dot--' + ev.type + '"></span>' +
+                '<span class="feed-dot feed-dot--' + ev.type + '" aria-hidden="true"></span>' +
                 '<div class="feed-content">' +
                     '<div class="feed-text">' + ev.text + '</div>' +
                     '<div class="feed-time">' + timeAgo(ev.ts) + '</div>' +
