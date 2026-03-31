@@ -4,12 +4,16 @@
   "description": "Presenter dashboard server for BoothApp",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node test-endpoints.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "express-rate-limit": "^7.4.0",
     "helmet": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

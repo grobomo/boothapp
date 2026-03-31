@@ -3,9 +3,27 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
+
+// Load .env if present (simple key=value parser, no extra dependency)
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf-8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq > 0) {
+      const key = trimmed.slice(0, eq).trim();
+      const val = trimmed.slice(eq + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
+  }
+}
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
+const S3_BUCKET = process.env.S3_BUCKET || 'boothapp-sessions-752266476357';
+const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 const startTime = Date.now();
 
 // --- CORS ---
@@ -18,7 +36,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin(origin, cb) {
-    // Allow requests with no origin (curl, server-to-server)
     if (!origin) return cb(null, true);
     const allowed = allowedOrigins.some(o =>
       o instanceof RegExp ? o.test(origin) : o === origin
@@ -61,11 +78,34 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// --- Config endpoint ---
+app.get('/api/config', (req, res) => {
+  res.json({
+    s3_bucket: S3_BUCKET,
+    aws_region: AWS_REGION,
+    port: PORT,
+    node_version: process.version
+  });
+});
+
+// --- Pages endpoint ---
+app.get('/api/pages', (req, res) => {
+  const htmlFiles = fs
+    .readdirSync(__dirname)
+    .filter(f => f.endsWith('.html'))
+    .map(f => ({
+      name: f.replace('.html', ''),
+      path: '/' + f
+    }));
+  res.json({ pages: htmlFiles });
+});
+
 // --- Static files ---
 app.use(express.static(path.join(__dirname)));
 
 app.listen(PORT, () => {
-  console.log(`Presenter server listening on port ${PORT}`);
+  console.log(`[presenter] listening on port ${PORT}`);
+  console.log(`[presenter] S3_BUCKET=${S3_BUCKET} AWS_REGION=${AWS_REGION}`);
 });
 
 module.exports = app;
