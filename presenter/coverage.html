@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoothApp - Product Coverage Map</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --red:       #D71920;
+            --red-dark:  #A8131A;
+            --bg:        #06080C;
+            --surface:   #0E1118;
+            --surface2:  #151920;
+            --border:    #1E2330;
+            --text:      #F0F2F5;
+            --text-dim:  #6B7385;
+            --success:   #00E676;
+            --amber:     #FFAB00;
+            --blue:      #448AFF;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--red), #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .header a:hover { color: var(--text); }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Coverage Matrix */
+        .matrix {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .matrix thead th {
+            background: var(--surface2);
+            padding: 0.75rem 1rem;
+            text-align: center;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .matrix thead th:first-child {
+            text-align: left;
+            width: 160px;
+        }
+
+        .matrix tbody td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .matrix tbody td:first-child {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .matrix tbody tr:last-child td { border-bottom: none; }
+        .matrix tbody tr:hover { background: var(--surface2); }
+
+        /* Signal indicators */
+        .signal-yes {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--success);
+            line-height: 24px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .signal-no {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: rgba(107, 115, 133, 0.1);
+            color: var(--text-dim);
+            line-height: 24px;
+            font-size: 0.75rem;
+        }
+
+        /* Interest heatmap cells */
+        .interest-high {
+            background: rgba(215, 25, 32, 0.25);
+            color: #FF6B6B;
+            font-weight: 700;
+        }
+        .interest-medium {
+            background: rgba(255, 171, 0, 0.2);
+            color: var(--amber);
+            font-weight: 600;
+        }
+        .interest-low {
+            background: rgba(68, 138, 255, 0.15);
+            color: var(--blue);
+        }
+        .interest-none {
+            color: var(--text-dim);
+        }
+
+        /* Follow-up relevance badges */
+        .relevance {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .relevance-high   { background: rgba(215, 25, 32, 0.2); color: #FF6B6B; }
+        .relevance-medium { background: rgba(255, 171, 0, 0.15); color: var(--amber); }
+        .relevance-low    { background: rgba(107, 115, 133, 0.15); color: var(--text-dim); }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-wrap: wrap;
+        }
+
+        .legend-group { display: flex; align-items: center; gap: 0.5rem; }
+        .legend-swatch {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        /* Stats row */
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .stats-bar .val { color: var(--text); font-weight: 600; }
+
+        /* Heatmap mini-bar */
+        .heat-bar {
+            display: flex;
+            gap: 3px;
+            margin-top: 1.5rem;
+        }
+        .heat-cell {
+            flex: 1;
+            height: 36px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            cursor: default;
+            transition: transform 0.15s;
+        }
+        .heat-cell:hover { transform: scaleY(1.15); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Product Coverage Map</h1>
+        <a href="/sessions.html">&larr; Sessions</a>
+        <a href="/demo.html">&larr; Dashboard</a>
+    </div>
+
+    <p class="subtitle">Vision One module coverage analysis -- transcript mentions, UI clicks, interest signals, and follow-up priority.</p>
+
+    <div class="stats-bar" id="stats-bar">
+        <span>Products Covered: <span class="val" id="stat-covered">--</span> / <span id="stat-total">10</span></span>
+        <span>High Interest: <span class="val" id="stat-high">--</span></span>
+        <span>Follow-up Items: <span class="val" id="stat-followup">--</span></span>
+    </div>
+
+    <table class="matrix" id="coverage-matrix">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Mentioned</th>
+                <th>Clicked</th>
+                <th>Interest Level</th>
+                <th>Follow-up</th>
+            </tr>
+        </thead>
+        <tbody id="matrix-body">
+        </tbody>
+    </table>
+
+    <div class="heat-bar" id="heat-bar"></div>
+
+    <div class="legend">
+        <div class="legend-group">
+            <span class="legend-swatch" style="background:rgba(215,25,32,0.25)"></span> High Interest
+        </div>
+        <div class="legend-group">
+            <span class="legend-swatch" style="background:rgba(255,171,0,0.2)"></span> Medium Interest
+        </div>
+        <div class="legend-group">
+            <span class="legend-swatch" style="background:rgba(68,138,255,0.15)"></span> Low Interest
+        </div>
+        <div class="legend-group">
+            <span class="legend-swatch" style="background:rgba(107,115,133,0.1)"></span> Not Covered
+        </div>
+    </div>
+
+    <script>
+    // -----------------------------------------------------------------------
+    // Demo data -- replace with real coverage matrix from API/correlator
+    // -----------------------------------------------------------------------
+    var DEMO_COVERAGE = [
+        { product: 'XDR',            mentioned: true,  clicked: true,  interestLevel: 'high',   followUpRelevance: 'high' },
+        { product: 'Endpoint',       mentioned: true,  clicked: true,  interestLevel: 'high',   followUpRelevance: 'high' },
+        { product: 'Email',          mentioned: true,  clicked: false, interestLevel: 'low',    followUpRelevance: 'low' },
+        { product: 'Network',        mentioned: false, clicked: false, interestLevel: 'none',   followUpRelevance: 'low' },
+        { product: 'Cloud',          mentioned: true,  clicked: true,  interestLevel: 'medium', followUpRelevance: 'medium' },
+        { product: 'Risk Insights',  mentioned: true,  clicked: false, interestLevel: 'medium', followUpRelevance: 'medium' },
+        { product: 'Workbench',      mentioned: false, clicked: true,  interestLevel: 'low',    followUpRelevance: 'low' },
+        { product: 'Threat Intel',   mentioned: false, clicked: false, interestLevel: 'none',   followUpRelevance: 'low' },
+        { product: 'ASRM',           mentioned: true,  clicked: true,  interestLevel: 'high',   followUpRelevance: 'high' },
+        { product: 'Zero Trust',     mentioned: false, clicked: false, interestLevel: 'none',   followUpRelevance: 'low' },
+    ];
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function signalCell(val) {
+        return val
+            ? '<span class="signal-yes">&#10003;</span>'
+            : '<span class="signal-no">&mdash;</span>';
+    }
+
+    function interestCell(level) {
+        var cls = 'interest-' + level;
+        return '<td class="' + cls + '">' + escHtml(level) + '</td>';
+    }
+
+    function relevanceCell(level) {
+        return '<span class="relevance relevance-' + level + '">' + escHtml(level) + '</span>';
+    }
+
+    function render(data) {
+        var tbody = document.getElementById('matrix-body');
+        tbody.innerHTML = data.map(function(row) {
+            return '<tr>' +
+                '<td>' + escHtml(row.product) + '</td>' +
+                '<td>' + signalCell(row.mentioned) + '</td>' +
+                '<td>' + signalCell(row.clicked) + '</td>' +
+                interestCell(row.interestLevel) +
+                '<td>' + relevanceCell(row.followUpRelevance) + '</td>' +
+                '</tr>';
+        }).join('');
+
+        // Stats
+        var covered = data.filter(function(r) { return r.interestLevel !== 'none'; }).length;
+        var highCount = data.filter(function(r) { return r.interestLevel === 'high'; }).length;
+        var followUp = data.filter(function(r) { return r.followUpRelevance === 'high' || r.followUpRelevance === 'medium'; }).length;
+        document.getElementById('stat-covered').textContent = covered;
+        document.getElementById('stat-high').textContent = highCount;
+        document.getElementById('stat-followup').textContent = followUp;
+
+        // Heatmap bar
+        var heatColors = {
+            high:   'rgba(215, 25, 32, 0.35)',
+            medium: 'rgba(255, 171, 0, 0.25)',
+            low:    'rgba(68, 138, 255, 0.2)',
+            none:   'rgba(107, 115, 133, 0.08)',
+        };
+        var heatText = {
+            high:   '#FF6B6B',
+            medium: '#FFAB00',
+            low:    '#448AFF',
+            none:   '#3A3F4B',
+        };
+        var heatBar = document.getElementById('heat-bar');
+        heatBar.innerHTML = data.map(function(row) {
+            return '<div class="heat-cell" style="background:' + heatColors[row.interestLevel] +
+                ';color:' + heatText[row.interestLevel] + '" title="' + escHtml(row.product) +
+                ': ' + escHtml(row.interestLevel) + '">' + escHtml(row.product) + '</div>';
+        }).join('');
+    }
+
+    // Try fetching from API, fall back to demo data
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        var sessionId = params.get('session');
+        if (sessionId) {
+            fetch('/api/sessions/' + encodeURIComponent(sessionId) + '/coverage')
+                .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+                .then(function(data) { render(data.coverage || data); })
+                .catch(function() { render(DEMO_COVERAGE); });
+        } else {
+            render(DEMO_COVERAGE);
+        }
+    })();
+    </script>
+</body>
+</html>

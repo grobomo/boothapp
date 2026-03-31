@@ -3,9 +3,11 @@
 const assert = require('assert');
 const {
   correlate,
+  buildCoverageMatrix,
   matchScreenshots,
   detectTopics,
   engagementScore,
+  PRODUCT_TOPICS,
 } = require('../lib/correlator');
 
 // ---------------------------------------------------------------------------
@@ -58,8 +60,8 @@ console.log('\n--- detectTopics ---');
 
 {
   const t = detectTopics(null, 'We discussed endpoint security and zero trust access');
-  assert.ok(t.includes('Endpoint Security'));
-  assert.ok(t.includes('ZTSA'));
+  assert.ok(t.includes('Endpoint'));
+  assert.ok(t.includes('Zero Trust'));
   console.log('  [PASS] detects multiple topics from text');
 }
 
@@ -71,8 +73,8 @@ console.log('\n--- detectTopics ---');
 
 {
   const t = detectTopics('https://app.com/cloud-security/dashboard', 'email security overview');
-  assert.ok(t.includes('Cloud Security'));
-  assert.ok(t.includes('Email Security'));
+  assert.ok(t.includes('Cloud'));
+  assert.ok(t.includes('Email'));
   console.log('  [PASS] detects topics from both URL and text');
 }
 
@@ -147,7 +149,7 @@ console.log('\n--- correlate ---');
 
   // Topics detected
   assert.ok(seg.topics.includes('XDR'));
-  assert.ok(seg.topics.includes('Endpoint Security'));
+  assert.ok(seg.topics.includes('Endpoint'));
 
   // Screenshot refs on clicks
   const click0 = seg.clicks[0];
@@ -190,11 +192,11 @@ console.log('\n--- correlate ---');
 
   // First segment: click only = medium
   assert.strictEqual(result.segments[0].engagement_score, 'medium');
-  assert.ok(result.segments[0].topics.includes('ZTSA'));
+  assert.ok(result.segments[0].topics.includes('Zero Trust'));
 
   // Second segment: dialogue only = medium
   assert.strictEqual(result.segments[1].engagement_score, 'medium');
-  assert.ok(result.segments[1].topics.includes('Cloud Security'));
+  assert.ok(result.segments[1].topics.includes('Cloud'));
 
   console.log('  [PASS] multi-segment with different engagement levels');
 }
@@ -204,6 +206,74 @@ console.log('\n--- correlate ---');
   const c = require('../lib/correlator');
   assert.strictEqual(typeof c.correlate, 'function');
   console.log('  [PASS] typeof correlate === function');
+}
+
+// ---------------------------------------------------------------------------
+// buildCoverageMatrix
+// ---------------------------------------------------------------------------
+
+console.log('\n--- buildCoverageMatrix ---');
+
+{
+  const matrix = buildCoverageMatrix(null);
+  assert.strictEqual(matrix.length, Object.keys(PRODUCT_TOPICS).length);
+  assert.ok(matrix.every((m) => m.interestLevel === 'none'));
+  console.log('  [PASS] null input returns all products with none interest');
+}
+
+{
+  const matrix = buildCoverageMatrix({ segments: [] });
+  assert.strictEqual(matrix.length, 10);
+  assert.ok(matrix.every((m) => !m.mentioned && !m.clicked));
+  console.log('  [PASS] empty segments returns 10 products, all uncovered');
+}
+
+{
+  // Simulate a session with XDR mentioned + clicked (high engagement), Endpoint mentioned only
+  const result = correlate({
+    clicks: [
+      { timestamp: 1000, url: 'https://app.com/xdr/alerts', element: 'btn' },
+    ],
+    transcript: [
+      { start: 0, end: 10000, text: 'Let me show XDR and endpoint protection features' },
+    ],
+    screenshots: [],
+  }, { segmentMs: 30000 });
+
+  const matrix = buildCoverageMatrix(result);
+  const xdr = matrix.find((m) => m.product === 'XDR');
+  assert.ok(xdr.mentioned);
+  assert.ok(xdr.clicked);
+  assert.strictEqual(xdr.interestLevel, 'high');
+  assert.strictEqual(xdr.followUpRelevance, 'high');
+
+  const ep = matrix.find((m) => m.product === 'Endpoint');
+  assert.ok(ep.mentioned);
+  assert.ok(!ep.clicked);
+
+  const zt = matrix.find((m) => m.product === 'Zero Trust');
+  assert.ok(!zt.mentioned);
+  assert.strictEqual(zt.interestLevel, 'none');
+  assert.strictEqual(zt.followUpRelevance, 'low');
+
+  console.log('  [PASS] mixed coverage: XDR high, Endpoint mentioned, Zero Trust absent');
+}
+
+{
+  // All 10 products present in matrix
+  const matrix = buildCoverageMatrix({ segments: [] });
+  const names = matrix.map((m) => m.product);
+  assert.ok(names.includes('XDR'));
+  assert.ok(names.includes('Endpoint'));
+  assert.ok(names.includes('Email'));
+  assert.ok(names.includes('Network'));
+  assert.ok(names.includes('Cloud'));
+  assert.ok(names.includes('Risk Insights'));
+  assert.ok(names.includes('Workbench'));
+  assert.ok(names.includes('Threat Intel'));
+  assert.ok(names.includes('ASRM'));
+  assert.ok(names.includes('Zero Trust'));
+  console.log('  [PASS] all 10 V1 products in matrix');
 }
 
 console.log('\nAll correlator tests passed.');

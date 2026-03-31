@@ -28,7 +28,7 @@ function makeCorrelatorOutput(overrides) {
       {
         start: 30000, end: 60000,
         engagement_score: 'medium',
-        topics: ['Endpoint Security'],
+        topics: ['Endpoint'],
         clicks: [],
         transcript_text: 'Brief mention of endpoint protection.',
         screenshot_urls: [],
@@ -36,7 +36,7 @@ function makeCorrelatorOutput(overrides) {
     ],
     summary: {
       totalSegments: 2,
-      topics: ['XDR', 'Endpoint Security'],
+      topics: ['XDR', 'Endpoint'],
       avgEngagement: 'high',
       scoreCounts: { high: 1, medium: 1, low: 0 },
     },
@@ -90,13 +90,13 @@ console.log('--- extractHighlights ---');
 console.log('\n--- buildTopicBlocks ---');
 
 {
-  const blocks = buildTopicBlocks(['XDR', 'ZTSA']);
+  const blocks = buildTopicBlocks(['XDR', 'Zero Trust']);
   assert.strictEqual(blocks.length, 2);
   assert.strictEqual(blocks[0].topic, 'XDR');
   assert.ok(blocks[0].blurb.length > 0);
   assert.ok(blocks[0].cta.length > 0);
   assert.ok(blocks[0].resource.startsWith('https://'));
-  assert.strictEqual(blocks[1].topic, 'ZTSA');
+  assert.strictEqual(blocks[1].topic, 'Zero Trust');
   console.log('  [PASS] builds blocks for known topics');
 }
 
@@ -126,7 +126,7 @@ console.log('\n--- buildTopicBlocks ---');
 console.log('\n--- generateTemplate (high engagement) ---');
 
 {
-  const data = makeCorrelatorOutput({ summary: { avgEngagement: 'high', topics: ['XDR', 'Endpoint Security'] } });
+  const data = makeCorrelatorOutput({ summary: { avgEngagement: 'high', topics: ['XDR', 'Endpoint'] } });
   const tmpl = generateTemplate(data, { name: 'Alice', company: 'Acme' });
 
   assert.strictEqual(tmpl.engagementTier, 'high');
@@ -151,7 +151,7 @@ console.log('\n--- generateTemplate (high engagement) ---');
 console.log('\n--- generateTemplate (medium engagement) ---');
 
 {
-  const data = makeCorrelatorOutput({ summary: { avgEngagement: 'medium', topics: ['Cloud Security'] } });
+  const data = makeCorrelatorOutput({ summary: { avgEngagement: 'medium', topics: ['Cloud'] } });
   const tmpl = generateTemplate(data);
 
   assert.strictEqual(tmpl.engagementTier, 'medium');
