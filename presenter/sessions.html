@@ -139,6 +139,41 @@
             padding: 3rem;
             color: var(--text-dim);
         }
+
+        /* ============================================================
+           SKELETON LOADING
+           ============================================================ */
+        @keyframes shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface2) 25%, #1c2030 37%, var(--surface2) 63%);
+            background-size: 800px 100%;
+            animation: shimmer 1.8s ease-in-out infinite;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .skel-id     { width: 180px; height: 14px; }
+        .skel-name   { width: 120px; height: 14px; }
+        .skel-badge  { width: 70px;  height: 20px; border-radius: 4px; }
+        .skel-date   { width: 130px; height: 14px; }
+        .skel-small  { width: 36px;  height: 14px; }
+        .skel-link   { width: 40px;  height: 14px; }
+
+        .skel-count  { width: 24px; height: 16px; display: inline-block; vertical-align: middle; }
+
+        tbody tr.skeleton-row td { border-bottom: 1px solid var(--border); }
+
+        @keyframes fadeInRow {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        tbody tr.loaded-row {
+            animation: fadeInRow .3s ease;
+        }
     </style>
 </head>
 <body>
@@ -148,8 +183,8 @@
     </div>
 
     <div class="status-bar">
-        <span>Total: <span class="count" id="total-count">--</span></span>
-        <span>With Analysis: <span class="count" id="analysis-count">--</span></span>
+        <span>Total: <span class="count" id="total-count"><span class="skeleton skel-count"></span></span></span>
+        <span>With Analysis: <span class="count" id="analysis-count"><span class="skeleton skel-count"></span></span></span>
     </div>
 
     <div id="error-msg"></div>
@@ -166,7 +201,11 @@
             </tr>
         </thead>
         <tbody id="sessions-body">
-            <tr><td colspan="6" class="loading">Loading sessions...</td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton skel-id"></span></td><td><span class="skeleton skel-name"></span></td><td><span class="skeleton skel-badge"></span></td><td><span class="skeleton skel-date"></span></td><td><span class="skeleton skel-small"></span></td><td><span class="skeleton skel-link"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton skel-id"></span></td><td><span class="skeleton skel-name"></span></td><td><span class="skeleton skel-badge"></span></td><td><span class="skeleton skel-date"></span></td><td><span class="skeleton skel-small"></span></td><td><span class="skeleton skel-link"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton skel-id"></span></td><td><span class="skeleton skel-name"></span></td><td><span class="skeleton skel-badge"></span></td><td><span class="skeleton skel-date"></span></td><td><span class="skeleton skel-small"></span></td><td><span class="skeleton skel-link"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton skel-id"></span></td><td><span class="skeleton skel-name"></span></td><td><span class="skeleton skel-badge"></span></td><td><span class="skeleton skel-date"></span></td><td><span class="skeleton skel-small"></span></td><td><span class="skeleton skel-link"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton skel-id"></span></td><td><span class="skeleton skel-name"></span></td><td><span class="skeleton skel-badge"></span></td><td><span class="skeleton skel-date"></span></td><td><span class="skeleton skel-small"></span></td><td><span class="skeleton skel-link"></span></td></tr>
         </tbody>
     </table>
 
@@ -215,7 +254,7 @@
                     var summaryCell = s.summary_link
                         ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
                         : '--';
-                    return '<tr>' +
+                    return '<tr class="loaded-row">' +
                         '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
                         '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
                         '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
