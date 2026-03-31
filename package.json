@@ -1,0 +1,14 @@
+{
+  "name": "boothapp",
+  "version": "1.0.0",
+  "description": "Booth visitor analytics and engagement reporting",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export": "node analysis/export.js",
+    "export:sample": "node analysis/export.js --sample"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0"
+  }
+}
