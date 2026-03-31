@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --red:       #D71920;
+      --red-dark:  #A8131A;
+      --red-glow:  rgba(215, 25, 32, 0.25);
+      --bg:        #0B0E14;
+      --surface:   #141820;
+      --surface2:  #1C2028;
+      --border:    #252A34;
+      --text:      #F0F2F5;
+      --text-dim:  #8A92A0;
+      --text-muted:#5A6170;
+      --success:   #00E676;
+      --amber:     #FFAB00;
+    }
+
+    body {
+      width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    /* ---- HEADER ---- */
+    .header {
+      background: var(--surface);
+      border-bottom: 2px solid var(--red);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .version {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    /* ---- SESSION STATUS BAR ---- */
+    .status-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+    }
+
+    .status-dot.recording {
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-label.recording { color: var(--success); }
+    .status-label.stopped   { color: var(--text-muted); }
+
+    .session-time {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    /* ---- VISITOR CARD ---- */
+    .visitor-card {
+      margin: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .visitor-card.empty {
+      border-style: dashed;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 16px 12px;
+    }
+
+    .visitor-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .visitor-company {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ---- COUNTERS ---- */
+    .counters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 0 16px 12px;
+    }
+
+    .counter-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .counter-icon {
+      font-size: 18px;
+      margin-bottom: 4px;
+      display: block;
+      color: var(--text-dim);
+    }
+
+    .counter-value {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .counter-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ---- CONNECTION STATUS ---- */
+    .connection {
+      margin: 0 16px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .conn-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .conn-icon {
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .conn-label {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .conn-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .conn-status.connected {
+      background: rgba(0, 230, 118, 0.12);
+      color: var(--success);
+    }
+
+    .conn-status.disconnected {
+      background: rgba(215, 25, 32, 0.12);
+      color: var(--red);
+    }
+
+    /* ---- ACTION BUTTON ---- */
+    .actions {
+      padding: 0 16px 14px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-start {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-start:hover { background: var(--red-dark); }
+
+    .btn-stop {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-stop:hover { background: var(--border); }
+
+    /* ---- FOOTER ---- */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-mark">B</div>
+      <span class="logo-text">BoothApp</span>
+    </div>
+    <span class="version" id="version">v0.1.0</span>
+  </div>
+
+  <!-- Session Status -->
+  <div class="status-bar">
+    <div class="status-left">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-label stopped" id="statusLabel">Stopped</span>
+    </div>
+    <span class="session-time" id="sessionTime">--:--:--</span>
+  </div>
+
+  <!-- Visitor Card -->
+  <div class="visitor-card empty" id="visitorCard">
+    No active session
+  </div>
+
+  <!-- Counters -->
+  <div class="counters">
+    <div class="counter-card">
+      <span class="counter-icon">&#9751;</span>
+      <div class="counter-value" id="clickCount">0</div>
+      <div class="counter-label">Clicks</div>
+    </div>
+    <div class="counter-card">
+      <span class="counter-icon">&#9634;</span>
+      <div class="counter-value" id="screenshotCount">0</div>
+      <div class="counter-label">Screenshots</div>
+    </div>
+  </div>
+
+  <!-- S3 Connection -->
+  <div class="connection">
+    <div class="conn-left">
+      <span class="conn-icon">&#9729;</span>
+      <span class="conn-label">S3 Upload</span>
+    </div>
+    <span class="conn-status disconnected" id="s3Status">Disconnected</span>
+  </div>
+
+  <!-- Action Button -->
+  <div class="actions">
+    <button class="btn btn-start" id="actionBtn">Start Session</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">AI-Powered Demo Capture</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
