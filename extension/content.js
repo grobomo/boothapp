@@ -232,6 +232,7 @@ if (window === window.top) {
     trackingSessionId = sessionId;
     dismissedBanner = false;
     showBanner();
+    if (typeof TimerOverlay !== 'undefined') TimerOverlay.show();
     chrome.runtime.sendMessage({ type: 'session_start', session_id: sessionId }).catch(() => {});
   }
   _onSessionStart = onSessionStart;
@@ -243,6 +244,7 @@ if (window === window.top) {
     const sessionId = trackingSessionId;
     trackingSessionId = null;
     hideBanner();
+    if (typeof TimerOverlay !== 'undefined') TimerOverlay.hide();
     uploadInProgress = true;
 
     // Get click buffer then trigger upload in background
