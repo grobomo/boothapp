@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enhanced Transcript",
+  "description": "Transcript output with speaker diarization, timestamps, and confidence scores",
+  "type": "object",
+  "required": ["version", "metadata", "transcript", "full_text"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "2.0"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["speaker_count", "total_duration", "language_code", "transcription_provider"],
+      "properties": {
+        "speaker_count": { "type": "integer", "minimum": 0 },
+        "total_duration": { "type": "number", "minimum": 0 },
+        "language_code": { "type": "string" },
+        "transcription_provider": {
+          "type": "string",
+          "enum": ["aws-transcribe", "aws-transcribe-streaming"]
+        }
+      }
+    },
+    "transcript": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["speaker_label", "start_time", "end_time", "text", "confidence"],
+        "properties": {
+          "speaker_label": {
+            "type": "string",
+            "pattern": "^spk_\\d+$",
+            "description": "Speaker identifier (e.g. spk_0, spk_1)"
+          },
+          "start_time": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Segment start time in seconds"
+          },
+          "end_time": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Segment end time in seconds"
+          },
+          "text": {
+            "type": "string",
+            "description": "Transcribed text for this segment"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Average confidence score for this segment (0-1)"
+          }
+        }
+      }
+    },
+    "full_text": {
+      "type": "string",
+      "description": "Full transcript with speaker labels, one line per segment"
+    }
+  }
+}
