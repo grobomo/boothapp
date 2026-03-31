@@ -176,6 +176,61 @@
         }
 
         /* ============================================================
+           STATS COUNTERS (header)
+           ============================================================ */
+        .stats-counters {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            margin-top: 40px;
+            padding: 32px 24px;
+            background: rgba(14, 17, 24, .6);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+        }
+        .stat-item {
+            text-align: center;
+            position: relative;
+        }
+        .stat-item + .stat-item::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 10%;
+            height: 80%;
+            width: 1px;
+            background: var(--border);
+        }
+        .stat-value {
+            font-size: 52px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 8px;
+            font-variant-numeric: tabular-nums;
+            transition: text-shadow .3s;
+        }
+        .stat-value--red     { color: var(--red);     text-shadow: 0 0 24px var(--red-glow); }
+        .stat-value--blue    { color: var(--blue);    text-shadow: 0 0 24px rgba(68,138,255,.3); }
+        .stat-value--amber   { color: var(--amber);   text-shadow: 0 0 24px rgba(255,171,0,.3); }
+        .stat-value--green   { color: var(--success); text-shadow: 0 0 24px rgba(0,230,118,.3); }
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .stats-counters { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+            .stat-value { font-size: 36px; }
+            .stat-item + .stat-item::before { display: none; }
+        }
+        @media (max-width: 500px) {
+            .stats-counters { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================================
            STATUS CARDS
            ============================================================ */
         .cards {
@@ -515,6 +570,26 @@
             <span class="live-dot"></span>
             Live Dashboard
         </div>
+
+        <!-- Stats Counters -->
+        <div class="stats-counters">
+            <div class="stat-item">
+                <div class="stat-value stat-value--red" id="statTotalSessions">0</div>
+                <div class="stat-label">Total Sessions</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value stat-value--blue" id="statAvgScore">0</div>
+                <div class="stat-label">Average Score</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value stat-value--amber" id="statProductsDemo">0</div>
+                <div class="stat-label">Products Demonstrated</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value stat-value--green" id="statFollowUps">0</div>
+                <div class="stat-label">Follow-Up Actions</div>
+            </div>
+        </div>
     </header>
 
     <!-- ============ STATUS CARDS ============ -->
@@ -739,6 +814,10 @@
         activeSessions: 0,
         totalDemos: 0,
         reportsGenerated: 0,
+        totalSessions: 0,
+        avgScore: 0,
+        productsDemo: 0,
+        followUps: 0,
         events: [],
         productCounts: {}
     };
@@ -784,11 +863,63 @@
         if (state.totalDemos < state.activeSessions) state.totalDemos = state.activeSessions;
         if (state.reportsGenerated > state.totalDemos) state.reportsGenerated = state.totalDemos;
 
+        // Update header stats counters
+        state.totalSessions += Math.floor(Math.random() * 2);
+        state.avgScore = Math.min(98, Math.max(72, state.avgScore + Math.floor(Math.random() * 5) - 2));
+        // Products demonstrated: count unique products with nonzero counts
+        var demoed = 0;
+        PRODUCTS.forEach(function (p) { if (state.productCounts[p.name] > 0) demoed++; });
+        state.productsDemo = demoed;
+        state.followUps += Math.floor(Math.random() * 2);
+
         var n = 1 + Math.floor(Math.random() * 2);
         for (var i = 0; i < n; i++) {
             state.events.unshift(generateMockEvent());
         }
         if (state.events.length > 25) state.events.length = 25;
+    }
+
+    // ------------------------------------------------------------------
+    // COUNT-UP ANIMATION (easeOutExpo)
+    // ------------------------------------------------------------------
+    function countUp(el, target, duration, suffix) {
+        suffix = suffix || '';
+        var start = parseInt(el.textContent, 10) || 0;
+        if (start === target) return;
+        var startTime = null;
+        var diff = target - start;
+
+        function easeOutExpo(t) {
+            return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
+
+        function step(ts) {
+            if (!startTime) startTime = ts;
+            var elapsed = ts - startTime;
+            var progress = Math.min(elapsed / duration, 1);
+            var eased = easeOutExpo(progress);
+            var current = Math.round(start + diff * eased);
+            el.textContent = current + suffix;
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                el.textContent = target + suffix;
+                // Pulse glow on completion
+                el.style.textShadow = el.style.textShadow.replace(/0 0 \d+px/, '0 0 40px');
+                setTimeout(function () {
+                    el.style.textShadow = '';
+                }, 600);
+            }
+        }
+        requestAnimationFrame(step);
+    }
+
+    function renderStatsCounters(animate) {
+        var dur = animate ? 2000 : 400;
+        countUp(document.getElementById('statTotalSessions'), state.totalSessions, dur);
+        countUp(document.getElementById('statAvgScore'), state.avgScore, dur);
+        countUp(document.getElementById('statProductsDemo'), state.productsDemo, dur);
+        countUp(document.getElementById('statFollowUps'), state.followUps, dur);
     }
 
     // ------------------------------------------------------------------
@@ -875,6 +1006,7 @@
 
     function renderAll() {
         renderCards();
+        renderStatsCounters(false);
         renderRingChart();
         renderProducts();
         renderFeed();
@@ -938,7 +1070,17 @@
         state.productCounts[p.name] = Math.max(1, Math.floor(Math.random() * 8) + (7 - i));
     });
 
+    // Seed header stats
+    state.totalSessions = 47;
+    state.avgScore = 84;
+    var seeded = 0;
+    PRODUCTS.forEach(function (p) { if (state.productCounts[p.name] > 0) seeded++; });
+    state.productsDemo = seeded;
+    state.followUps = 132;
+
     renderAll();
+    // Trigger count-up animation on page load (long easing from 0)
+    renderStatsCounters(true);
     renderClock();
     setInterval(renderClock, 1000);
     setInterval(tickCountdown, 1000);
