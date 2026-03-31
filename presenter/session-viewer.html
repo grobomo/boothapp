@@ -1569,7 +1569,10 @@ if (!BoothAuth.requireAwsCreds()) {
     if (meta.visitor_company) parts.push(meta.visitor_company);
     subEl.textContent = parts.join(" at ") || "";
 
-    // Avatar initials with name-based color
+    // Avatar initials with name-based color + entrance animation
+    avatarEl.classList.remove("avatar-animated");
+    void avatarEl.offsetWidth;
+    avatarEl.classList.add("avatar-animated");
     var initials = (meta.visitor_name || "?").split(" ").map(function (w) { return w[0]; }).join("").substring(0, 2).toUpperCase();
     avatarEl.textContent = initials;
     var avatarColors = ["#1f6feb", "#8b5cf6", "#d97706", "#059669", "#dc2626", "#0891b2", "#7c3aed", "#c026d3"];
@@ -1611,11 +1614,34 @@ if (!BoothAuth.requireAwsCreds()) {
     }
     metaEl.innerHTML = chips.join("");
 
-    // Score badge
+    // Stagger chip pop animations
+    var chipEls = metaEl.querySelectorAll(".chip");
+    for (var ci = 0; ci < chipEls.length; ci++) {
+      chipEls[ci].classList.add("chip-animated");
+      chipEls[ci].style.animationDelay = (ci * 0.06) + "s";
+    }
+
+    // Score badge with animated counter
     if (summary && summary.session_score != null) {
       var scoreEl = document.getElementById("score-value");
-      scoreEl.textContent = summary.session_score;
-      var scoreNum = Number(summary.session_score);
+      var targetScore = Number(summary.session_score);
+      scoreEl.textContent = "0";
+      scoreEl.classList.remove("score-animated");
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add("score-animated");
+      // Animate counting up
+      var scoreStart = 0;
+      var scoreDuration = 600;
+      var scoreStartTime = null;
+      function animateScore(ts) {
+        if (!scoreStartTime) scoreStartTime = ts;
+        var progress = Math.min((ts - scoreStartTime) / scoreDuration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        scoreEl.textContent = Math.round(eased * targetScore);
+        if (progress < 1) requestAnimationFrame(animateScore);
+      }
+      requestAnimationFrame(animateScore);
+      var scoreNum = targetScore;
       if (scoreNum >= 7) scoreEl.style.color = "var(--green)";
       else if (scoreNum >= 4) scoreEl.style.color = "var(--yellow)";
       else scoreEl.style.color = "var(--red)";
@@ -1675,6 +1701,13 @@ if (!BoothAuth.requireAwsCreds()) {
     }
     container.innerHTML = html;
 
+    // Stagger timeline item entrance animations
+    var tlItems = container.querySelectorAll(".tl-item");
+    for (var ti = 0; ti < tlItems.length; ti++) {
+      tlItems[ti].classList.add("tl-item-animated");
+      tlItems[ti].style.animationDelay = (ti * 0.05) + "s";
+    }
+
     // Async load screenshot thumbnails
     for (var j = 0; j < events.length; j++) {
       if (events[j].screenshot_file) {
@@ -1719,6 +1752,13 @@ if (!BoothAuth.requireAwsCreds()) {
         '</div>';
     }
     container.innerHTML = html;
+
+    // Stagger transcript entry animations
+    var tEntries = container.querySelectorAll(".t-entry");
+    for (var te = 0; te < tEntries.length; te++) {
+      tEntries[te].classList.add("t-entry-animated");
+      tEntries[te].style.animationDelay = (te * 0.04) + "s";
+    }
   }
 
   // ── Render: Analysis (summary + products + follow-up) ───────────
@@ -1832,6 +1872,50 @@ if (!BoothAuth.requireAwsCreds()) {
     }
 
     container.innerHTML = html || '<div class="empty">No analysis data</div>';
+
+    // Stagger micro-animations on analysis sub-elements
+    var interestRows = container.querySelectorAll(".interests-tbl tbody tr");
+    for (var ir = 0; ir < interestRows.length; ir++) {
+      interestRows[ir].classList.add("interest-animated");
+      interestRows[ir].style.animationDelay = (0.15 + ir * 0.06) + "s";
+    }
+    var momentItems = container.querySelectorAll(".moment-item");
+    for (var mi = 0; mi < momentItems.length; mi++) {
+      momentItems[mi].classList.add("moment-animated");
+      momentItems[mi].style.animationDelay = (0.2 + mi * 0.08) + "s";
+    }
+    var actionItems = container.querySelectorAll(".actions-list li");
+    for (var ai = 0; ai < actionItems.length; ai++) {
+      actionItems[ai].classList.add("action-animated");
+      actionItems[ai].style.animationDelay = (0.2 + ai * 0.06) + "s";
+    }
+    var productChips = container.querySelectorAll(".products-list .chip");
+    for (var pi = 0; pi < productChips.length; pi++) {
+      productChips[pi].classList.add("chip-animated");
+      productChips[pi].style.animationDelay = (0.1 + pi * 0.05) + "s";
+    }
+
+    // Set up IntersectionObserver for scroll-triggered reveal on analysis sections
+    var sections = container.querySelectorAll(".analysis-section-animated");
+    if (typeof IntersectionObserver !== "undefined" && sections.length > 1) {
+      // Only apply scroll-reveal to sections beyond the first (which is visible on load)
+      for (var si = 1; si < sections.length; si++) {
+        sections[si].classList.add("awaiting-reveal");
+        sections[si].classList.remove("revealed");
+      }
+      var observer = new IntersectionObserver(function (entries) {
+        for (var oi = 0; oi < entries.length; oi++) {
+          if (entries[oi].isIntersecting) {
+            entries[oi].target.classList.remove("awaiting-reveal");
+            entries[oi].target.classList.add("revealed");
+            observer.unobserve(entries[oi].target);
+          }
+        }
+      }, { threshold: 0.15 });
+      for (var so = 1; so < sections.length; so++) {
+        observer.observe(sections[so]);
+      }
+    }
   }
 
   // ── Notes ──────────────────────────────────────────────────────────
