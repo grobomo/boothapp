@@ -1,6 +1,8 @@
 const express = require('express');
 const path = require('path');
 const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { BedrockRuntimeClient } = require('@aws-sdk/client-bedrock-runtime');
+const { compareSessions } = require('../analysis/lib/session-compare');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,9 +10,11 @@ const BUCKET = process.env.S3_BUCKET || 'boothapp-sessions';
 const REGION = process.env.AWS_REGION || 'us-east-1';
 
 const s3 = new S3Client({ region: REGION });
+const bedrock = new BedrockRuntimeClient({ region: REGION });
 
 // Serve static HTML files
 app.use(express.static(path.join(__dirname)));
+app.use(express.json());
 
 // GET /api/sessions - list all sessions with metadata and analysis status
 app.get('/api/sessions', async (req, res) => {
@@ -98,6 +102,53 @@ app.get('/api/sessions/:id/summary', async (req, res) => {
             res.status(404).json({ error: 'Summary not found' });
         } else {
             res.status(500).json({ error: 'Failed to fetch summary', detail: err.message });
+        }
+    }
+});
+
+// POST /api/sessions/compare - compare two sessions using AI
+app.post('/api/sessions/compare', async (req, res) => {
+    const { sessionId1, sessionId2 } = req.body || {};
+    if (!sessionId1 || !sessionId2) {
+        return res.status(400).json({ error: 'sessionId1 and sessionId2 are required' });
+    }
+    if (sessionId1 === sessionId2) {
+        return res.status(400).json({ error: 'Cannot compare a session with itself' });
+    }
+
+    try {
+        // Fetch analysis.json for both sessions from S3
+        async function fetchAnalysis(sessionId) {
+            const cmd = new GetObjectCommand({
+                Bucket: BUCKET,
+                Key: `${sessionId}/analysis.json`,
+            });
+            const result = await s3.send(cmd);
+            const body = await result.Body.transformToString();
+            return JSON.parse(body);
+        }
+
+        const [analysis1, analysis2] = await Promise.all([
+            fetchAnalysis(sessionId1),
+            fetchAnalysis(sessionId2),
+        ]);
+
+        const result = await compareSessions(
+            { sessionId: sessionId1, correlatorOutput: analysis1 },
+            { sessionId: sessionId2, correlatorOutput: analysis2 },
+            {
+                bedrock,
+                outputDir: path.join(__dirname, '..', 'output'),
+            },
+        );
+
+        res.json(result);
+    } catch (err) {
+        if (err.name === 'NoSuchKey') {
+            res.status(404).json({ error: 'Analysis not found for one or both sessions' });
+        } else {
+            console.error('Compare failed:', err.message);
+            res.status(500).json({ error: 'Comparison failed', detail: err.message });
         }
     }
 });

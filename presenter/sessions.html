@@ -139,6 +139,70 @@
             padding: 3rem;
             color: var(--text-dim);
         }
+
+        /* Compare UI */
+        .compare-bar {
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .compare-bar.visible { display: flex; }
+        .compare-bar .selected-ids { color: var(--text); font-family: 'Consolas', monospace; }
+        .compare-btn {
+            background: var(--red);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .compare-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .compare-btn:hover:not(:disabled) { background: var(--red-dark); }
+        .clear-btn {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .clear-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+        .cb-select { width: 18px; height: 18px; accent-color: var(--red); cursor: pointer; }
+
+        .compare-result {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .compare-result.visible { display: block; }
+        .compare-result h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--red);
+        }
+        .compare-result h3 {
+            font-size: 0.95rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        .compare-result ul { padding-left: 1.5rem; }
+        .compare-result li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+        .compare-result .strategy { font-style: italic; color: var(--amber); }
+        .compare-spinner { color: var(--text-dim); }
     </style>
 </head>
 <body>
@@ -154,9 +218,16 @@
 
     <div id="error-msg"></div>
 
+    <div class="compare-bar" id="compare-bar">
+        <span>Compare: <span class="selected-ids" id="compare-ids">--</span></span>
+        <button class="compare-btn" id="compare-btn" disabled onclick="runComparison()">Compare Sessions</button>
+        <button class="clear-btn" onclick="clearSelection()">Clear</button>
+    </div>
+
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Session ID</th>
                 <th>Visitor</th>
                 <th>Status</th>
@@ -166,11 +237,15 @@
             </tr>
         </thead>
         <tbody id="sessions-body">
-            <tr><td colspan="6" class="loading">Loading sessions...</td></tr>
+            <tr><td colspan="7" class="loading">Loading sessions...</td></tr>
         </tbody>
     </table>
 
+    <div class="compare-result" id="compare-result"></div>
+
     <script>
+        var selectedSessions = [];
+
         function statusBadge(status) {
             var cls = 'badge-unknown';
             if (status === 'complete') cls = 'badge-complete';
@@ -190,6 +265,122 @@
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         }
 
+        function toggleSession(sessionId) {
+            var idx = selectedSessions.indexOf(sessionId);
+            if (idx >= 0) {
+                selectedSessions.splice(idx, 1);
+            } else if (selectedSessions.length < 2) {
+                selectedSessions.push(sessionId);
+            } else {
+                var cb = document.getElementById('cb-' + sessionId);
+                if (cb) cb.checked = false;
+                return;
+            }
+            updateCompareBar();
+        }
+
+        function updateCompareBar() {
+            var bar = document.getElementById('compare-bar');
+            var idsEl = document.getElementById('compare-ids');
+            var btn = document.getElementById('compare-btn');
+
+            if (selectedSessions.length > 0) {
+                bar.classList.add('visible');
+                idsEl.textContent = selectedSessions.join(' vs ');
+                btn.disabled = selectedSessions.length !== 2;
+            } else {
+                bar.classList.remove('visible');
+            }
+
+            document.querySelectorAll('.cb-select').forEach(function(cb) {
+                cb.checked = selectedSessions.indexOf(cb.dataset.sid) >= 0;
+            });
+        }
+
+        function clearSelection() {
+            selectedSessions = [];
+            updateCompareBar();
+            document.getElementById('compare-result').classList.remove('visible');
+        }
+
+        async function runComparison() {
+            if (selectedSessions.length !== 2) return;
+            var btn = document.getElementById('compare-btn');
+            var resultEl = document.getElementById('compare-result');
+
+            btn.disabled = true;
+            btn.textContent = 'Comparing...';
+            resultEl.classList.add('visible');
+            resultEl.innerHTML = '<p class="compare-spinner">Running AI comparison...</p>';
+
+            try {
+                var resp = await fetch('/api/sessions/compare', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId1: selectedSessions[0],
+                        sessionId2: selectedSessions[1],
+                    }),
+                });
+                if (!resp.ok) {
+                    var errData = await resp.json();
+                    throw new Error(errData.error || 'HTTP ' + resp.status);
+                }
+                var data = await resp.json();
+                renderComparison(data);
+            } catch (err) {
+                resultEl.innerHTML = '<p style="color:#FF6B6B;">Comparison failed: ' + escHtml(err.message) + '</p>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Compare Sessions';
+            }
+        }
+
+        function renderComparison(data) {
+            var c = data.comparison;
+            var html = '<h2>Session Comparison</h2>';
+            html += '<p style="color:var(--text-dim);font-size:0.8rem;">Generated ' + new Date(data.comparedAt).toLocaleString() + '</p>';
+
+            html += '<h3>Similar Interests</h3>';
+            if (c.similarInterests && c.similarInterests.length) {
+                html += '<ul>' + c.similarInterests.map(function(i) { return '<li>' + escHtml(i) + '</li>'; }).join('') + '</ul>';
+            } else {
+                html += '<p style="color:var(--text-dim);">No common interests detected.</p>';
+            }
+
+            html += '<h3>Different Products</h3>';
+            if (c.differentProducts && c.differentProducts.length) {
+                c.differentProducts.forEach(function(dp) {
+                    html += '<p><strong>' + escHtml(dp.sessionId) + ':</strong> ' +
+                        (dp.uniqueTopics || []).map(escHtml).join(', ') + '</p>';
+                });
+            }
+
+            html += '<h3>Engagement Comparison</h3>';
+            if (c.engagementComparison) {
+                html += '<p>Higher engagement: <strong>' + escHtml(c.engagementComparison.higherEngagement) + '</strong></p>';
+            }
+
+            html += '<h3>Combined Follow-Up Strategy</h3>';
+            if (c.combinedFollowUp) {
+                html += '<p class="strategy">' + escHtml(c.combinedFollowUp.strategy) + '</p>';
+                if (c.combinedFollowUp.sharedActions && c.combinedFollowUp.sharedActions.length) {
+                    html += '<h3>Shared Actions</h3><ul>';
+                    html += c.combinedFollowUp.sharedActions.map(function(a) { return '<li>' + escHtml(a) + '</li>'; }).join('');
+                    html += '</ul>';
+                }
+                if (c.combinedFollowUp.perSessionActions) {
+                    c.combinedFollowUp.perSessionActions.forEach(function(ps) {
+                        html += '<h3>' + escHtml(ps.sessionId) + ' Actions</h3><ul>';
+                        html += (ps.actions || []).map(function(a) { return '<li>' + escHtml(a) + '</li>'; }).join('');
+                        html += '</ul>';
+                    });
+                }
+            }
+
+            document.getElementById('compare-result').innerHTML = html;
+        }
+
         async function loadSessions() {
             try {
                 var resp = await fetch('/api/sessions');
@@ -204,7 +395,7 @@
                 var tbody = document.getElementById('sessions-body');
 
                 if (sessions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty">No sessions found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty">No sessions found</td></tr>';
                     return;
                 }
 
@@ -215,7 +406,10 @@
                     var summaryCell = s.summary_link
                         ? '<a class="summary-link" href="' + escHtml(s.summary_link) + '">View</a>'
                         : '--';
+                    var checked = selectedSessions.indexOf(s.session_id) >= 0 ? ' checked' : '';
+                    var disabledAttr = !s.has_analysis ? ' disabled title="No analysis data"' : '';
                     return '<tr>' +
+                        '<td><input type="checkbox" class="cb-select" id="cb-' + escHtml(s.session_id) + '" data-sid="' + escHtml(s.session_id) + '"' + checked + disabledAttr + ' onchange="toggleSession(\'' + escHtml(s.session_id) + '\')"></td>' +
                         '<td class="session-id">' + escHtml(s.session_id) + '</td>' +
                         '<td>' + (escHtml(s.visitor_name) || '<span style="color:var(--text-dim)">--</span>') + '</td>' +
                         '<td>' + statusBadge(s.status || 'unknown') + '</td>' +
@@ -229,7 +423,7 @@
                 errEl.style.display = 'block';
                 errEl.textContent = 'Failed to load sessions: ' + err.message;
                 document.getElementById('sessions-body').innerHTML =
-                    '<tr><td colspan="6" class="empty">Could not load sessions</td></tr>';
+                    '<tr><td colspan="7" class="empty">Could not load sessions</td></tr>';
             }
         }
 
