@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Session Handoff</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    background: #F8F9FA; color: #2D3436; line-height: 1.6;
+}
+
+/* -- Header ------------------------------------------------------------ */
+.header {
+    background: linear-gradient(135deg, #1A1A2E 0%, #12121F 100%);
+    color: #FFF; padding: 32px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.header .brand { display: flex; align-items: center; gap: 16px; }
+.header .logo {
+    width: 48px; height: 48px; background: #D71920; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 22px; color: #FFF;
+}
+.header h1 { font-size: 22px; font-weight: 600; }
+.header h1 .accent { color: #D71920; }
+.header .subtitle { font-size: 14px; opacity: 0.8; }
+.header .meta { text-align: right; font-size: 13px; opacity: 0.85; }
+.header .rid { font-family: Consolas, 'Courier New', monospace; font-size: 12px; opacity: 0.7; }
+
+/* -- Layout ------------------------------------------------------------ */
+.wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+.stitle {
+    font-size: 14px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; color: #636E72; margin: 32px 0 16px;
+    padding-bottom: 8px; border-bottom: 2px solid #DFE6E9;
+}
+.card {
+    background: #FFF; border: 1px solid #DFE6E9; border-radius: 10px;
+    padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* -- Visitor profile --------------------------------------------------- */
+.kv { display: grid; grid-template-columns: 160px 1fr; gap: 8px 16px; }
+.kv .k { font-size: 13px; font-weight: 600; color: #636E72; text-transform: uppercase; letter-spacing: 0.5px; }
+.kv .v { font-size: 15px; }
+
+/* -- Badges ------------------------------------------------------------ */
+.badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+}
+.badge-high   { background: #2D936C; color: #FFF; }
+.badge-medium { background: #E9C46A; color: #1A1A2E; }
+.badge-low    { background: #E63946; color: #FFF; }
+
+/* -- Buying signals ---------------------------------------------------- */
+.signal-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid #DFE6E9;
+}
+.signal-row:last-child { border-bottom: none; }
+.signal-name { font-weight: 600; min-width: 200px; }
+.signal-detail { color: #636E72; font-size: 14px; flex: 1; }
+
+/* -- Timeline ---------------------------------------------------------- */
+.timeline { position: relative; padding-left: 40px; }
+.timeline::before {
+    content: ''; position: absolute; left: 15px; top: 0; bottom: 0;
+    width: 2px; background: #DFE6E9;
+}
+.tl-phase { position: relative; padding: 16px 0; }
+.tl-phase::before {
+    content: ''; position: absolute; left: -29px; top: 22px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #D71920; border: 3px solid #FFF;
+    box-shadow: 0 0 0 2px #DFE6E9;
+}
+.tl-phase.completed::before { background: #2D936C; }
+.tl-day {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #D71920; margin-bottom: 4px;
+}
+.tl-action { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.tl-desc { font-size: 13px; color: #636E72; }
+
+/* -- Email drafts ------------------------------------------------------ */
+.email-card {
+    background: #FFF; border: 1px solid #DFE6E9; border-radius: 10px;
+    margin-bottom: 20px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.email-header-bar {
+    background: #F0F2F5; padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #DFE6E9;
+}
+.email-label { font-size: 13px; font-weight: 700; color: #636E72; text-transform: uppercase; letter-spacing: 0.8px; }
+.email-subject { font-size: 14px; font-weight: 600; color: #1A1A2E; }
+.email-body-text {
+    padding: 20px; font-size: 14px; line-height: 1.7; white-space: pre-wrap;
+}
+.btn-copy {
+    background: #D71920; color: #FFF; border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+    transition: background 0.2s;
+}
+.btn-copy:hover { background: #A8131A; }
+.btn-copy.copied { background: #2D936C; }
+
+/* -- Footer ------------------------------------------------------------ */
+.footer {
+    text-align: center; padding: 24px; font-size: 12px; color: #636E72;
+    border-top: 1px solid #DFE6E9; margin-top: 40px;
+}
+
+/* -- Print ------------------------------------------------------------- */
+@media print {
+    body { background: #FFF; }
+    .wrap { max-width: 100%; padding: 0 16px; }
+    .header { padding: 20px 24px; }
+    .card, .email-card { box-shadow: none; break-inside: avoid; }
+    .stitle { break-after: avoid; }
+    .btn-copy, .no-print { display: none; }
+    .email-card { break-inside: avoid; }
+}
+
+/* -- Load overlay ------------------------------------------------------ */
+.load-overlay {
+    position: fixed; inset: 0; background: #F8F9FA;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; font-size: 16px; color: #636E72;
+}
+.load-overlay.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="load-overlay" id="loadOverlay">Loading session data...</div>
+
+<div class="header">
+    <div class="brand">
+        <div class="logo">V1</div>
+        <div>
+            <h1>Trend Micro <span class="accent">Vision One</span></h1>
+            <div class="subtitle">Session Handoff Document</div>
+        </div>
+    </div>
+    <div class="meta">
+        <div id="hdrName" style="font-size:16px;font-weight:600;"></div>
+        <div id="hdrDate"></div>
+        <div class="rid" id="hdrId"></div>
+    </div>
+</div>
+
+<div class="wrap">
+
+    <!-- Visitor Profile -->
+    <div class="stitle">Visitor Profile</div>
+    <div class="card" id="visitorCard"></div>
+
+    <!-- Buying Signals -->
+    <div class="stitle">Buying Signals</div>
+    <div class="card" id="signalsCard"></div>
+
+    <!-- Follow-Up Timeline -->
+    <div class="stitle">Follow-Up Timeline</div>
+    <div class="card">
+        <div class="timeline" id="timeline"></div>
+    </div>
+
+    <!-- Email Drafts -->
+    <div class="stitle">Email Drafts</div>
+    <div id="emailDrafts"></div>
+
+    <div class="footer">
+        Trend Micro Vision One &mdash; Session Handoff &mdash; Generated <span id="ftrDate"></span>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ---- Data loading ----
+    var DATA_PATH = '../examples/sample_data.json';
+
+    function loadData() {
+        return fetch(DATA_PATH).then(function(r) { return r.json(); });
+    }
+
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+    }
+
+    function badge(level) {
+        var l = (level || '').toLowerCase();
+        return '<span class="badge badge-' + l + '">' + esc(level) + '</span>';
+    }
+
+    // ---- Build page ----
+    function render(data) {
+        var v = data.visitor;
+
+        // Header
+        document.getElementById('hdrName').textContent = v.name;
+        document.getElementById('hdrDate').textContent = data.generated_at;
+        document.getElementById('hdrId').textContent = data.report_id;
+        document.getElementById('ftrDate').textContent = data.generated_at;
+        document.title = 'Handoff - ' + v.name;
+
+        // Visitor profile
+        var fields = [
+            ['Name', v.name], ['Title', v.title], ['Company', v.company],
+            ['Email', v.email], ['Industry', v.industry],
+            ['Company Size', v.company_size], ['Visit Duration', v.visit_duration]
+        ];
+        var kvHtml = '<div class="kv">';
+        fields.forEach(function(f) {
+            kvHtml += '<div class="k">' + esc(f[0]) + '</div><div class="v">' + esc(f[1]) + '</div>';
+        });
+        kvHtml += '</div>';
+        document.getElementById('visitorCard').innerHTML = kvHtml;
+
+        // Buying signals (from interests)
+        var sigHtml = '';
+        data.interests.forEach(function(i) {
+            sigHtml += '<div class="signal-row">'
+                + '<span class="signal-name">' + esc(i.topic) + '</span>'
+                + badge(i.confidence)
+                + '<span class="signal-detail">' + esc(i.detail) + '</span>'
+                + '</div>';
+        });
+        document.getElementById('signalsCard').innerHTML = sigHtml;
+
+        // Build timeline phases
+        var highInterests = data.interests.filter(function(i) { return i.confidence === 'high'; });
+        var medInterests = data.interests.filter(function(i) { return i.confidence === 'medium'; });
+        var topProducts = data.products_demonstrated.slice(0, 3);
+
+        var phases = buildTimeline(v, data, highInterests, medInterests, topProducts);
+        var tlHtml = '';
+        phases.forEach(function(p) {
+            tlHtml += '<div class="tl-phase">'
+                + '<div class="tl-day">' + esc(p.day) + '</div>'
+                + '<div class="tl-action">' + esc(p.action) + '</div>'
+                + '<div class="tl-desc">' + esc(p.desc) + '</div>'
+                + '</div>';
+        });
+        document.getElementById('timeline').innerHTML = tlHtml;
+
+        // Email drafts
+        var emails = buildEmails(v, data, highInterests, medInterests, topProducts);
+        var draftsHtml = '';
+        emails.forEach(function(e, idx) {
+            draftsHtml += '<div class="email-card">'
+                + '<div class="email-header-bar">'
+                + '<div><span class="email-label">' + esc(e.label) + '</span>'
+                + '<div class="email-subject">Subject: ' + esc(e.subject) + '</div></div>'
+                + '<button class="btn-copy" onclick="copyEmail(' + idx + ')">Copy</button>'
+                + '</div>'
+                + '<div class="email-body-text" id="email-' + idx + '">' + esc(e.body) + '</div>'
+                + '</div>';
+        });
+        document.getElementById('emailDrafts').innerHTML = draftsHtml;
+
+        // Hide loading
+        document.getElementById('loadOverlay').classList.add('hidden');
+    }
+
+    // ---- Timeline builder ----
+    function buildTimeline(v, data, high, med, products) {
+        var firstName = v.name.split(' ')[0];
+
+        var day1Prods = products.map(function(p) { return p.name; }).join(', ');
+        var day3Topics = high.map(function(i) { return i.topic; }).join(' and ');
+        var day7Topics = med.length > 0
+            ? med.map(function(i) { return i.topic; }).join(', ')
+            : 'additional solutions';
+        var day14Recs = data.recommendations
+            .filter(function(r) { return r.priority === 'high'; })
+            .map(function(r) { return r.action; });
+
+        return [
+            {
+                day: 'Day 1 -- Same Day',
+                action: 'Thank-you email with session recap',
+                desc: 'Send personalized follow-up referencing ' + day1Prods + '. Attach relevant datasheets. Confirm interest areas.'
+            },
+            {
+                day: 'Day 3 -- Value Add',
+                action: 'Technical deep-dive resources on ' + day3Topics,
+                desc: 'Share case studies, ROI calculators, and architecture diagrams for primary interest areas. Offer to schedule a technical call with SE team.'
+            },
+            {
+                day: 'Day 7 -- Expand Conversation',
+                action: 'Broaden to ' + day7Topics,
+                desc: 'Introduce secondary interest areas with targeted content. Propose a proof-of-concept or demo environment. Connect with relevant SEs.'
+            },
+            {
+                day: 'Day 14 -- Proposal & Next Steps',
+                action: 'Consolidated proposal and executive briefing',
+                desc: day14Recs.length > 0
+                    ? 'Present unified proposal covering: ' + day14Recs.join('; ') + '. Request meeting with ' + firstName + '\'s team to discuss timeline.'
+                    : 'Present unified proposal with pricing. Request meeting with decision-making team to discuss evaluation timeline.'
+            }
+        ];
+    }
+
+    // ---- Email builder ----
+    function buildEmails(v, data, high, med, products) {
+        var firstName = v.name.split(' ')[0];
+        var prodList = products.map(function(p) {
+            return '  - ' + p.name + (p.note ? ' (' + p.note + ')' : '');
+        }).join('\n');
+        var highList = high.map(function(i) { return '  - ' + i.topic + ': ' + i.detail; }).join('\n');
+        var medList = med.map(function(i) { return '  - ' + i.topic + ': ' + i.detail; }).join('\n');
+
+        return [
+            {
+                label: 'Day 1 -- Thank You',
+                subject: 'Great connecting at the booth, ' + firstName + '!',
+                body: 'Hi ' + firstName + ',\n\n'
+                    + 'It was great meeting you at our booth today. I really enjoyed our conversation about your security priorities at ' + v.company + '.\n\n'
+                    + 'As promised, here\'s a quick recap of what we covered:\n\n'
+                    + prodList + '\n\n'
+                    + 'I\'ve attached the datasheets and resources we discussed. I\'d love to continue the conversation and explore how Vision One can help ' + v.company + ' achieve its security goals.\n\n'
+                    + 'Would you have 30 minutes this week for a brief follow-up call?\n\n'
+                    + 'Best regards,\n[Your Name]\nTrend Micro'
+            },
+            {
+                label: 'Day 3 -- Technical Deep-Dive',
+                subject: 'Technical resources for ' + (high.length > 0 ? high[0].topic : 'your evaluation'),
+                body: 'Hi ' + firstName + ',\n\n'
+                    + 'Following up on our conversation -- I wanted to share some technical resources that align with your top priorities:\n\n'
+                    + highList + '\n\n'
+                    + 'I\'ve put together:\n'
+                    + '  - Architecture diagrams showing how Vision One integrates with your existing stack\n'
+                    + '  - ROI calculator based on companies similar to ' + v.company + ' (' + v.industry + ', ' + v.company_size + ')\n'
+                    + '  - Case study from a peer organization in ' + v.industry + '\n\n'
+                    + 'Our Solutions Engineering team would be happy to walk through a technical deep-dive tailored to your environment. Would next Tuesday or Wednesday work for a 45-minute session?\n\n'
+                    + 'Best regards,\n[Your Name]\nTrend Micro'
+            },
+            {
+                label: 'Day 7 -- Expand the Conversation',
+                subject: 'Additional solutions for ' + v.company + '\'s security roadmap',
+                body: 'Hi ' + firstName + ',\n\n'
+                    + 'I\'ve been thinking about our discussion and wanted to share a few additional areas where Vision One could add value:\n\n'
+                    + (medList || '  (No secondary interests identified)') + '\n\n'
+                    + 'Many organizations in ' + v.industry + ' are taking a platform approach to consolidate their security tools. I think there\'s a strong fit between your goals and our unified platform.\n\n'
+                    + 'I\'d like to propose setting up a proof-of-concept environment so your team can evaluate Vision One hands-on. We can have it ready within a week of your go-ahead.\n\n'
+                    + 'Would you be open to a quick call to discuss?\n\n'
+                    + 'Best regards,\n[Your Name]\nTrend Micro'
+            },
+            {
+                label: 'Day 14 -- Proposal',
+                subject: 'Vision One proposal for ' + v.company,
+                body: 'Hi ' + firstName + ',\n\n'
+                    + 'Thank you for the great conversations over the past two weeks. Based on everything we\'ve discussed, I\'ve prepared a consolidated proposal for ' + v.company + ' that covers:\n\n'
+                    + data.recommendations
+                        .filter(function(r) { return r.priority === 'high' || r.priority === 'medium'; })
+                        .map(function(r) { return '  - ' + r.action; }).join('\n') + '\n\n'
+                    + 'The proposal includes pricing, implementation timeline, and success metrics tailored to your environment.\n\n'
+                    + 'I\'d like to schedule a 30-minute executive briefing with you and any stakeholders you\'d like to include. We can walk through the proposal together and answer any questions.\n\n'
+                    + 'What does your calendar look like next week?\n\n'
+                    + 'Best regards,\n[Your Name]\nTrend Micro'
+            }
+        ];
+    }
+
+    // ---- Copy to clipboard ----
+    window.copyEmail = function(idx) {
+        var el = document.getElementById('email-' + idx);
+        var text = el.textContent;
+        navigator.clipboard.writeText(text).then(function() {
+            var btn = el.closest('.email-card').querySelector('.btn-copy');
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(function() {
+                btn.textContent = 'Copy';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    };
+
+    // ---- Init ----
+    loadData().then(render).catch(function(err) {
+        document.getElementById('loadOverlay').textContent = 'Error loading data: ' + err.message;
+    });
+})();
+</script>
+</body>
+</html>
