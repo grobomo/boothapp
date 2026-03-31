@@ -10,6 +10,27 @@ from engines.email_template import render_follow_up_email
 from engines.product_detector import detect_products
 
 
+def _make_s3_client():
+    """Create a boto3 S3 client with credential fallback.
+
+    Tries env vars -> AWS_PROFILE -> default chain (instance metadata).
+    """
+    import boto3
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY"):
+        session = boto3.Session(
+            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+            aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
+            region_name=region,
+        )
+        return session.client("s3")
+    if os.environ.get("AWS_PROFILE"):
+        session = boto3.Session(profile_name=os.environ["AWS_PROFILE"], region_name=region)
+        return session.client("s3")
+    return boto3.client("s3", region_name=region)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Analyze a booth demo session with Claude"
@@ -87,10 +108,9 @@ def write_output(output_dir: str, results: dict):
         html_files.append(("follow-up-email.html", results["follow_up_email_html"]))
 
     if output_dir.startswith("s3://"):
-        import boto3
         prefix = output_dir.replace("s3://", "")
         bucket, _, key_prefix = prefix.partition("/")
-        s3 = boto3.client("s3")
+        s3 = _make_s3_client()
         for filename, data in json_files:
             key = f"{key_prefix}/{filename}".lstrip("/")
             s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(data, indent=2), ContentType="application/json")
@@ -188,10 +208,9 @@ def main():
     try:
         clicks_data = {}
         if args.session_dir.startswith("s3://"):
-            import boto3
             prefix = args.session_dir.replace("s3://", "")
             bucket, _, key_prefix = prefix.partition("/")
-            s3 = boto3.client("s3")
+            s3 = _make_s3_client()
             resp = s3.get_object(Bucket=bucket, Key=f"{key_prefix}/clicks/clicks.json")
             clicks_data = json.loads(resp["Body"].read())
         else:
@@ -223,10 +242,9 @@ def main():
         try:
             transcript_data = {}
             if args.session_dir.startswith("s3://"):
-                import boto3
                 prefix = args.session_dir.replace("s3://", "")
                 bucket, _, key_prefix = prefix.partition("/")
-                s3 = boto3.client("s3")
+                s3 = _make_s3_client()
                 resp = s3.get_object(Bucket=bucket, Key=f"{key_prefix}/transcript/transcript.json")
                 transcript_data = json.loads(resp["Body"].read())
             else:

@@ -147,7 +147,25 @@ class SessionAnalyzer:
     def _get_s3_client(self):
         if self._s3_client is None:
             import boto3
-            self._s3_client = boto3.client("s3")
+            import botocore.exceptions
+            region = os.environ.get("AWS_REGION", "us-east-1")
+            # Try explicit env creds -> AWS_PROFILE -> default chain (instance metadata)
+            if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY"):
+                session = boto3.Session(
+                    aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+                    aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+                    aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
+                    region_name=region,
+                )
+                self._s3_client = session.client("s3")
+            elif os.environ.get("AWS_PROFILE"):
+                session = boto3.Session(
+                    profile_name=os.environ["AWS_PROFILE"],
+                    region_name=region,
+                )
+                self._s3_client = session.client("s3")
+            else:
+                self._s3_client = boto3.client("s3", region_name=region)
         return self._s3_client
 
     def _read_file(self, relative_path: str) -> bytes:

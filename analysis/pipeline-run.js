@@ -41,6 +41,34 @@ if (!sessionId || !bucket) {
 }
 
 const REGION = process.env.AWS_REGION || 'us-east-1';
+
+// Build env for child processes — explicitly forward AWS creds and analysis config
+// so Python subprocesses (analyze.py, annotator.py) inherit them even if the
+// parent process was spawned in a context that strips env (e.g. systemd, cron).
+function buildChildEnv() {
+  const env = { ...process.env };
+  // Ensure these are explicitly set (no-op if already present, but makes intent clear)
+  const forward = [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_SESSION_TOKEN',
+    'AWS_REGION',
+    'AWS_PROFILE',
+    'AWS_DEFAULT_REGION',
+    'USE_BEDROCK',
+    'ANALYSIS_MODEL',
+    'RONE_AI_BASE_URL',
+    'RONE_AI_API_KEY',
+    'ANTHROPIC_API_KEY',
+  ];
+  for (const key of forward) {
+    if (process.env[key]) {
+      env[key] = process.env[key];
+    }
+  }
+  return env;
+}
+
 const PIPELINE_TIMEOUT_MS = 120_000;
 const STAGE_TIMEOUT_MS = 300_000; // 5 minutes per stage
 const MAX_RETRIES = 3;
@@ -175,6 +203,7 @@ async function run() {
     const annotatorScript = path.join(__dirname, 'engines', 'annotator.py');
     const annotateSessionPath = `s3://${bucket}/sessions/${sessionId}`;
     execFileSync('python3', [annotatorScript, annotateSessionPath], {
+      env: buildChildEnv(),
       stdio: 'inherit',
       timeout: STAGE_TIMEOUT_MS,
     });
@@ -193,6 +222,7 @@ async function run() {
     const analyzeScript = path.join(__dirname, 'analyze.py');
     const sessionS3Path = `s3://${bucket}/sessions/${sessionId}`;
     execFileSync('python3', [analyzeScript, sessionS3Path], {
+      env: buildChildEnv(),
       stdio: 'inherit',
       timeout: STAGE_TIMEOUT_MS,
     });
@@ -229,6 +259,7 @@ async function run() {
     log('Rendering HTML report (render-report.js)...');
     const renderScript = path.join(__dirname, 'render-report.js');
     execFileSync('node', [renderScript, sessionS3Path], {
+      env: buildChildEnv(),
       stdio: 'inherit',
       timeout: STAGE_TIMEOUT_MS,
     });
@@ -243,6 +274,7 @@ async function run() {
   const emailScript = path.join(__dirname, 'email-report.js');
   try {
     execFileSync('node', [emailScript, sessionS3Path], {
+      env: buildChildEnv(),
       stdio: 'inherit',
       timeout: STAGE_TIMEOUT_MS,
     });
