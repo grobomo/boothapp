@@ -6,6 +6,7 @@ import sys
 
 from engines.analyzer import SessionAnalyzer
 from engines.competitive import analyze_transcript as analyze_competitive
+from engines.demo_script import generate_demo_script
 from engines.email_template import render_follow_up_email
 from engines.product_detector import detect_products
 
@@ -55,6 +56,11 @@ def parse_args():
         "--competitive",
         action="store_true",
         help="Run competitive intelligence analysis on transcript",
+    )
+    parser.add_argument(
+        "--demo-script",
+        action="store_true",
+        help="Generate recommended demo script based on session analysis",
     )
     args = parser.parse_args()
     # Support both positional and --session-dir flag
@@ -272,6 +278,15 @@ def main():
         except Exception as e:
             print(f"Failed to write outputs: {e}", file=sys.stderr)
             return 1
+
+    # Optional: generate recommended demo script
+    if args.demo_script and not args.session_dir.startswith("s3://"):
+        try:
+            generate_demo_script(args.session_dir)
+            script_path = os.path.join(args.session_dir, "output", "recommended-demo-script.md")
+            print(f"\nDemo script written to {script_path}")
+        except Exception as e:
+            print(f"Warning: demo script generation failed: {e}", file=sys.stderr)
 
     print("\nDone.")
     return 0

@@ -22,8 +22,8 @@ const path = require('path');
 const PRESENTER_DIR = path.join(__dirname, '..', 'presenter');
 const OUTPUT_PATH = path.join(PRESENTER_DIR, 'batch-report.html');
 
-// Single source of truth for product topics — shared with correlator
-const { PRODUCT_TOPICS } = require('./lib/correlator');
+// Single source of truth for product topics and normalizers — shared with correlator
+const { PRODUCT_TOPICS, normalizeClicks, normalizeTranscript } = require('./lib/correlator');
 
 // Company size buckets based on endpoint count or keywords in transcript
 const SIZE_BUCKETS = [
@@ -61,8 +61,9 @@ function loadSessionLocal(dir) {
 
 function detectModulesFromClicks(clicks) {
   const counts = {};
-  if (!clicks || !clicks.events) return counts;
-  for (const evt of clicks.events) {
+  const clicksArray = normalizeClicks(clicks);
+  if (clicksArray.length === 0) return counts;
+  for (const evt of clicksArray) {
     const text = [
       evt.page_title || '',
       evt.page_url || '',
@@ -83,8 +84,9 @@ function detectModulesFromClicks(clicks) {
 
 function detectModulesFromTranscript(transcript) {
   const counts = {};
-  if (!transcript || !transcript.entries) return counts;
-  for (const entry of transcript.entries) {
+  const entries = normalizeTranscript(transcript).entries;
+  if (entries.length === 0) return counts;
+  for (const entry of entries) {
     const text = entry.text.toLowerCase();
     for (const prod of PRODUCT_TOPICS) {
       for (const kw of prod.keywords) {
@@ -99,15 +101,17 @@ function detectModulesFromTranscript(transcript) {
 }
 
 function extractVisitorQuestions(transcript) {
-  if (!transcript || !transcript.entries) return [];
-  return transcript.entries
+  const entries = normalizeTranscript(transcript).entries;
+  if (entries.length === 0) return [];
+  return entries
     .filter(e => e.speaker === 'Visitor' && e.text.includes('?'))
     .map(e => e.text.trim());
 }
 
 function estimateCompanySize(transcript) {
-  if (!transcript || !transcript.entries) return null;
-  const fullText = transcript.entries.map(e => e.text).join(' ');
+  const entries = normalizeTranscript(transcript).entries;
+  if (entries.length === 0) return null;
+  const fullText = entries.map(e => e.text).join(' ');
   // Look for endpoint count mentions
   const match = fullText.match(/(\d[\d,]*)\s*endpoint/i);
   if (match) {
@@ -174,7 +178,7 @@ function analyzeAll(sessions) {
     const transcriptModules = detectModulesFromTranscript(s.transcript);
     const questions = extractVisitorQuestions(s.transcript);
     const size = estimateCompanySize(s.transcript);
-    const clickCount = (s.clicks && s.clicks.events) ? s.clicks.events.length : 0;
+    const clickCount = normalizeClicks(s.clicks).length;
 
     // Accumulate module counts
     for (const [mod, cnt] of Object.entries(clickModules)) {

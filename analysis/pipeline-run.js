@@ -24,7 +24,7 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 
-const { correlate } = require('./lib/correlator');
+const { correlate, normalizeClicks, normalizeTranscript } = require('./lib/correlator');
 const { getJson, listObjects } = require('./lib/s3');
 const { sendNotification } = require('./lib/notify');
 const { withRetry } = require('./lib/retry');
@@ -163,7 +163,7 @@ async function run() {
       log(`WARNING: Could not list screenshots — ${ssErr.message}`);
       screenshots = [];
     }
-    log(`Loaded: ${clicks.events?.length ?? 0} clicks, ${transcript.entries?.length ?? 0} transcript entries`);
+    log(`Loaded: ${normalizeClicks(clicks).length} clicks, ${normalizeTranscript(transcript).entries.length} transcript entries`);
   } catch (err) {
     errors.push({ step: 'fetch', error: err.message, timestamp: new Date().toISOString() });
     log(`FATAL: Failed to fetch session data — ${err.message}`);
