@@ -9,9 +9,23 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg-primary: #0d1117;
+    --bg-card: #161b22;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #484f58;
+    --accent-blue: #58a6ff;
+    --accent-red: #f85149;
+    --accent-orange: #f78166;
+    --accent-green: #3fb950;
+    --accent-yellow: #d29922;
+  }
+
   body {
-    background: #0d1117;
-    color: #e6edf3;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     min-height: 100vh;
     display: flex;
@@ -20,17 +34,106 @@
     padding: 2rem;
   }
 
+  /* -- Logo header -- */
+  .logo-header {
+    text-align: center;
+    margin-bottom: 1rem;
+    padding-top: 0.5rem;
+  }
+
+  .logo-header .logo-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 0.6rem;
+    background: linear-gradient(135deg, var(--accent-blue), #a371f7);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 24px rgba(88, 166, 255, 0.2);
+  }
+
+  .logo-header .logo-icon svg {
+    width: 44px;
+    height: 44px;
+    fill: #fff;
+  }
+
+  .logo-header .logo-title {
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .logo-header .logo-title span {
+    color: var(--accent-blue);
+  }
+
+  .logo-header .logo-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 0.15rem;
+  }
+
+  /* -- Session counter bar -- */
+  .session-counter {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .counter-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .counter-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .counter-dot.active    { background: var(--accent-red); animation: pulse 1.5s infinite; }
+  .counter-dot.completed { background: var(--accent-green); }
+  .counter-dot.total     { background: var(--accent-blue); }
+
+  .counter-chip .count {
+    font-weight: 700;
+    font-family: monospace;
+    color: var(--text-primary);
+  }
+
+  .counter-chip .count-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   h1 {
     font-size: 2rem;
     font-weight: 600;
-    color: #58a6ff;
+    color: var(--accent-blue);
     margin-bottom: 0.5rem;
     letter-spacing: 0.02em;
   }
 
   .session-id {
     font-size: 1.2rem;
-    color: #8b949e;
+    color: var(--text-muted);
     margin-bottom: 2rem;
     font-family: monospace;
   }
@@ -44,8 +147,8 @@
   }
 
   .card {
-    background: #161b22;
-    border: 1px solid #30363d;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 2rem 2.5rem;
     text-align: center;
@@ -53,7 +156,7 @@
 
   .card-label {
     font-size: 1.4rem;
-    color: #8b949e;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.8rem;
@@ -67,8 +170,8 @@
   }
 
   .card-value.name   { color: #f0f6fc; font-size: 3.5rem; }
-  .card-value.timer  { color: #58a6ff; font-family: monospace; }
-  .card-value.clicks { color: #f78166; }
+  .card-value.timer  { color: var(--accent-blue); font-family: monospace; }
+  .card-value.clicks { color: var(--accent-orange); }
 
   .status-dot {
     display: inline-block;
@@ -78,9 +181,9 @@
     margin-right: 0.5rem;
     vertical-align: middle;
   }
-  .status-dot.recording { background: #f85149; animation: pulse 1.5s infinite; }
-  .status-dot.ended     { background: #8b949e; }
-  .status-dot.waiting   { background: #d29922; animation: pulse 2s infinite; }
+  .status-dot.recording { background: var(--accent-red); animation: pulse 1.5s infinite; }
+  .status-dot.ended     { background: var(--text-muted); }
+  .status-dot.waiting   { background: var(--accent-yellow); animation: pulse 2s infinite; }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -95,7 +198,7 @@
 
   .se-name {
     font-size: 1rem;
-    color: #8b949e;
+    color: var(--text-muted);
     margin-top: 0.3rem;
   }
 
@@ -105,8 +208,8 @@
     max-height: 340px;
     overflow: hidden;
     border-radius: 8px;
-    border: 1px solid #30363d;
-    background: #0d1117;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -119,20 +222,20 @@
     object-fit: contain;
   }
   .screenshot-wrap .placeholder {
-    color: #484f58;
+    color: var(--text-dim);
     font-size: 1.1rem;
     font-style: italic;
   }
   .screenshot-meta {
     margin-top: 0.5rem;
     font-size: 0.85rem;
-    color: #484f58;
+    color: var(--text-dim);
   }
 
   .error-banner {
     background: #f8514922;
-    border: 1px solid #f85149;
-    color: #f85149;
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
     padding: 1rem 2rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -146,32 +249,48 @@
   .refresh-indicator {
     margin-top: 1.5rem;
     font-size: 0.9rem;
-    color: #484f58;
+    color: var(--text-dim);
+  }
+
+  /* -- Footer -- */
+  .site-footer {
+    margin-top: auto;
+    padding-top: 2.5rem;
+    padding-bottom: 0.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 0.03em;
+  }
+
+  .site-footer .team-name {
+    font-weight: 600;
+    color: var(--text-muted);
   }
 
   /* -- Setup screen -- */
   .setup {
     text-align: center;
-    margin-top: 4rem;
+    margin-top: 2rem;
   }
   .setup label {
     display: block;
     font-size: 1.3rem;
-    color: #8b949e;
+    color: var(--text-muted);
     margin-bottom: 1rem;
   }
   .setup input {
     font-size: 2rem;
     padding: 0.6rem 1.2rem;
     border-radius: 8px;
-    border: 1px solid #30363d;
-    background: #161b22;
-    color: #e6edf3;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
     text-align: center;
     font-family: monospace;
     width: 320px;
   }
-  .setup input:focus { outline: 2px solid #58a6ff; }
+  .setup input:focus { outline: 2px solid var(--accent-blue); }
   .setup button {
     display: block;
     margin: 1.5rem auto 0;
@@ -191,6 +310,9 @@
   /* -- Responsive: tablet (< 768px) -- */
   @media (max-width: 768px) {
     body { padding: 1rem; }
+    .logo-header .logo-title { font-size: 2rem; }
+    .logo-header .logo-icon { width: 56px; height: 56px; border-radius: 14px; }
+    .logo-header .logo-icon svg { width: 34px; height: 34px; }
     h1 { font-size: 1.6rem; }
     .grid { gap: 1rem; }
     .card { padding: 1.2rem 1.5rem; }
@@ -199,11 +321,15 @@
     .card-value.name { font-size: 2.5rem; }
     .card-value.status { font-size: 2rem; }
     .screenshot-wrap { max-height: 260px; min-height: 140px; }
+    .session-counter { gap: 0.6rem; }
   }
 
   /* -- Responsive: phone (< 480px) -- */
   @media (max-width: 480px) {
     body { padding: 0.75rem; }
+    .logo-header .logo-title { font-size: 1.6rem; }
+    .logo-header .logo-icon { width: 48px; height: 48px; border-radius: 12px; }
+    .logo-header .logo-icon svg { width: 28px; height: 28px; }
     h1 { font-size: 1.3rem; }
     .session-id { font-size: 0.95rem; margin-bottom: 1rem; }
     .grid { grid-template-columns: 1fr; gap: 0.75rem; }
@@ -214,6 +340,8 @@
     .card-value.status { font-size: 1.6rem; }
     .setup input { width: 100%; font-size: 1.5rem; }
     .screenshot-wrap { max-height: 200px; min-height: 120px; }
+    .session-counter { gap: 0.5rem; }
+    .counter-chip { padding: 0.3rem 0.7rem; font-size: 0.8rem; }
   }
 </style>
 </head>
@@ -222,11 +350,44 @@
 <script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
 else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
+<!-- Logo header -->
+<div class="logo-header">
+  <div class="logo-icon">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" opacity="0.3"/>
+      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
+      <circle cx="17" cy="8" r="2"/>
+      <path d="M7.5 14l2.5-3 2 2.5 2.5-3.2L18 14z"/>
+    </svg>
+  </div>
+  <div class="logo-title">Booth<span>App</span></div>
+  <div class="logo-subtitle">Presenter Dashboard</div>
+</div>
+
+<!-- Session counter (populated by JS) -->
+<div class="session-counter" id="session-counter">
+  <div class="counter-chip">
+    <span class="counter-dot active"></span>
+    <span class="count" id="cnt-active">-</span>
+    <span class="count-label">Active</span>
+  </div>
+  <div class="counter-chip">
+    <span class="counter-dot completed"></span>
+    <span class="count" id="cnt-completed">-</span>
+    <span class="count-label">Completed</span>
+  </div>
+  <div class="counter-chip">
+    <span class="counter-dot total"></span>
+    <span class="count" id="cnt-total">-</span>
+    <span class="count-label">Total</span>
+  </div>
+</div>
+
 <div style="max-width:900px;margin:0 auto 1rem;display:flex;justify-content:flex-end;gap:1rem;font-size:0.85rem;">
-  <span id="auth-user" style="color:#8b949e;font-family:monospace;"></span>
-  <a href="sessions.html" style="color:#8b949e;text-decoration:none;">Sessions</a>
-  <a href="admin.html" id="admin-link" style="color:#8b949e;text-decoration:none;display:none;">Admin</a>
-  <a href="#" id="logout-link" style="color:#8b949e;text-decoration:none;">Logout</a>
+  <span id="auth-user" style="color:var(--text-muted);font-family:monospace;"></span>
+  <a href="sessions.html" style="color:var(--text-muted);text-decoration:none;">Sessions</a>
+  <a href="admin.html" id="admin-link" style="color:var(--text-muted);text-decoration:none;display:none;">Admin</a>
+  <a href="#" id="logout-link" style="color:var(--text-muted);text-decoration:none;">Logout</a>
 </div>
 <script>
   document.getElementById("auth-user").textContent = BoothAuth.currentUser() || "";
@@ -236,7 +397,6 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
 <!-- Setup: enter session ID if not in URL -->
 <div id="setup" class="setup">
-  <h1>BoothApp Presenter</h1>
   <label for="session-input">Enter Session ID</label>
   <input id="session-input" type="text" placeholder="A726594" autofocus>
   <button id="go-btn">Go</button>
@@ -244,7 +404,6 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
 <!-- Dashboard -->
 <div id="dashboard" class="hidden">
-  <h1>BoothApp Presenter</h1>
   <div class="session-id" id="sid-display"></div>
   <div class="error-banner" id="error-banner"></div>
 
@@ -279,11 +438,16 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
   <div class="refresh-indicator" id="refresh-indicator">Auto-refresh: 5s</div>
   <div style="margin-top:1rem;text-align:center">
-    <a href="sessions.html" style="color:#58a6ff;text-decoration:none;font-size:0.9rem;margin-right:1.5rem;">All Sessions</a>
-    <a href="live.html" style="color:#58a6ff;text-decoration:none;font-size:0.9rem;margin-right:1.5rem;">Live Monitor</a>
-    <a href="workers.html" style="color:#58a6ff;text-decoration:none;font-size:0.9rem;">Worker Status</a>
+    <a href="sessions.html" style="color:var(--accent-blue);text-decoration:none;font-size:0.9rem;margin-right:1.5rem;">All Sessions</a>
+    <a href="live.html" style="color:var(--accent-blue);text-decoration:none;font-size:0.9rem;margin-right:1.5rem;">Live Monitor</a>
+    <a href="workers.html" style="color:var(--accent-blue);text-decoration:none;font-size:0.9rem;">Worker Status</a>
   </div>
 </div>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <span class="team-name">Smells Like Machine Learning</span> &mdash; Hackathon 2026
+</footer>
 
 <script>
 (function () {
@@ -291,10 +455,47 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
   var BUCKET = "boothapp-sessions-752266476357";
   var REGION = "us-east-1";
   var REFRESH_MS = 5000;
+  var COUNTER_REFRESH_MS = 15000;
 
   function s3Url(key) {
     return "https://" + BUCKET + ".s3." + REGION + ".amazonaws.com/" + key;
   }
+
+  // ── Session counter ─────────────────────────────────────────────────────────
+  var cntActiveEl    = document.getElementById("cnt-active");
+  var cntCompletedEl = document.getElementById("cnt-completed");
+  var cntTotalEl     = document.getElementById("cnt-total");
+
+  function refreshSessionCounts() {
+    var apiUrl = (localStorage.getItem("boothapp_api_url") || "").replace(/\/+$/, "");
+    if (!apiUrl) return;
+    fetch(apiUrl + "/sessions")
+      .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
+      .then(function (data) {
+        if (!Array.isArray(data)) return;
+        var active = 0;
+        var completed = 0;
+        data.forEach(function (s) {
+          var st = (s.status || "").toLowerCase();
+          if (st === "recording" || st === "active" || st === "in_progress") {
+            active++;
+          } else if (st === "completed" || st === "ended" || st === "analyzed" || st === "reviewed" || st === "sent") {
+            completed++;
+          }
+        });
+        cntActiveEl.textContent = active;
+        cntCompletedEl.textContent = completed;
+        cntTotalEl.textContent = data.length;
+      })
+      .catch(function () {
+        cntActiveEl.textContent = "-";
+        cntCompletedEl.textContent = "-";
+        cntTotalEl.textContent = "-";
+      });
+  }
+
+  refreshSessionCounts();
+  setInterval(refreshSessionCounts, COUNTER_REFRESH_MS);
 
   // ── URL param ───────────────────────────────────────────────────────────────
   var params = new URLSearchParams(window.location.search);
