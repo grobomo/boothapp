@@ -18,7 +18,7 @@
  *   commands/<demo_pc>/start.json  — presence = start signal (PC polls every 1s)
  *   commands/<demo_pc>/end.json    — presence = end signal   (PC polls every 5s)
  */
-const { putObject, getObject, objectExists, deleteObject } = require('./s3');
+const { putObject, getObject, objectExists, deleteObject, listPrefixes } = require('./s3');
 const { claimTenant } = require('./tenant-pool');
 
 // ── Input validation ───────────────────────────────────────────────────────
@@ -298,8 +298,44 @@ async function getSession(session_id) {
   return { ...metadata, commands: { start_sent: startSent, end_sent: endSent } };
 }
 
+/**
+ * List all sessions with metadata and analysis status.
+ * Returns an array of session objects with: session_id, visitor_name, status,
+ * created_at, has_analysis, se_name, started_at, ended_at.
+ */
+async function listSessions() {
+  const prefixes = await listPrefixes('sessions/', '/');
+  const sessionIds = prefixes
+    .map(p => p.replace('sessions/', '').replace(/\/$/, ''))
+    .filter(Boolean);
+
+  const results = await Promise.all(sessionIds.map(async (sid) => {
+    let meta = {};
+    try {
+      meta = await getObject(`sessions/${sid}/metadata.json`);
+    } catch (_) {}
+
+    const has_analysis = await objectExists(`sessions/${sid}/output/summary.json`);
+
+    return {
+      session_id: sid,
+      visitor_name: meta.visitor_name || 'Unknown',
+      status: meta.status || (meta.ended_at ? 'ended' : meta.started_at ? 'active' : 'unknown'),
+      created_at: meta.started_at || meta.created_at || null,
+      has_analysis,
+      se_name: meta.se_name || null,
+      started_at: meta.started_at || null,
+      ended_at: meta.ended_at || null,
+      visitor_company: meta.visitor_company || null,
+      click_count: meta.click_count != null ? meta.click_count : null,
+    };
+  }));
+
+  return results;
+}
+
 module.exports = {
-  createSession, endSession, getSession,
+  createSession, endSession, getSession, listSessions,
   transitionState, getSessionState,
   validateSessionId, validateDemoPc,
   VALID_STATES, TRANSITIONS,

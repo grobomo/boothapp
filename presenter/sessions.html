@@ -160,10 +160,12 @@
     letter-spacing: 0.03em;
   }
   .badge-recording   { background: #f8514933; color: #f85149; }
+  .badge-active      { background: #f8514933; color: #f85149; }
   .badge-completed   { background: #23863633; color: #3fb950; }
   .badge-ended       { background: #23863633; color: #3fb950; }
+  .badge-analyzed    { background: #23863633; color: #3fb950; }
   .badge-waiting     { background: #d2992233; color: #d29922; }
-  .badge-analyzing   { background: #58a6ff33; color: #58a6ff; }
+  .badge-processing  { background: #58a6ff33; color: #58a6ff; }
   .badge-unknown     { background: #30363d;   color: #8b949e; }
 
   /* -- Engagement score bar -- */
@@ -304,6 +306,16 @@
 <script>if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); }
 else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
 
+<!-- Setup: API endpoint -->
+<div id="setup" class="setup">
+  <h1>BoothApp</h1>
+  <h2>Session Review Dashboard</h2>
+  <label for="api-url">API Endpoint URL</label>
+  <input id="api-url" type="text" placeholder="https://your-api.example.com or http://localhost:3000">
+  <button id="save-config">Connect</button>
+  <div class="hint">Endpoint URL is stored in localStorage only.</div>
+</div>
+
 <!-- Dashboard -->
 <div id="dashboard">
   <header>
@@ -338,17 +350,14 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
       </thead>
       <tbody id="session-body"></tbody>
     </table>
-    <div class="empty-state hidden" id="empty-state">No sessions found in bucket.</div>
+    <div class="empty-state hidden" id="empty-state">No sessions found.</div>
   </div>
 </div>
 
 <script>
 (function () {
-  var BUCKET = "boothapp-sessions-752266476357";
-  var REGION = "us-east-1";
   var REFRESH_MS = 15000;
-  var LS_KEY_AK = "boothapp_aws_ak";
-  var LS_KEY_SK = "boothapp_aws_sk";
+  var LS_KEY_API = "boothapp_api_url";
 
   // ── Elements ────────────────────────────────────────────────────────────────
   var dashboardEl  = document.getElementById("dashboard");
@@ -359,23 +368,47 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
   var emptyEl      = document.getElementById("empty-state");
   var countEl      = document.getElementById("session-count");
   var refreshBadge = document.getElementById("refresh-badge");
+  var saveBtn      = document.getElementById("save-config");
   var logoutLink   = document.getElementById("logout-link");
+  var apiInput     = document.getElementById("api-url");
 
-  // ── AWS client ──────────────────────────────────────────────────────────────
-  var s3 = null;
+  var apiUrl = null;
 
-  function initS3(ak, sk) {
-    AWS.config.update({ accessKeyId: ak, secretAccessKey: sk, region: REGION });
-    s3 = new AWS.S3({ params: { Bucket: BUCKET } });
+  // ── Config ──────────────────────────────────────────────────────────────────
+  function loadConfig() {
+    var url = localStorage.getItem(LS_KEY_API);
+    if (url) {
+      apiUrl = url.replace(/\/+$/, "");
+      return true;
+    }
+    return false;
   }
 
-  // ── Init (AWS creds guaranteed by auth gate) ──────────────────────────────
-  var ak = localStorage.getItem(LS_KEY_AK);
-  var sk = localStorage.getItem(LS_KEY_SK);
-  initS3(ak, sk);
+  function saveConfig(url) {
+    localStorage.setItem(LS_KEY_API, url);
+    apiUrl = url.replace(/\/+$/, "");
+  }
+
+  function clearConfig() {
+    localStorage.removeItem(LS_KEY_API);
+    apiUrl = null;
+  }
+
+  // ── Setup flow ──────────────────────────────────────────────────────────────
+  if (loadConfig()) {
+    showDashboard();
+  }
+
+  saveBtn.addEventListener("click", function () {
+    var url = apiInput.value.trim();
+    if (!url) return;
+    saveConfig(url);
+    showDashboard();
+  });
 
   logoutLink.addEventListener("click", function (e) {
     e.preventDefault();
+    clearConfig();
     BoothAuth.logout();
   });
 
@@ -411,104 +444,69 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
     errorBanner.style.display = "none";
   }
 
-  // ── S3: list sessions ───────────────────────────────────────────────────────
+  // ── API: list sessions ────────────────────────────────────────────────────
   function loadSessions() {
     startCountdown();
-    s3.listObjectsV2({ Prefix: "sessions/", Delimiter: "/" }, function (err, data) {
-      if (err) {
-        showError("S3 error: " + (err.message || err.code));
+    fetch(apiUrl + "/sessions")
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        clearError();
+        if (!Array.isArray(data) || data.length === 0) {
+          loadingEl.classList.add("hidden");
+          tableEl.classList.add("hidden");
+          emptyEl.classList.remove("hidden");
+          countEl.textContent = "0 sessions";
+          return;
+        }
+        sessions = data.map(function (s) { return buildSessionRow(s); });
+        renderTable();
+      })
+      .catch(function (err) {
+        showError("API error: " + err.message);
         loadingEl.classList.add("hidden");
-        return;
-      }
-      clearError();
-
-      var prefixes = (data.CommonPrefixes || []).map(function (p) {
-        return p.Prefix.replace("sessions/", "").replace("/", "");
-      }).filter(Boolean);
-
-      if (prefixes.length === 0) {
-        loadingEl.classList.add("hidden");
-        tableEl.classList.add("hidden");
-        emptyEl.classList.remove("hidden");
-        countEl.textContent = "0 sessions";
-        return;
-      }
-
-      var pending = prefixes.length;
-      var results = [];
-
-      prefixes.forEach(function (sid) {
-        fetchMetadata(sid, function (meta) {
-          results.push(buildSessionRow(sid, meta));
-          pending--;
-          if (pending === 0) {
-            sessions = results;
-            renderTable();
-          }
-        });
       });
-    });
-  }
-
-  function fetchMetadata(sid, cb) {
-    s3.getObject({ Key: "sessions/" + sid + "/metadata.json" }, function (err, data) {
-      if (err) { cb(null); return; }
-      try {
-        cb(JSON.parse(data.Body.toString()));
-      } catch (e) {
-        cb(null);
-      }
-    });
   }
 
   // ── Build row data ──────────────────────────────────────────────────────────
-  function buildSessionRow(sid, meta) {
-    meta = meta || {};
-    var status = deriveStatus(meta);
-    var score = computeScore(meta);
+  function buildSessionRow(s) {
+    var score = computeScore(s);
     return {
-      id: sid,
-      name: meta.visitor_name || "Unknown",
-      date: meta.started_at || meta.created_at || "",
-      status: status,
+      id: s.session_id,
+      name: s.visitor_name || "Unknown",
+      date: s.started_at || s.created_at || "",
+      status: s.status || "unknown",
       score: score,
-      se: meta.se_name || "",
-      duration: computeDuration(meta),
-      clicks: (meta.click_count != null) ? meta.click_count : "--",
-      company: meta.visitor_company || "",
-      endedAt: meta.ended_at || "",
-      raw: meta
+      se: s.se_name || "",
+      duration: computeDuration(s),
+      clicks: (s.click_count != null) ? s.click_count : "--",
+      company: s.visitor_company || "",
+      endedAt: s.ended_at || "",
+      hasAnalysis: s.has_analysis || false
     };
   }
 
-  function deriveStatus(meta) {
-    if (meta.status) return meta.status.toLowerCase();
-    if (meta.ended_at) return "completed";
-    if (meta.started_at) return "recording";
-    return "waiting";
-  }
-
-  function computeScore(meta) {
-    // Heuristic: clicks * duration_minutes, capped at 100
-    var clicks = meta.click_count || 0;
+  function computeScore(s) {
+    var clicks = s.click_count || 0;
     var dur = 0;
-    if (meta.started_at) {
-      var end = meta.ended_at ? new Date(meta.ended_at).getTime() : Date.now();
-      dur = Math.max(0, (end - new Date(meta.started_at).getTime()) / 60000);
+    if (s.started_at) {
+      var end = s.ended_at ? new Date(s.ended_at).getTime() : Date.now();
+      dur = Math.max(0, (end - new Date(s.started_at).getTime()) / 60000);
     }
-    // Score: sqrt(clicks * dur) scaled, capped at 100
     var raw = Math.sqrt(clicks * dur) * 5;
     return Math.min(100, Math.round(raw));
   }
 
-  function computeDuration(meta) {
-    if (!meta.started_at) return "--";
-    var start = new Date(meta.started_at).getTime();
-    var end = meta.ended_at ? new Date(meta.ended_at).getTime() : Date.now();
+  function computeDuration(s) {
+    if (!s.started_at) return "--";
+    var start = new Date(s.started_at).getTime();
+    var end = s.ended_at ? new Date(s.ended_at).getTime() : Date.now();
     var sec = Math.max(0, Math.floor((end - start) / 1000));
     var m = Math.floor(sec / 60);
-    var s = sec % 60;
-    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    var ss = sec % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (ss < 10 ? "0" : "") + ss;
   }
 
   // ── Sorting ─────────────────────────────────────────────────────────────────
@@ -555,9 +553,9 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
   }
 
   function badgeClass(status) {
-    if (status === "recording" || status === "in_progress") return "badge-recording";
-    if (status === "completed" || status === "ended") return "badge-completed";
-    if (status === "analyzing") return "badge-analyzing";
+    if (status === "recording" || status === "active") return "badge-active";
+    if (status === "completed" || status === "ended" || status === "analyzed" || status === "reviewed" || status === "sent") return "badge-completed";
+    if (status === "processing") return "badge-processing";
     if (status === "waiting") return "badge-waiting";
     return "badge-unknown";
   }
@@ -634,6 +632,7 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }</script>
             '<div class="detail-item"><label>Clicks</label><span class="mono">' + esc(String(s.clicks)) + '</span></div>' +
             '<div class="detail-item"><label>Started</label><span class="mono">' + esc(formatDate(s.date)) + '</span></div>' +
             '<div class="detail-item"><label>Ended</label><span class="mono">' + esc(formatDate(s.endedAt)) + '</span></div>' +
+            '<div class="detail-item"><label>Analysis</label><span>' + (s.hasAnalysis ? '<span class="badge badge-completed">ready</span>' : '<span class="badge badge-waiting">pending</span>') + '</span></div>' +
             '<div class="detail-actions">' +
               '<a href="index.html?session=' + encodeURIComponent(s.id) + '">Live View</a>' +
             '</div>' +

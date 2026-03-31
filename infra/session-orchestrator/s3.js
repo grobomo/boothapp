@@ -5,6 +5,7 @@ const {
   GetObjectCommand,
   HeadObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
 } = require('@aws-sdk/client-s3');
 
 const client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -41,4 +42,13 @@ async function deleteObject(key) {
   await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
-module.exports = { putObject, getObject, objectExists, deleteObject };
+async function listPrefixes(prefix, delimiter) {
+  const res = await client.send(new ListObjectsV2Command({
+    Bucket: BUCKET,
+    Prefix: prefix,
+    Delimiter: delimiter,
+  }));
+  return (res.CommonPrefixes || []).map(p => p.Prefix);
+}
+
+module.exports = { putObject, getObject, objectExists, deleteObject, listPrefixes };

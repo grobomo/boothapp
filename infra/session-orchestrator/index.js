@@ -3,6 +3,7 @@
  * Session Orchestrator — Lambda handler + local HTTP server.
  *
  * API:
+ *   GET  /sessions               — list all sessions with metadata + analysis status
  *   POST /sessions               — create session (Android app on badge scan)
  *   POST /sessions/:id/end       — end session (Android app or operator)
  *   GET  /sessions/:id           — get session metadata + command flags
@@ -13,12 +14,13 @@
  * Deploy as Lambda (API Gateway HTTP API or Function URL) or run locally:
  *   node index.js
  */
-const { createSession, endSession, getSession, transitionState, getSessionState } = require('./orchestrator');
+const { createSession, endSession, getSession, listSessions, transitionState, getSessionState } = require('./orchestrator');
 
 // ── Route table ────────────────────────────────────────────────────────────
 
 const ROUTES = [
   { method: 'GET',  pattern: /^\/health$/,                   handler: handleHealth },
+  { method: 'GET',  pattern: /^\/sessions$/,                 handler: handleListSessions },
   { method: 'POST', pattern: /^\/sessions$/,                 handler: handleCreateSession },
   { method: 'POST', pattern: /^\/sessions\/([^/]+)\/end$/,   handler: handleEndSession },
   { method: 'GET',  pattern: /^\/sessions\/([^/]+)\/state$/, handler: handleGetState },
@@ -28,6 +30,11 @@ const ROUTES = [
 
 async function handleHealth(_body, _matches, origin) {
   return respond(200, { status: 'ok', service: 'session-orchestrator' }, origin);
+}
+
+async function handleListSessions(_body, _matches, origin) {
+  const result = await listSessions();
+  return respond(200, result, origin);
 }
 
 async function handleCreateSession(body, _matches, origin) {
