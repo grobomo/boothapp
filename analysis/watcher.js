@@ -2,9 +2,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { runPipeline } = require('./lib/pipeline');
 const { classifyError } = require('./lib/errors');
 const { writeErrorJson } = require('./lib/error-writer');
+const { runPipelineWithTimeout } = require('./pipeline-run');
+const { retry } = require('./lib/retry');
 
 // ---------------------------------------------------------------------------
 // Watcher — monitors sessions directory for new recordings and kicks off
@@ -49,20 +50,68 @@ function getPendingSessions() {
   });
 }
 
+const MAX_SESSION_RETRIES = 2;
+
 /**
- * Process a single session.  All errors are caught, classified, and persisted.
+ * Upload error.json to S3 so the dashboard can display it even if local
+ * disk state is lost.
+ */
+async function writeErrorToS3(s3Client, bucket, sessionId, stage, err) {
+  try {
+    const { PutObjectCommand } = require('@aws-sdk/client-s3');
+    const classified = classifyError(err);
+    const payload = {
+      error: true,
+      timestamp: new Date().toISOString(),
+      sessionId,
+      stage,
+      type: classified.type,
+      retryable: classified.retryable,
+      message: classified.message,
+      code: classified.code,
+      detail: classified.detail,
+    };
+    await s3Client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `sessions/${sessionId}/output/error.json`,
+      Body: JSON.stringify(payload, null, 2),
+      ContentType: 'application/json',
+    }));
+    log(`wrote error.json to s3://${bucket}/sessions/${sessionId}/output/error.json`);
+  } catch (s3Err) {
+    log(`WARNING: failed to write error.json to S3: ${s3Err.message}`);
+  }
+}
+
+/**
+ * Process a single session with up to MAX_SESSION_RETRIES retries.
+ * On final failure, writes error.json to both local disk and S3.
  */
 async function processSession(sessionId, clients, config) {
   log(`processing session=${sessionId}`);
 
-  try {
-    const result = await runPipeline({
+  const runOnce = async () => {
+    const result = await runPipelineWithTimeout({
       sessionId,
       sessionsDir: SESSIONS_DIR,
       s3: clients.s3,
       bedrock: clients.bedrock,
       config,
       log,
+    });
+    return result;
+  };
+
+  try {
+    const result = await retry(runOnce, {
+      maxRetries: MAX_SESSION_RETRIES,
+      baseDelayMs: config.baseDelayMs || 1000,
+      maxDelayMs: config.maxDelayMs || 30000,
+      shouldRetry: (err) => classifyError(err).retryable,
+      onRetry: (err, attempt, delayMs) => {
+        const classified = classifyError(err);
+        log(`session=${sessionId} retry ${attempt}/${MAX_SESSION_RETRIES} type=${classified.type} delay=${delayMs}ms`);
+      },
     });
 
     // Write successful result
@@ -77,15 +126,22 @@ async function processSession(sessionId, clients, config) {
   } catch (err) {
     const classified = classifyError(err);
 
-    // Error already written by pipeline, but log a summary here
     log(`session=${sessionId} FAILED type=${classified.type} retryable=${classified.retryable}`);
+
+    // Write error.json locally
+    writeErrorJson(SESSIONS_DIR, sessionId, 'pipeline', err);
+
+    // Write error.json to S3
+    if (clients.s3) {
+      await writeErrorToS3(clients.s3, config.bucket, sessionId, 'pipeline', err);
+    }
 
     if (classified.type === 's3_access_denied') {
       log(`  -> S3 access denied. Check IAM role/policy for bucket "${config.bucket}".`);
     } else if (classified.type === 'missing_file') {
       log(`  -> Recording file not found. Was it uploaded? Detail: ${classified.detail}`);
     } else if (classified.type === 'throttling') {
-      log(`  -> Service throttled. Pipeline retried ${config.maxRetries || 3} times before giving up.`);
+      log(`  -> Service throttled. Retried ${MAX_SESSION_RETRIES} times before giving up.`);
     } else if (classified.type === 'bedrock_validation') {
       log(`  -> Bedrock rejected the request. Check model ID and payload format.`);
     } else {
