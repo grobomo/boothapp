@@ -28,14 +28,38 @@ function createRouter(opts) {
   });
 
   // GET /api/sessions
+  // Optional: ?include=analysis  — enriches completed sessions with summary.json fields
   router.get('/api/sessions', async (req, res) => {
     const start = Date.now();
     try {
       const sessions = await s3cache.listSessions();
+      const includeAnalysis = (req.query.include || '').split(',').includes('analysis');
+
+      let result = sessions;
+      if (includeAnalysis) {
+        result = await Promise.all(sessions.map(async (s) => {
+          const st = (s.status || '').toLowerCase();
+          const isCompleted = ['completed', 'ended', 'analyzed', 'reviewed', 'sent'].includes(st);
+          if (!isCompleted) return s;
+          try {
+            const summary = await s3cache._getCachedJson(`sessions/${s.session_id}/output/summary.json`);
+            if (summary) {
+              return {
+                ...s,
+                session_score: summary.session_score,
+                executive_summary: summary.executive_summary,
+                has_analysis: true,
+              };
+            }
+          } catch (e) { /* no analysis yet */ }
+          return s;
+        }));
+      }
+
       const duration = Date.now() - start;
-      console.log(`[sessions] GET /api/sessions ${sessions.length} sessions ${duration}ms`);
+      console.log(`[sessions] GET /api/sessions ${result.length} sessions ${includeAnalysis ? '+analysis ' : ''}${duration}ms`);
       res.set('X-Response-Time', `${duration}ms`);
-      res.json(sessions);
+      res.json(result);
     } catch (err) {
       console.error('[sessions] Error listing sessions:', err.message);
       res.status(500).json({ error: 'Failed to list sessions' });

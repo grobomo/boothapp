@@ -5,13 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="components/error-boundary.js"></script>
 <script src="components/nav.js"></script>
-<title>BoothApp — AI-Powered Demo Capture</title>
+<title>BoothApp — Session Dashboard</title>
+<link rel="stylesheet" href="styles/mobile.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --bg-primary: #0d1117;
     --bg-card: #161b22;
+    --bg-card-hover: #1c2333;
     --border: #30363d;
     --text-primary: #e6edf3;
     --text-muted: #8b949e;
@@ -19,73 +21,62 @@
     --accent-blue: #58a6ff;
     --accent-green: #3fb950;
     --accent-red: #f85149;
-    --accent-orange: #f78166;
+    --accent-yellow: #d29922;
     --accent-purple: #a371f7;
+    --score-green: #3fb950;
+    --score-yellow: #d29922;
+    --score-red: #f85149;
   }
 
   body {
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 40%, #1a1e2e 70%, #0d1117 100%);
+    background: var(--bg-primary);
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     padding: 2rem;
   }
 
-  /* -- Hero section -- */
-  .hero {
-    text-align: center;
-    margin-bottom: 2.5rem;
-  }
-
-  .logo-icon {
-    width: 96px;
-    height: 96px;
-    margin: 0 auto 1.2rem;
-    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-    border-radius: 24px;
+  /* -- Header -- */
+  .page-header {
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
     display: flex;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 32px rgba(88, 166, 255, 0.25), 0 0 64px rgba(163, 113, 247, 0.1);
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
-  .logo-icon svg {
-    width: 56px;
-    height: 56px;
-    fill: #fff;
-  }
-
-  .logo-title {
-    font-size: 3.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-  }
-
-  .logo-title span {
+  .page-header h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
     color: var(--accent-blue);
+    letter-spacing: 0.02em;
   }
 
-  .tagline {
-    font-size: 1.15rem;
-    color: var(--text-muted);
-    margin-top: 0.5rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-
-  /* -- Session status bar -- */
-  .status-bar {
+  .header-right {
     display: flex;
-    gap: 1.5rem;
-    justify-content: center;
-    margin-bottom: 2.5rem;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  .refresh-badge {
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    font-family: monospace;
+    color: var(--text-muted);
+  }
+
+  /* -- Status bar -- */
+  .status-bar {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    display: flex;
+    gap: 1rem;
     flex-wrap: wrap;
   }
 
@@ -98,11 +89,6 @@
     border-radius: 24px;
     padding: 0.5rem 1.2rem;
     font-size: 0.9rem;
-    transition: border-color 0.3s;
-  }
-
-  .status-chip:hover {
-    border-color: var(--accent-blue);
   }
 
   .status-dot {
@@ -115,6 +101,7 @@
   .status-dot.active { background: var(--accent-red); animation: pulse 1.5s infinite; }
   .status-dot.completed { background: var(--accent-green); }
   .status-dot.total { background: var(--accent-blue); }
+  .status-dot.avg { background: var(--accent-purple); }
 
   .status-chip .count {
     font-weight: 700;
@@ -135,131 +122,251 @@
     50% { opacity: 0.3; }
   }
 
-  /* -- Quick actions grid -- */
-  .actions {
+  /* -- Session grid -- */
+  .session-grid {
+    max-width: 1200px;
+    margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1rem;
-    width: 100%;
-    max-width: 520px;
-    margin-bottom: 3rem;
   }
 
-  .actions .full-width { grid-column: 1 / -1; }
-
-  .action-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 1.5rem 1rem;
+  /* -- Session card -- */
+  .session-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    text-decoration: none;
-    color: var(--text-primary);
+    padding: 1.25rem;
     transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
     cursor: pointer;
+    text-decoration: none;
+    color: inherit;
   }
 
-  .action-btn:hover {
+  .session-card:hover {
     border-color: var(--accent-blue);
-    background: #1c2333;
+    background: var(--bg-card-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(88, 166, 255, 0.12);
+    box-shadow: 0 4px 16px rgba(88, 166, 255, 0.1);
   }
 
-  .action-btn .icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .visitor-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .visitor-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .visitor-company {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* -- Score badge -- */
+  .score-badge {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-family: "SF Mono", "Cascadia Code", monospace;
   }
 
-  .action-btn .icon svg {
-    width: 24px;
-    height: 24px;
-    fill: #fff;
+  .score-badge.score-green {
+    background: rgba(63, 185, 80, 0.15);
+    color: var(--score-green);
+    border: 1px solid rgba(63, 185, 80, 0.3);
   }
 
-  .action-btn .icon.green  { background: linear-gradient(135deg, #238636, #3fb950); }
-  .action-btn .icon.blue   { background: linear-gradient(135deg, #1f6feb, #58a6ff); }
-  .action-btn .icon.orange { background: linear-gradient(135deg, #bd561d, #f78166); }
-  .action-btn .icon.purple { background: linear-gradient(135deg, #8957e5, #a371f7); }
-
-  .action-btn .btn-label {
-    font-size: 0.95rem;
-    font-weight: 600;
+  .score-badge.score-yellow {
+    background: rgba(210, 153, 34, 0.15);
+    color: var(--score-yellow);
+    border: 1px solid rgba(210, 153, 34, 0.3);
   }
 
-  .action-btn .btn-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-align: center;
-    line-height: 1.3;
+  .score-badge.score-red {
+    background: rgba(248, 81, 73, 0.15);
+    color: var(--score-red);
+    border: 1px solid rgba(248, 81, 73, 0.3);
   }
 
-  /* -- Team credits -- */
-  .credits {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    max-width: 600px;
+  .score-badge.score-none {
+    background: rgba(48, 54, 61, 0.5);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
   }
 
-  .credits-title {
+  /* -- Card meta row -- */
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
     font-size: 0.8rem;
     color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.8rem;
   }
 
-  .team-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-bottom: 0.6rem;
-  }
-
-  .members {
+  .meta-item {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.4rem 1.2rem;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .meta-item svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    opacity: 0.7;
+  }
+
+  /* -- Card summary -- */
+  .card-summary {
     font-size: 0.85rem;
-    color: var(--text-dim);
+    color: var(--text-muted);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
-  .members span {
-    white-space: nowrap;
+  /* -- Card footer -- */
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
   }
 
-  /* -- Footer -- */
-  .footer {
+  .session-id-tag {
+    font-family: "SF Mono", "Cascadia Code", monospace;
     font-size: 0.75rem;
     color: var(--text-dim);
-    letter-spacing: 0.03em;
+    background: rgba(48, 54, 61, 0.5);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
   }
 
-  .refresh-note {
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    margin-bottom: 2rem;
-    font-family: monospace;
+  .view-link {
+    font-size: 0.8rem;
+    color: var(--accent-blue);
+    font-weight: 500;
   }
+
+  /* -- Loading / empty states -- */
+  .loading-state {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+
+  .loading-state::after {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 0.6rem;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--text-dim);
+  }
+
+  .empty-state h2 {
+    font-size: 1.3rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p {
+    font-size: 0.95rem;
+  }
+
+  .error-banner {
+    max-width: 1200px;
+    margin: 0 auto 1rem;
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    display: none;
+  }
+
+  /* -- Quick nav row -- */
+  .quick-nav {
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .quick-nav a {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .quick-nav a:hover {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+  }
+
+  .hidden { display: none !important; }
 
   /* -- Responsive -- */
-  @media (max-width: 600px) {
-    body { padding: 1.5rem 1rem; }
-    .logo-title { font-size: 2.5rem; }
-    .logo-icon { width: 72px; height: 72px; border-radius: 18px; }
-    .logo-icon svg { width: 44px; height: 44px; }
-    .tagline { font-size: 0.95rem; }
-    .actions { grid-template-columns: 1fr; max-width: 320px; }
-    .status-bar { gap: 0.8rem; }
-    .status-chip { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .page-header h1 { font-size: 1.4rem; }
+    .session-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -270,21 +377,17 @@ if (!BoothAuth.requireAwsCreds()) { window.location.href = "login.html?redirect=
 else if (!BoothAuth.requireLogin()) { /* redirects */ }
 </script>
 
-<!-- Hero -->
-<div class="hero">
-  <div class="logo-icon">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" opacity="0.3"/>
-      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-      <circle cx="17" cy="8" r="2"/>
-      <path d="M7.5 14l2.5-3 2 2.5 2.5-3.2L18 14z"/>
-    </svg>
+<div class="page-header">
+  <h1>Session Dashboard</h1>
+  <div class="header-right">
+    <span id="session-count" style="color:#8b949e;"></span>
+    <span class="refresh-badge" id="refresh-badge">30s</span>
   </div>
-  <div class="logo-title">Booth<span>App</span></div>
-  <div class="tagline">AI-Powered Demo Capture</div>
 </div>
 
-<!-- Real-time session status -->
+<div class="error-banner" id="error-banner"></div>
+
+<!-- Status chips -->
 <div class="status-bar" id="status-bar" role="status" aria-label="Session status summary">
   <div class="status-chip">
     <span class="status-dot active"></span>
@@ -301,117 +404,262 @@ else if (!BoothAuth.requireLogin()) { /* redirects */ }
     <span class="count" id="cnt-total">-</span>
     <span class="label">Total</span>
   </div>
-</div>
-
-<!-- Quick actions -->
-<div class="actions" role="navigation" aria-label="Quick actions">
-  <a href="session.html" class="action-btn">
-    <div class="icon green">
-      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-    </div>
-    <span class="btn-label">Start New Session</span>
-    <span class="btn-desc">Enter session ID and begin tracking</span>
-  </a>
-  <a href="sessions.html" class="action-btn">
-    <div class="icon blue">
-      <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-    </div>
-    <span class="btn-label">View Sessions</span>
-    <span class="btn-desc">Browse all captured demos</span>
-  </a>
-  <a href="live.html" class="action-btn">
-    <div class="icon orange">
-      <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-    </div>
-    <span class="btn-label">Live Monitor</span>
-    <span class="btn-desc">Watch active sessions in real time</span>
-  </a>
-  <a href="admin.html" class="action-btn">
-    <div class="icon purple">
-      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-    </div>
-    <span class="btn-label">Admin Panel</span>
-    <span class="btn-desc">Manage users and settings</span>
-  </a>
-  <a href="analytics.html" class="action-btn">
-    <div class="icon" style="background:linear-gradient(135deg, #f78166, #f0883e);">
-      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-    </div>
-    <span class="btn-label">Analytics</span>
-    <span class="btn-desc">Aggregate stats across all sessions</span>
-  </a>
-  <a href="feedback.html" class="action-btn">
-    <div class="icon" style="background:linear-gradient(135deg, #3fb950, #2ea043);">
-      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>
-    </div>
-    <span class="btn-label">Visitor Feedback</span>
-    <span class="btn-desc">Post-demo feedback form for visitors</span>
-  </a>
-  <a href="compare.html" class="action-btn full-width">
-    <div class="icon" style="background:linear-gradient(135deg, #d29922, #f0b429);">
-      <svg viewBox="0 0 24 24"><path d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v-2H5V5h5V3zm4 18h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-5v2h5v14h-5v2zm-1-6l-4-4 1.41-1.41L12 11.17l1.59-1.59L15 11l-4 4h2z"/></svg>
-    </div>
-    <span class="btn-label">Compare Sessions</span>
-    <span class="btn-desc">Side-by-side comparison for judges</span>
-  </a>
-</div>
-
-<!-- Refresh indicator -->
-<div class="refresh-note" id="refresh-note">Status refreshes every 5s</div>
-
-<!-- Team credits -->
-<div class="credits">
-  <div class="credits-title">Built by</div>
-  <div class="team-name">Smells Like Machine Learning</div>
-  <div class="members">
-    <span>Casey Mondoux</span>
-    <span>Joel Ginsberg</span>
-    <span>Tom Gamull</span>
-    <span>Kush Mangat</span>
-    <span>Chris LaFleur</span>
+  <div class="status-chip">
+    <span class="status-dot avg"></span>
+    <span class="count" id="cnt-avg">-</span>
+    <span class="label">Avg Score</span>
   </div>
 </div>
 
-<!-- Footer -->
-<div class="footer">Hackathon 2026</div>
+<!-- Quick nav links -->
+<div class="quick-nav">
+  <a href="sessions.html">Table View</a>
+  <a href="live-dashboard.html">Live Monitor</a>
+  <a href="analytics.html">Analytics</a>
+  <a href="highlights.html">Highlights</a>
+  <a href="session.html">New Session</a>
+  <a href="admin.html">Admin</a>
+</div>
+
+<!-- Loading state -->
+<div class="loading-state" id="loading">Loading sessions</div>
+
+<!-- Empty state -->
+<div class="empty-state hidden" id="empty-state">
+  <h2>No completed sessions yet</h2>
+  <p>Sessions will appear here after demos are captured and analyzed.</p>
+</div>
+
+<!-- Session card grid -->
+<div class="session-grid hidden" id="session-grid"></div>
 
 <script>
 (function () {
-  var REFRESH_MS = 5000;
-  var cntActive    = document.getElementById("cnt-active");
-  var cntCompleted = document.getElementById("cnt-completed");
-  var cntTotal     = document.getElementById("cnt-total");
+  'use strict';
 
-  function refreshStatus() {
-    var apiUrl = (localStorage.getItem("boothapp_api_url") || "").replace(/\/+$/, "");
-    if (!apiUrl) return;
-    fetch(apiUrl + "/sessions")
-      .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
-      .then(function (data) {
-        if (!Array.isArray(data)) return;
-        var active = 0;
-        var completed = 0;
-        data.forEach(function (s) {
-          var st = (s.status || "").toLowerCase();
-          if (st === "recording" || st === "active" || st === "in_progress") {
-            active++;
-          } else if (st === "completed" || st === "ended" || st === "analyzed" || st === "reviewed" || st === "sent") {
-            completed++;
-          }
-        });
-        cntActive.textContent = active;
-        cntCompleted.textContent = completed;
-        cntTotal.textContent = data.length;
+  var REFRESH_MS = 30000;
+  var apiUrl = (localStorage.getItem('boothapp_api_url') || '').replace(/\/+$/, '');
+
+  var gridEl      = document.getElementById('session-grid');
+  var loadingEl   = document.getElementById('loading');
+  var emptyEl     = document.getElementById('empty-state');
+  var errorBanner = document.getElementById('error-banner');
+  var cntActive   = document.getElementById('cnt-active');
+  var cntCompleted= document.getElementById('cnt-completed');
+  var cntTotal    = document.getElementById('cnt-total');
+  var cntAvg      = document.getElementById('cnt-avg');
+  var countEl     = document.getElementById('session-count');
+  var refreshBadge= document.getElementById('refresh-badge');
+
+  var countdown = 30;
+  var countdownTimer = null;
+
+  function startCountdown() {
+    countdown = Math.floor(REFRESH_MS / 1000);
+    refreshBadge.textContent = countdown + 's';
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(function () {
+      countdown = Math.max(0, countdown - 1);
+      refreshBadge.textContent = countdown + 's';
+    }, 1000);
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = 'block';
+  }
+
+  function clearError() {
+    errorBanner.style.display = 'none';
+  }
+
+  function esc(str) {
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function isCompleted(status) {
+    var s = (status || '').toLowerCase();
+    return s === 'completed' || s === 'ended' || s === 'analyzed' || s === 'reviewed' || s === 'sent';
+  }
+
+  function isActive(status) {
+    var s = (status || '').toLowerCase();
+    return s === 'recording' || s === 'active' || s === 'in_progress';
+  }
+
+  // Score color: green 8-10, yellow 5-7, red 1-4
+  function scoreClass(score) {
+    if (score == null) return 'score-none';
+    if (score >= 8) return 'score-green';
+    if (score >= 5) return 'score-yellow';
+    return 'score-red';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '--';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '--';
+    var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return mon[d.getMonth()] + ' ' + d.getDate() + ', ' +
+      (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' +
+      (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+  }
+
+  function computeDuration(s) {
+    if (!s.started_at) return '--';
+    var start = new Date(s.started_at).getTime();
+    var end = s.ended_at ? new Date(s.ended_at).getTime() : Date.now();
+    var sec = Math.max(0, Math.floor((end - start) / 1000));
+    var m = Math.floor(sec / 60);
+    return m + 'min';
+  }
+
+  function loadSessions() {
+    startCountdown();
+
+    if (!apiUrl) {
+      loadingEl.classList.add('hidden');
+      showError('No API endpoint configured. Visit sessions.html to set it up.');
+      return;
+    }
+
+    // Single request with ?include=analysis to avoid N+1 detail fetches
+    fetch(apiUrl + '/sessions?include=analysis')
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
       })
-      .catch(function () {
-        cntActive.textContent = "-";
-        cntCompleted.textContent = "-";
-        cntTotal.textContent = "-";
+      .then(function (data) {
+        clearError();
+        if (!Array.isArray(data) || data.length === 0) {
+          loadingEl.classList.add('hidden');
+          emptyEl.classList.remove('hidden');
+          gridEl.classList.add('hidden');
+          updateCounts(data || []);
+          return;
+        }
+
+        updateCounts(data);
+
+        var completed = data.filter(function (s) { return isCompleted(s.status); });
+
+        if (completed.length === 0) {
+          loadingEl.classList.add('hidden');
+          emptyEl.classList.remove('hidden');
+          gridEl.classList.add('hidden');
+          return;
+        }
+
+        var enriched = completed.map(function (s) {
+          return {
+            session_id: s.session_id,
+            visitor_name: s.visitor_name || 'Unknown Visitor',
+            visitor_company: s.visitor_company || '',
+            started_at: s.started_at,
+            ended_at: s.ended_at,
+            status: s.status,
+            se_name: s.se_name || '',
+            session_score: s.session_score != null ? s.session_score : null,
+            executive_summary: s.executive_summary || ''
+          };
+        });
+
+        // Sort by score descending (null scores at bottom)
+        enriched.sort(function (a, b) {
+          var sa = a.session_score != null ? a.session_score : -1;
+          var sb = b.session_score != null ? b.session_score : -1;
+          return sb - sa;
+        });
+
+        renderGrid(enriched);
+      })
+      .catch(function (err) {
+        showError('Failed to load sessions: ' + err.message);
+        loadingEl.classList.add('hidden');
       });
   }
 
-  refreshStatus();
-  setInterval(refreshStatus, REFRESH_MS);
+  function updateCounts(data) {
+    var active = 0;
+    var completed = 0;
+
+    data.forEach(function (s) {
+      if (isActive(s.status)) active++;
+      if (isCompleted(s.status)) completed++;
+    });
+
+    cntActive.textContent = active;
+    cntCompleted.textContent = completed;
+    cntTotal.textContent = data.length;
+    countEl.textContent = completed + ' completed session' + (completed !== 1 ? 's' : '');
+  }
+
+  function renderGrid(sessions) {
+    loadingEl.classList.add('hidden');
+    emptyEl.classList.add('hidden');
+    gridEl.classList.remove('hidden');
+
+    // Calculate average score
+    var scores = sessions.filter(function (s) { return s.session_score != null; })
+                         .map(function (s) { return s.session_score; });
+    if (scores.length > 0) {
+      var avg = scores.reduce(function (a, b) { return a + b; }, 0) / scores.length;
+      cntAvg.textContent = avg.toFixed(1);
+    } else {
+      cntAvg.textContent = '--';
+    }
+
+    gridEl.innerHTML = '';
+
+    sessions.forEach(function (s) {
+      var scoreVal = s.session_score != null ? s.session_score : '--';
+      var sClass = scoreClass(s.session_score);
+      var duration = computeDuration(s);
+      var dateStr = formatDate(s.started_at);
+
+      var card = document.createElement('a');
+      card.className = 'session-card';
+      card.href = 'session-viewer.html?session=' + encodeURIComponent(s.session_id);
+
+      card.innerHTML =
+        '<div class="card-top">' +
+          '<div class="visitor-info">' +
+            '<div class="visitor-name">' + esc(s.visitor_name) + '</div>' +
+            (s.visitor_company ? '<div class="visitor-company">' + esc(s.visitor_company) + '</div>' : '') +
+          '</div>' +
+          '<div class="score-badge ' + sClass + '">' + esc(String(scoreVal)) + '</div>' +
+        '</div>' +
+        (s.executive_summary ?
+          '<div class="card-summary">' + esc(s.executive_summary) + '</div>' : '') +
+        '<div class="card-meta">' +
+          '<span class="meta-item">' +
+            '<svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>' +
+            esc(dateStr) +
+          '</span>' +
+          '<span class="meta-item">' +
+            '<svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>' +
+            esc(duration) +
+          '</span>' +
+          (s.se_name ?
+            '<span class="meta-item">' +
+              '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' +
+              esc(s.se_name) +
+            '</span>' : '') +
+        '</div>' +
+        '<div class="card-footer">' +
+          '<span class="session-id-tag">' + esc(s.session_id) + '</span>' +
+          '<span class="view-link">View Analysis &rarr;</span>' +
+        '</div>';
+
+      gridEl.appendChild(card);
+    });
+  }
+
+  // Initial load + 30s auto-refresh
+  loadSessions();
+  setInterval(loadSessions, REFRESH_MS);
 })();
 </script>
 <script src="lib/shortcuts.js"></script>
