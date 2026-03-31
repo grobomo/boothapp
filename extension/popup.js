@@ -263,6 +263,27 @@ document.getElementById('qualityGroup').addEventListener('click', function(e) {
   btns.forEach(function(b) { b.classList.toggle('active', b === btn); });
 });
 
+// ─── Screenshot Interval ─────────────────────────────────────────────────────
+
+// Load saved interval
+chrome.storage.local.get(['screenshotIntervalMs'], function(result) {
+  var interval = result.screenshotIntervalMs || 1000;
+  var btns = document.querySelectorAll('#intervalGroup .quality-btn');
+  btns.forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-interval') === String(interval));
+  });
+});
+
+// Interval button clicks
+document.getElementById('intervalGroup').addEventListener('click', function(e) {
+  var btn = e.target.closest('.quality-btn');
+  if (!btn) return;
+  var interval = parseInt(btn.getAttribute('data-interval'), 10);
+  chrome.storage.local.set({ screenshotIntervalMs: interval });
+  var btns = document.querySelectorAll('#intervalGroup .quality-btn');
+  btns.forEach(function(b) { b.classList.toggle('active', b === btn); });
+});
+
 // Save
 document.getElementById('s3SaveBtn').addEventListener('click', function() {
   var config = {

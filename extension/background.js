@@ -1,5 +1,8 @@
 // V1-Helper background service worker
-// Handles screenshot capture on every click and periodic fallback screenshots.
+// Handles timed screenshot capture (configurable interval) and click tracking.
+// Screenshots POSTed to local packager at localhost:9222.
+
+const PACKAGER_URL = 'http://localhost:9222';
 
 // ─── IndexedDB ────────────────────────────────────────────────────────────────
 
@@ -59,7 +62,6 @@ async function clearAllScreenshots() {
 }
 
 // ─── Screenshot Quality Settings ──────────────────────────────────────────────
-// Configurable via popup: low=480p, medium=720p, high=1080p
 
 const QUALITY_PRESETS = {
   low:    { maxW: 854,  maxH: 480,  jpegQuality: 0.4 },
@@ -72,9 +74,78 @@ async function getQualitySettings() {
   return QUALITY_PRESETS[screenshotQuality] || QUALITY_PRESETS.medium;
 }
 
+// ─── Screenshot Interval Setting ─────────────────────────────────────────────
+
+const DEFAULT_SCREENSHOT_INTERVAL_MS = 1000;
+
+async function getScreenshotInterval() {
+  const { screenshotIntervalMs } = await chrome.storage.local.get(['screenshotIntervalMs']);
+  return screenshotIntervalMs || DEFAULT_SCREENSHOT_INTERVAL_MS;
+}
+
+// ─── Timecode Formatting ──────────────────────────────────────────────────────
+
+function formatTimecode(sessionStartMs) {
+  const elapsed = Date.now() - sessionStartMs;
+  const totalMs = Math.max(0, elapsed);
+  const minutes = Math.floor(totalMs / 60000);
+  const seconds = Math.floor((totalMs % 60000) / 1000);
+  const millis = totalMs % 1000;
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
+  const ms = String(millis).padStart(3, '0');
+  return `${mm}m${ss}s${ms}`;
+}
+
+// ─── Packager POST ───────────────────────────────────────────────────────────
+
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function postScreenshotToPackager(filename, imageBytes, sessionId) {
+  const blob = new Blob([imageBytes], { type: 'image/jpeg' });
+  const formData = new FormData();
+  formData.append('screenshot', blob, filename);
+  formData.append('session_id', sessionId);
+  formData.append('filename', filename);
+
+  const response = await fetch(`${PACKAGER_URL}/screenshots`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Packager POST failed: ${response.status}`);
+  }
+  return response;
+}
+
+async function postClicksToPackager(sessionId, clickBuffer) {
+  const body = JSON.stringify({
+    session_id: sessionId,
+    clicks: clickBuffer.events || [],
+  });
+
+  const response = await fetch(`${PACKAGER_URL}/clicks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Packager clicks POST failed: ${response.status}`);
+  }
+  return response;
+}
+
 // ─── Image Resize ─────────────────────────────────────────────────────────────
-// Resize dataURL to fit within maxW x maxH using OffscreenCanvas.
-// Returns original dataURL unchanged if already within bounds.
 
 async function resizeIfNeeded(dataUrl, maxW, maxH, jpegQuality) {
   const response = await fetch(dataUrl);
@@ -107,9 +178,14 @@ async function resizeIfNeeded(dataUrl, maxW, maxH, jpegQuality) {
 
 async function captureAndStore({ clickIndex = null, timestamp = null, type = 'click' } = {}) {
   const ts = timestamp || new Date().toISOString();
-  const safeTs = ts.replace(/[:.]/g, '-');
-  const label = clickIndex != null ? `click${clickIndex}` : 'periodic';
-  const filename = `screenshot_${label}_${safeTs}.jpg`;
+
+  const { v1helper_session } = await chrome.storage.local.get(['v1helper_session']);
+  const sessionStartMs = v1helper_session && v1helper_session.start_epoch
+    ? v1helper_session.start_epoch
+    : Date.now();
+  const timecode = formatTimecode(sessionStartMs);
+  const filename = `screenshot_${timecode}.jpg`;
+  const sessionId = (v1helper_session && v1helper_session.session_id) || '';
 
   try {
     const qs = await getQualitySettings();
@@ -124,39 +200,61 @@ async function captureAndStore({ clickIndex = null, timestamp = null, type = 'cl
       data_url: resized,
     });
 
+    try {
+      const imgBytes = dataUrlToBytes(resized);
+      await postScreenshotToPackager(filename, imgBytes, sessionId);
+    } catch (packagerErr) {
+      console.warn('V1-Helper packager POST failed (will retry via S3):', packagerErr.message);
+    }
+
     return filename;
   } catch (err) {
-    // Tab may not be capturable (e.g. chrome:// pages) — fail silently
     console.warn('V1-Helper screenshot failed:', err.message);
     return null;
   }
 }
 
-// ─── Periodic Screenshot (10-second fallback) ─────────────────────────────────
-// setInterval keeps firing while the service worker is alive. The worker wakes
-// on each click message, so coverage is continuous during active sessions.
+// ─── Timed Screenshot Capture ─────────────────────────────────────────────────
 
-let periodicTimer = null;
+let timedCaptureTimer = null;
+let currentIntervalMs = null;
 
-function startPeriodicScreenshots() {
-  if (periodicTimer !== null) return;
-  periodicTimer = setInterval(async () => {
-    // Only capture periodic screenshots when a session is active
+async function startTimedCapture() {
+  const intervalMs = await getScreenshotInterval();
+
+  if (timedCaptureTimer !== null && currentIntervalMs === intervalMs) return;
+
+  stopTimedCapture();
+
+  currentIntervalMs = intervalMs;
+  timedCaptureTimer = setInterval(async () => {
     const { v1helper_session } = await chrome.storage.local.get(['v1helper_session']);
     if (v1helper_session && v1helper_session.active) {
-      captureAndStore({ type: 'periodic' });
+      captureAndStore({ type: 'timed' });
     }
-  }, 10_000);
+  }, intervalMs);
 }
 
+function stopTimedCapture() {
+  if (timedCaptureTimer !== null) {
+    clearInterval(timedCaptureTimer);
+    timedCaptureTimer = null;
+    currentIntervalMs = null;
+  }
+}
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.screenshotIntervalMs && timedCaptureTimer !== null) {
+    startTimedCapture();
+  }
+});
+
 // ─── Pre-signed URL Upload ────────────────────────────────────────────────────
-// Uses a Lambda Function URL to get pre-signed S3 PUT URLs instead of
-// embedding AWS credentials in the extension for uploads.
 
 async function getPresignedUrl(sessionId, fileType, filename) {
   const { presignEndpoint } = await chrome.storage.local.get(['presignEndpoint']);
   if (!presignEndpoint) {
-    throw new Error('Presign endpoint not configured — set presignEndpoint in extension settings');
+    throw new Error('Presign endpoint not configured');
   }
 
   const body = { session_id: sessionId, file_type: fileType };
@@ -173,17 +271,7 @@ async function getPresignedUrl(sessionId, fileType, filename) {
     throw new Error(`Presign request failed: ${response.status} ${text}`);
   }
 
-  return response.json(); // { upload_url, key, expires_in }
-}
-
-function dataUrlToBytes(dataUrl) {
-  const base64 = dataUrl.split(',')[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+  return response.json();
 }
 
 async function s3PutPresigned(sessionId, fileType, body, contentType, filename) {
@@ -204,7 +292,7 @@ async function s3PutPresigned(sessionId, fileType, body, contentType, filename) 
   return response;
 }
 
-// ─── AWS SigV4 Signing (retained for S3 GET polling of active-session.json) ──
+// ─── AWS SigV4 Signing (for S3 GET polling of active-session.json) ───────────
 
 function toHex(bytes) {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -301,9 +389,9 @@ async function s3GetJson(bucket, key, region, credentials) {
 // ─── S3 Session Polling (signed) ─────────────────────────────────────────────
 
 let pollingSessionId = null;
-let lastError = '';       // Surfaced to popup as error_message
-let lastErrorTime = 0;    // Auto-clear after 30s
-let isUploading = false;  // Surfaced to popup as uploading indicator
+let lastError = '';
+let lastErrorTime = 0;
+let isUploading = false;
 
 async function pollActiveSession() {
   const config = await chrome.storage.local.get([
@@ -320,7 +408,7 @@ async function pollActiveSession() {
     if (data && data.active === true) {
       if (!pollingSessionId) {
         pollingSessionId = data.session_id;
-        // Notify all content scripts
+        const now = Date.now();
         chrome.tabs.query({}, (tabs) => {
           for (const tab of tabs) {
             chrome.tabs.sendMessage(tab.id, {
@@ -331,18 +419,18 @@ async function pollActiveSession() {
             }).catch(() => {});
           }
         });
-        // Update local storage
         chrome.storage.local.set({
           v1helper_session: {
             active: true,
             session_id: data.session_id,
             visitor_name: data.visitor_name || '',
-            start_time: new Date().toISOString(),
+            start_time: new Date(now).toISOString(),
+            start_epoch: now,
             stop_audio: data.stop_audio || false,
           }
         });
+        startTimedCapture();
       } else if (data.stop_audio !== undefined) {
-        // Update stop_audio flag if session is ongoing
         const { v1helper_session } = await chrome.storage.local.get(['v1helper_session']);
         if (v1helper_session && v1helper_session.active) {
           chrome.storage.local.set({
@@ -354,7 +442,16 @@ async function pollActiveSession() {
       if (pollingSessionId) {
         const endedSessionId = pollingSessionId;
         pollingSessionId = null;
-        // Notify all content scripts
+        stopTimedCapture();
+
+        try {
+          const { v1helper_clicks } = await chrome.storage.local.get(['v1helper_clicks']);
+          const clickBuffer = v1helper_clicks || { session_id: endedSessionId, events: [] };
+          await postClicksToPackager(endedSessionId, clickBuffer);
+        } catch (clickErr) {
+          console.warn('V1-Helper: failed to POST clicks to packager:', clickErr.message);
+        }
+
         chrome.tabs.query({}, (tabs) => {
           for (const tab of tabs) {
             chrome.tabs.sendMessage(tab.id, {
@@ -370,9 +467,9 @@ async function pollActiveSession() {
   } catch (_err) {
     lastError = 'S3 Poll Failed';
     lastErrorTime = Date.now();
-    // Network error — if tracking, end session
     if (pollingSessionId) {
       pollingSessionId = null;
+      stopTimedCapture();
       chrome.storage.local.set({ v1helper_session: { active: false } });
     }
   }
@@ -383,12 +480,10 @@ setInterval(pollActiveSession, 2000);
 // ─── Session Upload ───────────────────────────────────────────────────────────
 
 async function uploadSessionData(sessionId, clickBuffer) {
-  // 30-second timeout for the entire upload
   const deadline = Date.now() + 30_000;
 
   const screenshots = await getAllScreenshots();
 
-  // Fix screenshot_file paths in clicks buffer (prepend 'screenshots/')
   const buffer = clickBuffer || { session_id: sessionId, events: [] };
   buffer.session_id = sessionId;
   for (const evt of buffer.events) {
@@ -397,11 +492,15 @@ async function uploadSessionData(sessionId, clickBuffer) {
     }
   }
 
-  // Upload clicks.json via presigned URL
+  try {
+    await postClicksToPackager(sessionId, buffer);
+  } catch (packagerErr) {
+    console.warn('V1-Helper: packager clicks POST failed, falling back to S3:', packagerErr.message);
+  }
+
   const clicksBody = JSON.stringify(buffer, null, 2);
   await s3PutPresigned(sessionId, 'clicks', clicksBody, 'application/json');
 
-  // Upload screenshots in batches of 10 via presigned URLs
   const BATCH_SIZE = 10;
   for (let i = 0; i < screenshots.length; i += BATCH_SIZE) {
     if (Date.now() > deadline) {
@@ -415,7 +514,6 @@ async function uploadSessionData(sessionId, clickBuffer) {
     }));
   }
 
-  // Clear local data after upload (success or partial)
   await clearAllScreenshots();
   await chrome.storage.local.remove(['v1helper_clicks']);
 }
@@ -430,7 +528,6 @@ chrome.runtime.onConnect.addListener((port) => {
     port.onDisconnect.addListener(() => {
       if (keepalivePort === port) keepalivePort = null;
     });
-    // No-op: just accepting the connection keeps the service worker alive
   }
 });
 
@@ -438,27 +535,21 @@ chrome.runtime.onConnect.addListener((port) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('V1-Helper installed');
-  startPeriodicScreenshots();
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'click_event') {
     const { index, timestamp } = message.event;
-
     captureAndStore({ clickIndex: index, timestamp }).then((filename) => {
       sendResponse({ status: 'ok', filename });
     });
-
-    // Ensure periodic timer is running now that the worker is awake
-    startPeriodicScreenshots();
-
-    return true; // keep channel open for async sendResponse
+    return true;
   }
 
   if (message.type === 'session_start') {
     const { session_id, visitor_name } = message;
     lastError = '';
-    // Clear previous session data
+    const now = Date.now();
     Promise.all([
       clearAllScreenshots(),
       chrome.storage.local.remove(['v1helper_clicks']),
@@ -467,11 +558,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           active: true,
           session_id,
           visitor_name: visitor_name || '',
-          start_time: new Date().toISOString(),
+          start_time: new Date(now).toISOString(),
+          start_epoch: now,
           stop_audio: false,
         }
       }),
     ]).then(() => {
+      startTimedCapture();
       sendResponse({ status: 'ok' });
     }).catch((err) => {
       sendResponse({ status: 'error', error: err.message });
@@ -480,9 +573,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'session_end') {
-    chrome.storage.local.set({ v1helper_session: { active: false } }).then(() => {
+    stopTimedCapture();
+    (async () => {
+      try {
+        const { v1helper_clicks, v1helper_session } = await chrome.storage.local.get(['v1helper_clicks', 'v1helper_session']);
+        const sessionId = (v1helper_session && v1helper_session.session_id) || '';
+        const clickBuffer = v1helper_clicks || { session_id: sessionId, events: [] };
+        await postClicksToPackager(sessionId, clickBuffer);
+      } catch (err) {
+        console.warn('V1-Helper: failed to POST clicks to packager on session end:', err.message);
+      }
+      await chrome.storage.local.set({ v1helper_session: { active: false } });
       sendResponse({ status: 'ok' });
-    });
+    })();
     return true;
   }
 
@@ -506,7 +609,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       lastError = 'Upload Failed';
       lastErrorTime = Date.now();
       isUploading = false;
-      // Still clear local data even on error
       clearAllScreenshots().catch(() => {});
       chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});
       sendResponse({ status: 'error', error: err.message });
@@ -526,14 +628,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
         const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
-        // Try to read active-session.json -- 200 or 404 both mean S3 is reachable
-        const body = new Uint8Array(0);
-        const { url, headers } = await signS3Request(
-          'GET', s3Bucket, 'active-session.json', s3Region, body, 'application/json', credentials
-        );
+        const { url, headers } = await signS3GetRequest(s3Bucket, 'active-session.json', s3Region, credentials);
         const response = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
-        // 200 = file exists, 404 = file doesn't exist but bucket is accessible
-        // 403 = bad credentials, other = network error
         sendResponse({ connected: response.status === 200 || response.status === 404 });
       } catch (err) {
         sendResponse({ connected: false, error: err.message });
@@ -551,7 +647,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const s3Configured = !!(store.s3Bucket && store.awsAccessKeyId);
         const lastEvent = clicks.events.length > 0 ? clicks.events[clicks.events.length - 1] : null;
 
-        // Count screenshots in IndexedDB
         let screenshotCount = 0;
         try {
           const db = await openScreenshotDB();
@@ -563,7 +658,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         } catch (_) {}
 
-        // Auto-clear errors after 30 seconds
         const errorMessage = (lastError && (Date.now() - lastErrorTime < 30000)) ? lastError : '';
         if (!errorMessage) lastError = '';
 
@@ -589,6 +683,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Default pass-through
   sendResponse({ status: 'ok' });
 });
