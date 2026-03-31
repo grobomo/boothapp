@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-shortcuts-exclude="t,r,Home,End">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2943,6 +2943,67 @@ if (!BoothAuth.requireAwsCreds()) {
   document.addEventListener("fullscreenchange", function() {
     btn.innerHTML = document.fullscreenElement ? shrinkSvg : expandSvg;
     btn.title = document.fullscreenElement ? "Exit fullscreen" : "Toggle fullscreen";
+  });
+})();
+</script>
+
+<!-- Page-specific keyboard shortcuts for presenter mode -->
+<script>
+(function () {
+  'use strict';
+
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    switch (e.key) {
+      case 't':
+      case 'T':
+        e.preventDefault();
+        var timelineLink = document.getElementById('link-timeline');
+        if (timelineLink && timelineLink.href) window.location.href = timelineLink.href;
+        break;
+
+      case 'r':
+      case 'R':
+        e.preventDefault();
+        var replayLink = document.getElementById('link-replay');
+        if (replayLink && replayLink.href) window.location.href = replayLink.href;
+        break;
+
+      case 'Home':
+        e.preventDefault();
+        var sessionsUrl = (localStorage.getItem('boothapp_api_url') || '').replace(/\/+$/, '');
+        if (!sessionsUrl) break;
+        fetch(sessionsUrl + '/sessions')
+          .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
+          .then(function (data) {
+            if (Array.isArray(data) && data.length > 0) {
+              var params = new URLSearchParams(window.location.search);
+              params.set('session', data[0].session_id);
+              window.location.search = params.toString();
+            }
+          })
+          .catch(function () {});
+        break;
+
+      case 'End':
+        e.preventDefault();
+        var sessUrl = (localStorage.getItem('boothapp_api_url') || '').replace(/\/+$/, '');
+        if (!sessUrl) break;
+        fetch(sessUrl + '/sessions')
+          .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
+          .then(function (data) {
+            if (Array.isArray(data) && data.length > 0) {
+              var params = new URLSearchParams(window.location.search);
+              params.set('session', data[data.length - 1].session_id);
+              window.location.search = params.toString();
+            }
+          })
+          .catch(function () {});
+        break;
+    }
   });
 })();
 </script>
