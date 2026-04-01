@@ -10,6 +10,7 @@ const badgeRoutes = require('./routes/badges');
 const sessionRoutes = require('./routes/sessions');
 const demoPcRoutes = require('./routes/demo-pcs');
 const contactRoutes = require('./routes/contacts');
+const pairRoutes = require('./routes/pair');
 
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 4000;
@@ -42,6 +43,7 @@ app.use('/api/badges', badgeRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/demo-pcs', demoPcRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/pair', pairRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

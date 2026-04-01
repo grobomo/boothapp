@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>V1-Helper</title>
+  <title>CaseyApp</title>
   <style>
     * {
       margin: 0;
@@ -473,7 +473,7 @@
   <div class="header">
     <div class="logo-icon">T</div>
     <div class="brand">
-      <div class="brand-name">V1-Helper</div>
+      <div class="brand-name">CaseyApp</div>
       <div class="brand-sub">Trend Micro</div>
     </div>
     <button class="settings-btn" id="settingsBtn" title="S3 Settings">
@@ -519,8 +519,12 @@
 
   <!-- S3 Config Panel (toggled by gear icon) -->
   <div class="s3-config" id="s3Config">
-    <div class="s3-config-title">S3 Configuration</div>
+    <div class="s3-config-title">Connection Settings</div>
     <div class="s3-fields">
+      <div class="s3-field">
+        <label class="s3-label" for="managementUrl">Management Server</label>
+        <input class="s3-input" id="managementUrl" type="text" placeholder="https://caseyapp.trendcyberrange.com" />
+      </div>
       <div class="s3-field">
         <label class="s3-label" for="s3Bucket">S3 Bucket</label>
         <input class="s3-input" id="s3Bucket" type="text" placeholder="my-bucket-name" />
