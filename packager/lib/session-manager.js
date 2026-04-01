@@ -13,6 +13,8 @@ class SessionManager extends EventEmitter {
     this.region = opts.region || process.env.AWS_REGION || 'us-east-1';
     this.pollIntervalMs = opts.pollIntervalMs || parseInt(process.env.POLL_INTERVAL_MS, 10) || 2000;
     this.outputDir = opts.outputDir || path.join(process.cwd(), 'sessions');
+    this.managementUrl = opts.managementUrl || process.env.MANAGEMENT_URL || '';
+    this.demoPcId = opts.demoPcId || process.env.DEMO_PC_ID || '';
 
     this.s3 = new S3Client({ region: this.region });
     this.audio = new AudioManager();
@@ -26,7 +28,11 @@ class SessionManager extends EventEmitter {
   }
 
   startPolling() {
-    console.log(`  [session] Polling s3://${this.bucket}/active-session.json every ${this.pollIntervalMs}ms`);
+    if (this.managementUrl) {
+      console.log(`  [session] Polling ${this.managementUrl}/api/sessions/active every ${this.pollIntervalMs}ms`);
+    } else {
+      console.log(`  [session] Polling s3://${this.bucket}/active-session.json every ${this.pollIntervalMs}ms`);
+    }
     this.poller = setInterval(() => this._poll(), this.pollIntervalMs);
     this._poll();
   }
@@ -37,7 +43,9 @@ class SessionManager extends EventEmitter {
 
   async _poll() {
     try {
-      const data = await this._getActiveSession();
+      const data = this.managementUrl
+        ? await this._getActiveSessionFromMgmt()
+        : await this._getActiveSession();
 
       if (data && data.active && data.session_id) {
         // Session is active
@@ -69,6 +77,17 @@ class SessionManager extends EventEmitter {
       Key: 'active-session.json',
     }));
     return JSON.parse(await resp.Body.transformToString());
+  }
+
+  async _getActiveSessionFromMgmt() {
+    const url = `${this.managementUrl}/api/sessions/active` +
+      (this.demoPcId ? `?demoPcId=${encodeURIComponent(this.demoPcId)}` : '');
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!resp.ok) return null;
+    return resp.json();
   }
 
   async _onSessionStart(data) {

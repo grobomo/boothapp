@@ -119,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnStartSession.setOnClickListener { startSession() }
         binding.btnEndSession.setOnClickListener { confirmEndSession() }
+        binding.btnStopAudio.setOnClickListener { stopAudio() }
     }
 
     override fun onResume() {
@@ -259,9 +260,12 @@ class MainActivity : AppCompatActivity() {
                 binding.tvDuration.text = "0:00"
                 timerHandler.post(timerRunnable)
 
-                // Swap buttons
+                // Swap buttons: show Stop Audio + End Session
                 binding.btnCapture.visibility = View.GONE
                 binding.btnStartSession.visibility = View.GONE
+                binding.btnStopAudio.visibility = View.VISIBLE
+                binding.btnStopAudio.isEnabled = true
+                binding.btnStopAudio.text = getString(R.string.stop_audio)
                 binding.btnEndSession.visibility = View.VISIBLE
                 binding.btnEndSession.isEnabled = true
 
@@ -336,6 +340,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun stopAudio() {
+        val url = prefs.orchestratorUrl
+        val sessionId = activeSessionId
+        if (url.isBlank() || sessionId == null) return
+
+        binding.btnStopAudio.isEnabled = false
+
+        lifecycleScope.launch {
+            val api = SessionApi(url)
+            val result = api.stopAudio(sessionId)
+
+            result.onSuccess {
+                binding.btnStopAudio.text = getString(R.string.audio_stopped)
+                binding.btnStopAudio.isEnabled = false
+            }
+
+            result.onFailure { e ->
+                binding.btnStopAudio.isEnabled = true
+                toast(getString(R.string.audio_stop_failed, e.message))
+            }
+        }
+    }
+
     private fun confirmEndSession() {
         AlertDialog.Builder(this)
             .setTitle(R.string.end_session_confirm_title)
@@ -390,6 +417,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnCapture.text = getString(R.string.capture_badge)
         binding.btnStartSession.visibility = View.VISIBLE
         binding.btnStartSession.isEnabled = false
+        binding.btnStopAudio.visibility = View.GONE
         binding.btnEndSession.visibility = View.GONE
 
         showProgress(false)

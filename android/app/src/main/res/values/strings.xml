@@ -38,4 +38,7 @@
     <string name="scan_qr">Scan QR</string>
     <string name="paired_success">Paired with demo PC</string>
     <string name="auto_starting_session">Starting session automatically...</string>
+    <string name="stop_audio">Stop Audio</string>
+    <string name="audio_stopped">Audio Stopped</string>
+    <string name="audio_stop_failed">Failed to stop audio: %s</string>
 </resources>

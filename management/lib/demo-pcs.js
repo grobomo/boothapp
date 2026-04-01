@@ -1,26 +1,31 @@
 const express = require('express');
 const { getDb } = require('./db');
 
-function createRouter() {
+// Public routes -- extension calls these without auth
+function createPublicRouter() {
   const router = express.Router();
 
-  // List demo PCs for an event
-  router.get('/api/events/:eventId/demo-pcs', (req, res) => {
-    const db = getDb();
-    const pcs = db.prepare('SELECT * FROM demo_pcs WHERE event_id = ? ORDER BY name').all(req.params.eventId);
-    res.json({ demo_pcs: pcs });
-  });
-
-  // Register a demo PC
+  // Register a demo PC (extension calls this at setup)
   router.post('/api/demo-pcs', (req, res) => {
     const db = getDb();
-    const { name, event_id } = req.body;
-    if (!name || !event_id) return res.status(400).json({ error: 'name and event_id required' });
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'name required' });
 
-    const event = db.prepare('SELECT * FROM events WHERE id = ?').get(event_id);
+    let eventId = req.body.event_id;
+    if (!eventId) {
+      const active = db.prepare('SELECT id FROM events WHERE active = 1').get();
+      eventId = active?.id;
+    }
+    if (!eventId) return res.status(400).json({ error: 'No event_id provided and no active event' });
+
+    const event = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
-    const result = db.prepare('INSERT INTO demo_pcs (name, event_id) VALUES (?, ?)').run(name, event_id);
+    // Upsert: return existing if PC with same name exists for this event
+    const existing = db.prepare('SELECT * FROM demo_pcs WHERE name = ? AND event_id = ?').get(name, eventId);
+    if (existing) return res.json(existing);
+
+    const result = db.prepare('INSERT INTO demo_pcs (name, event_id) VALUES (?, ?)').run(name, eventId);
     const pc = db.prepare('SELECT * FROM demo_pcs WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(pc);
   });
@@ -31,7 +36,6 @@ function createRouter() {
     const pc = db.prepare('SELECT dp.*, e.name as event_name, e.badge_profile FROM demo_pcs dp JOIN events e ON dp.event_id = e.id WHERE dp.id = ?').get(req.params.id);
     if (!pc) return res.status(404).json({ error: 'Demo PC not found' });
 
-    // Parse badge profile to get field list
     let badgeFields = ['name', 'company', 'title'];
     if (pc.badge_profile) {
       try {
@@ -42,8 +46,8 @@ function createRouter() {
       } catch { /* use defaults */ }
     }
 
-    const managementUrl = process.env.MANAGEMENT_URL || `https://caseyapp.trendcyberrange.com`;
-    const payload = {
+    const managementUrl = process.env.MANAGEMENT_URL || 'https://caseyapp.trendcyberrange.com';
+    res.json({
       type: 'caseyapp-pair',
       v: 2,
       managementUrl,
@@ -51,9 +55,21 @@ function createRouter() {
       demoPcId: pc.name,
       badgeFields,
       eventName: pc.event_name
-    };
+    });
+  });
 
-    res.json(payload);
+  return router;
+}
+
+// Protected routes -- require auth (admin dashboard)
+function createRouter() {
+  const router = express.Router();
+
+  // List demo PCs for an event
+  router.get('/api/events/:eventId/demo-pcs', (req, res) => {
+    const db = getDb();
+    const pcs = db.prepare('SELECT * FROM demo_pcs WHERE event_id = ? ORDER BY name').all(req.params.eventId);
+    res.json({ demo_pcs: pcs });
   });
 
   // Delete a demo PC
@@ -67,4 +83,4 @@ function createRouter() {
   return router;
 }
 
-module.exports = { createRouter };
+module.exports = { createRouter, createPublicRouter };

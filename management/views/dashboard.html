@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CaseyApp Management</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --bg: #000000;
@@ -624,7 +625,7 @@
 
         var recent = sessions.sessions.slice(0, 10);
         document.getElementById('recentSessions').innerHTML = recent.map(function(s) {
-          return '<tr><td>' + esc(s.id) + '</td><td>' + esc(s.visitor_name || '') + '</td><td>' + esc(s.demo_pc || '') + '</td><td><span class="badge badge-' + s.status + '">' + s.status + '</span></td><td>' + formatDate(s.started_at) + '</td></tr>';
+          return '<tr style="cursor:pointer" onclick="showSessionDetail(\x27' + esc(s.id) + '\x27)"><td>' + esc(s.id) + '</td><td>' + esc(s.visitor_name || '') + '</td><td>' + esc(s.demo_pc || '') + '</td><td><span class="badge badge-' + s.status + '">' + s.status + '</span></td><td>' + formatDate(s.started_at) + '</td></tr>';
         }).join('');
       } catch (e) { console.error(e); }
     }
@@ -690,7 +691,11 @@
 
     async function showQrPayload(pcId) {
       var payload = await api('GET', '/demo-pcs/' + pcId + '/qr-payload');
-      showModal('<h2>QR Pairing Payload</h2><pre style="background:var(--bg);padding:12px;border-radius:6px;font-size:12px;overflow-x:auto">' + JSON.stringify(payload, null, 2) + '</pre><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>');
+      var json = JSON.stringify(payload);
+      showModal(
+        '<h2>QR Pairing Code</h2><div style="text-align:center;padding:24px;background:#fff;border-radius:8px;margin:12px 0"><div id="qrCanvas"></div><p style="color:#333;font-size:12px;margin-top:8px">' + esc(payload.eventName || '') + ' -- ' + esc(payload.demoPcId || '') + '</p></div><details style="margin:12px 0"><summary style="cursor:pointer;color:var(--text-dim);font-size:12px">Show raw payload</summary><pre style="background:var(--bg);padding:12px;border-radius:6px;font-size:11px;overflow-x:auto;margin-top:8px">' + JSON.stringify(payload, null, 2) + '</pre></details><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>'
+      );
+      setTimeout(function() { var el = document.getElementById('qrCanvas'); if (el && typeof QRCode !== 'undefined') { new QRCode(el, { text: json, width: 256, height: 256, colorDark: '#d71920', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H }); } }, 50);
     }
 
     async function deleteDemoPc(id) {
@@ -761,8 +766,29 @@
     async function loadSessions() {
       var data = await api('GET', '/sessions');
       document.getElementById('sessionsList').innerHTML = data.sessions.map(function(s) {
-        return '<tr><td>' + esc(s.id) + '</td><td>' + esc(s.visitor_name || '--') + '</td><td>' + esc(s.visitor_company || '--') + '</td><td>' + esc(s.demo_pc || '--') + '</td><td>' + (s.screenshot_count || 0) + '</td><td>' + (s.has_audio ? 'Yes' : (s.audio_opted_out ? 'Opted out' : 'No')) + '</td><td><span class="badge badge-' + s.status + '">' + s.status + '</span></td><td>' + formatDate(s.started_at) + '</td></tr>';
+        return '<tr style="cursor:pointer" onclick="showSessionDetail(\x27' + esc(s.id) + '\x27)"><td>' + esc(s.id) + '</td><td>' + esc(s.visitor_name || '--') + '</td><td>' + esc(s.visitor_company || '--') + '</td><td>' + esc(s.demo_pc || '--') + '</td><td>' + (s.screenshot_count || 0) + '</td><td>' + (s.has_audio ? 'Yes' : (s.audio_opted_out ? 'Opted out' : 'No')) + '</td><td><span class="badge badge-' + s.status + '">' + s.status + '</span></td><td>' + formatDate(s.started_at) + '</td></tr>';
       }).join('');
+    }
+
+
+
+    async function showSessionDetail(sessionId) {
+      try {
+        var session = await api('GET', '/sessions/' + sessionId);
+        var filesData = await api('GET', '/sessions/' + sessionId + '/files');
+        var files = filesData.files || [];
+        var screenshots = files.filter(function(f) { return f.type === 'image' && f.name.indexOf('screenshots/') === 0; });
+        var audioFiles = files.filter(function(f) { return f.type === 'audio'; });
+        var clickFiles = files.filter(function(f) { return f.name.indexOf('clicks') >= 0 && f.name.endsWith('.json'); });
+        var html = '<h2>Session: ' + esc(sessionId) + '</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0"><div><span style="color:var(--text-dim);font-size:12px">Visitor</span><div style="font-size:16px;font-weight:600">' + esc(session.visitor_name || '--') + '</div></div><div><span style="color:var(--text-dim);font-size:12px">Company</span><div style="font-size:16px;font-weight:600">' + esc(session.visitor_company || '--') + '</div></div><div><span style="color:var(--text-dim);font-size:12px">Demo PC</span><div>' + esc(session.demo_pc || '--') + '</div></div><div><span style="color:var(--text-dim);font-size:12px">Status</span><div><span class="badge badge-' + session.status + '">' + session.status + '</span></div></div><div><span style="color:var(--text-dim);font-size:12px">Started</span><div>' + formatDate(session.started_at) + '</div></div><div><span style="color:var(--text-dim);font-size:12px">Ended</span><div>' + formatDate(session.ended_at) + '</div></div></div>';
+        if (screenshots.length > 0) { html += '<h3 style="margin:16px 0 8px;font-size:14px;color:var(--text-dim)">Screenshots (' + screenshots.length + ')</h3><div style="display:flex;flex-wrap:wrap;gap:8px;max-height:400px;overflow-y:auto;padding:4px">'; screenshots.sort(function(a,b){return a.name.localeCompare(b.name);}); for (var i=0;i<screenshots.length;i++){var fname=screenshots[i].name.replace('screenshots/',''); html+='<div style="position:relative"><img src="/api/sessions/'+sessionId+'/file/'+screenshots[i].name+'" style="width:160px;height:100px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src)"><div style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;padding:1px 4px;border-radius:2px">'+esc(fname.replace('screenshot_','').replace('.jpg',''))+'</div></div>';} html+='</div>'; }
+        if (audioFiles.length > 0) { html += '<h3 style="margin:16px 0 8px;font-size:14px;color:var(--text-dim)">Audio</h3>'; for (var j=0;j<audioFiles.length;j++){html+='<audio controls style="width:100%;margin:4px 0"><source src="/api/sessions/'+sessionId+'/file/'+audioFiles[j].name+'"></audio>';} }
+        else if (session.audio_opted_out) { html += '<p style="margin:12px 0;color:var(--text-dim);font-size:13px">Audio was opted out by visitor.</p>'; }
+        if (clickFiles.length > 0) { html += '<h3 style="margin:16px 0 8px;font-size:14px;color:var(--text-dim)">Click Data</h3><div id="clickTimeline" style="font-size:12px;color:var(--text-dim)">Loading...</div>'; }
+        html += '<div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>';
+        showModal(html);
+        if (clickFiles.length > 0) { try { var cr=await fetch('/api/sessions/'+sessionId+'/file/'+clickFiles[0].name); var cd=await cr.json(); var ev=cd.events||cd.clicks||[]; if(ev.length>0){document.getElementById('clickTimeline').innerHTML='<table style="width:100%"><thead><tr><th>Time</th><th>Page</th><th>Element</th></tr></thead><tbody>'+ev.slice(0,50).map(function(c){return '<tr><td>'+esc(c.timestamp||'')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">'+esc(c.page_title||c.url||'')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">'+esc(c.dom_path||c.element||'')+'</td></tr>';}).join('')+'</tbody></table>';}else{document.getElementById('clickTimeline').textContent='No click events.';}} catch(e){document.getElementById('clickTimeline').textContent='Could not load clicks.';} }
+      } catch (e) { toast('Error: ' + e.message, 'error'); }
     }
 
     async function importSessions() {

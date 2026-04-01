@@ -22,6 +22,12 @@ if (fs.existsSync(envPath)) {
 }
 
 const { requireAuth, login, changePassword, destroySession, getSession } = require('./lib/auth');
+const badges = require('./lib/badges');
+const sessions = require('./lib/sessions');
+const events = require('./lib/events');
+const demoPcs = require('./lib/demo-pcs');
+const contacts = require('./lib/contacts');
+const users = require('./lib/users');
 
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 4000;
@@ -90,7 +96,6 @@ app.post('/api/auth/login', (req, res) => {
   const result = login(username, password);
   if (!result) return res.status(401).json({ error: 'Invalid credentials' });
 
-  // Set httpOnly cookie
   res.setHeader('Set-Cookie', `session=${result.token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`);
   res.json({
     username: result.user.username,
@@ -132,28 +137,18 @@ app.get('/api/auth/me', (req, res) => {
   });
 });
 
-// --- Badge scan endpoint (no session auth — phone app uses it) ---
-const { createRouter: badgesRouter } = require('./lib/badges');
-app.use(badgesRouter());
+// --- Public endpoints (no auth -- phone app, extension, packager) ---
+app.use(badges.createRouter());
+app.use(sessions.createRouter());
+app.use(events.createPublicRouter());
+app.use(demoPcs.createPublicRouter());
 
-// --- Session lifecycle endpoints (no session auth — phone app + extension use these) ---
-const { createRouter: sessionsRouter } = require('./lib/sessions');
-app.use(sessionsRouter());
-
-// --- Protected routes ---
+// --- Protected routes (require auth cookie) ---
 app.use(requireAuth);
-
-const { createRouter: eventsRouter } = require('./lib/events');
-app.use(eventsRouter());
-
-const { createRouter: demoPcsRouter } = require('./lib/demo-pcs');
-app.use(demoPcsRouter());
-
-const { createRouter: contactsRouter } = require('./lib/contacts');
-app.use(contactsRouter());
-
-const { createRouter: usersRouter } = require('./lib/users');
-app.use(usersRouter());
+app.use(events.createRouter());
+app.use(demoPcs.createRouter());
+app.use(contacts.createRouter());
+app.use(users.createRouter());
 
 // --- Dashboard UI ---
 app.use(express.static(path.join(__dirname, 'views')));

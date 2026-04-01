@@ -141,6 +141,36 @@ function createRouter() {
     res.json({ sessions });
   });
 
+  // Get active session (polled by Chrome extension -- no auth required)
+  // MUST be defined before /api/sessions/:id to avoid :id matching 'active'
+  router.get('/api/sessions/active', (req, res) => {
+    const db = getDb();
+    const demoPcId = req.query.demoPcId;
+    let session;
+    if (demoPcId) {
+      session = db.prepare(
+        "SELECT * FROM sessions WHERE status = 'active' AND demo_pc = ? ORDER BY started_at DESC LIMIT 1"
+      ).get(demoPcId);
+    }
+    if (!session) {
+      session = db.prepare(
+        "SELECT * FROM sessions WHERE status = 'active' ORDER BY started_at DESC LIMIT 1"
+      ).get();
+    }
+    if (!session) return res.status(404).json({ active: false });
+
+    res.json({
+      active: true,
+      session_id: session.id,
+      visitor_name: session.visitor_name || '',
+      visitor_company: session.visitor_company || '',
+      started_at: session.started_at,
+      stop_audio: !!session.audio_opted_out,
+      event_id: session.event_id,
+      demo_pc_id: session.demo_pc,
+    });
+  });
+
   // Get session detail
   router.get('/api/sessions/:id', (req, res) => {
     const db = getDb();
@@ -202,6 +232,43 @@ function createRouter() {
       res.json({ imported: imported.length, session_ids: imported });
     } catch (err) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+
+  // List session files from S3 (screenshots, audio, clicks)
+  router.get('/api/sessions/:id/files', async (req, res) => {
+    try {
+      const prefix = `sessions/${req.params.id}/`;
+      const keys = await s3.listKeys(prefix);
+      const files = keys.map(k => ({
+        key: k,
+        name: k.replace(prefix, ''),
+        type: k.endsWith('.jpg') || k.endsWith('.jpeg') || k.endsWith('.png') ? 'image' :
+              k.endsWith('.mp3') || k.endsWith('.wav') ? 'audio' :
+              k.endsWith('.json') ? 'json' : 'other'
+      }));
+      res.json({ files });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Proxy S3 file for dashboard display (screenshots, audio)
+  router.get('/api/sessions/:id/file/*', async (req, res) => {
+    try {
+      const filePath = req.params[0];
+      const key = `sessions/${req.params.id}/${filePath}`;
+      const { GetObjectCommand } = require('@aws-sdk/client-s3');
+      const resp = await s3.s3.send(new GetObjectCommand({ Bucket: s3.BUCKET, Key: key }));
+
+      const ext = filePath.split('.').pop().toLowerCase();
+      const types = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', mp3: 'audio/mpeg', wav: 'audio/wav', json: 'application/json' };
+      res.setHeader('Content-Type', types[ext] || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      resp.Body.pipe(res);
+    } catch (err) {
+      res.status(404).json({ error: 'File not found' });
     }
   });
 

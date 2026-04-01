@@ -1,17 +1,16 @@
 const express = require('express');
 const { getDb } = require('./db');
 
-function createRouter() {
+// Public routes -- extension needs active event info for registration
+function createPublicRouter() {
   const router = express.Router();
 
-  // List events
   router.get('/api/events', (req, res) => {
     const db = getDb();
     const events = db.prepare('SELECT * FROM events ORDER BY created_at DESC').all();
     res.json({ events });
   });
 
-  // Get active event
   router.get('/api/events/active', (req, res) => {
     const db = getDb();
     const event = db.prepare('SELECT * FROM events WHERE active = 1').get();
@@ -19,7 +18,13 @@ function createRouter() {
     res.json(event);
   });
 
-  // Create event
+  return router;
+}
+
+// Protected routes -- require auth (admin dashboard)
+function createRouter() {
+  const router = express.Router();
+
   router.post('/api/events', (req, res) => {
     const db = getDb();
     const { name, date, location } = req.body;
@@ -31,7 +36,6 @@ function createRouter() {
     res.status(201).json(event);
   });
 
-  // Update event
   router.put('/api/events/:id', (req, res) => {
     const db = getDb();
     const { name, date, location } = req.body;
@@ -44,7 +48,6 @@ function createRouter() {
     res.json(updated);
   });
 
-  // Set active event (deactivates all others)
   router.post('/api/events/:id/activate', (req, res) => {
     const db = getDb();
     const event = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
@@ -55,7 +58,6 @@ function createRouter() {
     res.json({ ...event, active: 1 });
   });
 
-  // Delete event
   router.delete('/api/events/:id', (req, res) => {
     const db = getDb();
     const result = db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
@@ -66,4 +68,4 @@ function createRouter() {
   return router;
 }
 
-module.exports = { createRouter };
+module.exports = { createRouter, createPublicRouter };
