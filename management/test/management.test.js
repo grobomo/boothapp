@@ -169,6 +169,38 @@ async function run() {
   ok(r.status === 200, 'end session');
   ok(r.body.status === 'complete', 'session complete');
 
+  // --- Pairing ---
+  console.log('\n[Pairing]');
+  r = await req('POST', '/api/pair', { event_id: eventId, demo_pc_id: pcId, device_id: 'phone-abc123', device_name: 'SE Phone 1' });
+  ok(r.status === 200, 'pair device to demo pc');
+  ok(r.body.paired === true, 'pairing confirmed');
+  ok(r.body.event_name, 'pairing returns event name');
+
+  r = await req('GET', '/api/pair/status/' + pcId);
+  ok(r.status === 200, 'check pairing status');
+  ok(r.body.paired === true, 'demo pc is paired');
+  ok(r.body.device_id === 'phone-abc123', 'paired device id correct');
+
+  // Re-pair (upsert)
+  r = await req('POST', '/api/pair', { event_id: eventId, demo_pc_id: pcId, device_id: 'phone-xyz999', device_name: 'SE Phone 2' });
+  ok(r.status === 200, 're-pair succeeds');
+
+  r = await req('GET', '/api/pair/status/' + pcId);
+  ok(r.body.device_id === 'phone-xyz999', 're-pair updated device');
+
+  // --- Badge Scan & Start ---
+  console.log('\n[Badge Scan & Start]');
+  r = await req('POST', '/api/badges/scan-and-start', { event_id: eventId, demo_pc_id: pcId, visitor_name: 'Bob Test', visitor_company: 'TestCorp' });
+  ok(r.status === 201, 'scan-and-start creates session');
+  ok(r.body.session_id, 'scan-and-start returns session id');
+  ok(r.body.visitor_name === 'Bob Test', 'scan-and-start visitor name');
+  ok(r.body.source === 'badge-scan', 'scan-and-start source is badge-scan');
+  const scanSessionId = r.body.session_id;
+
+  r = await req('GET', '/api/sessions/' + scanSessionId);
+  ok(r.status === 200, 'scan-created session exists in db');
+  ok(r.body.session.visitor_company === 'TestCorp', 'scan-created session has company');
+
   // --- Contacts ---
   console.log('\n[Contacts]');
   r = await req('GET', '/api/contacts?event_id=' + eventId);
@@ -203,6 +235,9 @@ async function run() {
 
   // --- Cleanup ---
   console.log('\n[Cleanup]');
+  r = await req('DELETE', '/api/pair/' + pcId);
+  ok(r.status === 200, 'unpair device');
+
   r = await req('DELETE', '/api/demo-pcs/' + pcId);
   ok(r.status === 200, 'delete demo pc');
 

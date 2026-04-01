@@ -112,6 +112,17 @@ function initSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS pairings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL,
+      demo_pc_id INTEGER NOT NULL UNIQUE,
+      device_id TEXT NOT NULL,
+      device_name TEXT DEFAULT 'Unknown',
+      paired_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (event_id) REFERENCES events(id),
+      FOREIGN KEY (demo_pc_id) REFERENCES demo_pcs(id)
+    );
   `);
 
   // Seed default admin if no users exist

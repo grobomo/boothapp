@@ -137,4 +137,101 @@ router.post('/profiles/:id/train', requireAuth, upload.single('sample_image'), a
   });
 });
 
+// POST /api/badges/scan-and-start - Badge scan -> OCR -> auto-start session
+// This is the key endpoint for Feature 4: badge scan triggers session creation.
+// The mobile app (paired via QR) scans a badge and posts the image here.
+router.post('/scan-and-start', upload.single('badge_image'), async (req, res) => {
+  const { event_id, demo_pc_id, visitor_name, visitor_company, visitor_title } = req.body;
+
+  if (!event_id) {
+    return res.status(400).json({ error: 'event_id required' });
+  }
+
+  const db = getDb();
+  const event = db.prepare('SELECT * FROM events WHERE id = ?').get(parseInt(event_id, 10));
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found' });
+  }
+
+  // Extract fields from badge image (AI) or use provided fields
+  let extractedName = visitor_name || '';
+  let extractedCompany = visitor_company || '';
+  let extractedTitle = visitor_title || '';
+
+  // If a badge image was uploaded and AI key is available, do OCR extraction
+  if (req.file && (process.env.ANTHROPIC_API_KEY || process.env.RONE_AI_API_KEY)) {
+    // In production: call Claude Vision API with badge image
+    // For now, placeholder -- fields come from the request body
+  }
+
+  // Auto-create session with extracted visitor info
+  const { v4: uuidv4 } = require('uuid');
+  const sessionId = uuidv4();
+  const s3Prefix = `sessions/${sessionId}`;
+
+  db.prepare(`
+    INSERT INTO sessions (id, event_id, demo_pc_id, visitor_name, visitor_company, visitor_title, visitor_fields, status, s3_prefix)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)
+  `).run(
+    sessionId,
+    parseInt(event_id, 10),
+    demo_pc_id ? parseInt(demo_pc_id, 10) : null,
+    extractedName || null,
+    extractedCompany || null,
+    extractedTitle || null,
+    JSON.stringify({}),
+    s3Prefix
+  );
+
+  // Write active-session.json to S3 so extension + packager detect the session
+  try {
+    const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+    const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+    const bucket = process.env.S3_BUCKET || 'boothapp-sessions-752266476357';
+
+    await s3.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: 'active-session.json',
+      Body: JSON.stringify({
+        active: true,
+        session_id: sessionId,
+        event_id: parseInt(event_id, 10),
+        demo_pc_id: demo_pc_id ? parseInt(demo_pc_id, 10) : null,
+        stop_audio: false,
+      }, null, 2),
+      ContentType: 'application/json',
+    }));
+
+    await s3.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `${s3Prefix}/metadata.json`,
+      Body: JSON.stringify({
+        session_id: sessionId,
+        event_id: parseInt(event_id, 10),
+        demo_pc_id: demo_pc_id || null,
+        visitor_name: extractedName || null,
+        visitor_company: extractedCompany || null,
+        visitor_title: extractedTitle || null,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        source: 'badge-scan',
+      }, null, 2),
+      ContentType: 'application/json',
+    }));
+  } catch (err) {
+    console.error('Failed to write session to S3:', err.message);
+    // Session is still in DB -- don't fail the request
+  }
+
+  res.status(201).json({
+    session_id: sessionId,
+    status: 'active',
+    source: 'badge-scan',
+    visitor_name: extractedName || null,
+    visitor_company: extractedCompany || null,
+    visitor_title: extractedTitle || null,
+    s3_prefix: s3Prefix,
+  });
+});
+
 module.exports = router;

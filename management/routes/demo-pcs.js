@@ -121,10 +121,13 @@ router.get('/:id/qr-image', async (req, res) => {
   }
 });
 
-// DELETE /api/demo-pcs/:id
+// DELETE /api/demo-pcs/:id (cascade pairings and nullify session references)
 router.delete('/:id', requireAuth, (req, res) => {
   const db = getDb();
-  db.prepare('DELETE FROM demo_pcs WHERE id = ?').run(parseInt(req.params.id, 10));
+  const pcId = parseInt(req.params.id, 10);
+  db.prepare('DELETE FROM pairings WHERE demo_pc_id = ?').run(pcId);
+  db.prepare('UPDATE sessions SET demo_pc_id = NULL WHERE demo_pc_id = ?').run(pcId);
+  db.prepare('DELETE FROM demo_pcs WHERE id = ?').run(pcId);
   res.json({ ok: true });
 });
 
