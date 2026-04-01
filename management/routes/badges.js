@@ -153,6 +153,14 @@ router.post('/scan-and-start', upload.single('badge_image'), async (req, res) =>
     return res.status(404).json({ error: 'Event not found' });
   }
 
+  // Validate pairing: if demo_pc_id is provided, verify a device is paired to it
+  if (demo_pc_id) {
+    const pairing = db.prepare('SELECT * FROM pairings WHERE demo_pc_id = ?').get(parseInt(demo_pc_id, 10));
+    if (!pairing) {
+      return res.status(403).json({ error: 'No device paired to this demo PC. Scan QR code first.' });
+    }
+  }
+
   // Extract fields from badge image (AI) or use provided fields
   let extractedName = visitor_name || '';
   let extractedCompany = visitor_company || '';

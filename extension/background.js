@@ -471,6 +471,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'write_active_session') {
+    const { session_id, active } = message;
+    chrome.storage.local.get([
+      's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
+    ]).then((config) => {
+      const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
+      if (!s3Bucket || !awsAccessKeyId || !awsSecretAccessKey) {
+        sendResponse({ status: 'error', error: 'S3 not configured' });
+        return;
+      }
+      const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
+      const body = JSON.stringify({ active, session_id, stop_audio: false }, null, 2);
+      return s3Put(s3Bucket, 'active-session.json', s3Region, body, 'application/json', credentials);
+    }).then(() => {
+      sendResponse({ status: 'ok' });
+    }).catch((err) => {
+      sendResponse({ status: 'error', error: err.message });
+    });
+    return true;
+  }
+
   if (message.type === 'upload_session') {
     const { session_id, click_buffer } = message;
     uploadSessionData(session_id, click_buffer).then(() => {

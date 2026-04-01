@@ -7,3 +7,6 @@ continuous-claude.log
 management/uploads/*
 !management/uploads/.gitkeep
 management/data/*.db
+__pycache__/
+output/
+packager/data/

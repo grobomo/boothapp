@@ -124,6 +124,8 @@ async function run() {
   ok(r.status === 200, 'qr payload');
   ok(r.body.payload.type === 'caseyapp-pair', 'qr payload type');
   ok(r.body.payload.v === 2, 'qr payload v2');
+  ok(typeof r.body.payload.demoPcId === 'number', 'qr payload demoPcId is integer');
+  ok(r.body.payload.demoPcId === pcId, 'qr payload demoPcId matches pc id');
 
   // --- Badge Profiles ---
   console.log('\n[Badge Profiles]');
@@ -168,6 +170,17 @@ async function run() {
   r = await req('POST', '/api/sessions/' + sessionId + '/end');
   ok(r.status === 200, 'end session');
   ok(r.body.status === 'complete', 'session complete');
+
+  // --- Badge Scan & Start (before pairing -- should be rejected) ---
+  console.log('\n[Badge Scan & Start - Unpaired]');
+  r = await req('POST', '/api/badges/scan-and-start', { event_id: eventId, demo_pc_id: pcId, visitor_name: 'Alice Nope', visitor_company: 'NoCorp' });
+  ok(r.status === 403, 'scan-and-start rejects when no device paired');
+  ok(r.body.error.includes('No device paired'), 'scan-and-start error message mentions pairing');
+
+  // scan-and-start without demo_pc_id should still work (no pairing check needed)
+  r = await req('POST', '/api/badges/scan-and-start', { event_id: eventId, visitor_name: 'Walk-in Visitor', visitor_company: 'WalkCorp' });
+  ok(r.status === 201, 'scan-and-start without demo_pc_id succeeds');
+  ok(r.body.source === 'badge-scan', 'walk-in scan source is badge-scan');
 
   // --- Pairing ---
   console.log('\n[Pairing]');
