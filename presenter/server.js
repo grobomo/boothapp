@@ -170,6 +170,10 @@ app.use(chatRouter({ bucket: S3_BUCKET }));
 const { createRouter: contactsRouter } = require('./lib/contacts');
 app.use(contactsRouter({ bucket: S3_BUCKET }));
 
+// --- Review & Approval API (Feature 8: Session Import + Review) ---
+const { createRouter: reviewRouter } = require('./lib/review');
+app.use(reviewRouter({ bucket: S3_BUCKET }));
+
 // --- Static files ---
 app.use('/analysis', express.static(path.join(__dirname, '..', 'analysis')));
 app.use(express.static(path.join(__dirname)));

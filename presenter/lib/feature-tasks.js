@@ -25,16 +25,16 @@ const FEATURES = [
     id: 'feature-7',
     feature: 'Feature 7: Session End + Packaging',
     description: 'When SE taps End Session, all data (audio, clicks, screenshots, metadata) is packaged and uploaded to S3 as a complete session bundle.',
-    status: 'submitted',
+    status: 'completed',
     submitted_at: '2026-03-31',
     assignee: 'CCC Fleet',
-    prs: []
+    prs: ['#371']
   },
   {
     id: 'feature-8',
     feature: 'Feature 8: Session Import + Review',
     description: 'Presenter UI to import completed sessions, review AI analysis, view click timeline with screenshots, and approve follow-up content before sending.',
-    status: 'submitted',
+    status: 'completed',
     submitted_at: '2026-03-31',
     assignee: 'CCC Fleet',
     prs: []
@@ -43,10 +43,10 @@ const FEATURES = [
     id: 'feature-9',
     feature: 'Feature 9: Contact CSV Import + AI Matching',
     description: 'Import CSV of conference attendees, use AI to match badge OCR names to contacts, enrich session data with company/title/email for follow-up.',
-    status: 'submitted',
+    status: 'completed',
     submitted_at: '2026-03-31',
     assignee: 'CCC Fleet',
-    prs: []
+    prs: ['#372']
   }
 ];
 
