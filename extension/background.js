@@ -110,15 +110,13 @@ function dataUrlToBytes(dataUrl) {
 }
 
 async function postScreenshotToPackager(filename, imageBytes, sessionId) {
-  const blob = new Blob([imageBytes], { type: 'image/jpeg' });
-  const formData = new FormData();
-  formData.append('screenshot', blob, filename);
-  formData.append('session_id', sessionId);
-  formData.append('filename', filename);
-
   const response = await fetch(`${PACKAGER_URL}/screenshots`, {
     method: 'POST',
-    body: formData,
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'X-Filename': filename,
+    },
+    body: imageBytes,
   });
 
   if (!response.ok) {

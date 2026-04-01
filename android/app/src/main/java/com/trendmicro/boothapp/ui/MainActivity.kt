@@ -173,24 +173,46 @@ class MainActivity : AppCompatActivity() {
                 binding.ivCapturedBadge.setImageBitmap(bitmap)
                 binding.tvCameraHint.text = getString(R.string.ocr_extracting)
 
-                // Run OCR
+                // Extract badge fields: server-side Claude Vision if configured, else local OCR
                 lifecycleScope.launch {
-                    val info = ocrProcessor.process(bitmap)
-                    Log.d(TAG, "OCR result: name='${info.name}' company='${info.company}'")
+                    var name = ""
+                    var company = ""
 
-                    binding.etVisitorName.setText(info.name)
-                    binding.etVisitorCompany.setText(info.company)
+                    if (prefs.orchestratorUrl.isNotBlank() && file.exists()) {
+                        try {
+                            val api = SessionApi(prefs.orchestratorUrl)
+                            val result = api.scanBadge(file)
+                            result.onSuccess { resp ->
+                                name = resp.fields["name"] ?: ""
+                                company = resp.fields["company"] ?: ""
+                                Log.d(TAG, "Server badge scan: name='$name' company='$company'")
+                            }
+                            result.onFailure { e ->
+                                Log.w(TAG, "Server badge scan failed, falling back to local OCR: ${e.message}")
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Server badge scan error: ${e.message}")
+                        }
+                    }
+
+                    // Fall back to local ML Kit OCR if server scan didn't produce results
+                    if (name.isBlank()) {
+                        val info = ocrProcessor.process(bitmap)
+                        name = info.name
+                        company = info.company
+                        Log.d(TAG, "Local OCR: name='$name' company='$company'")
+                    }
+
+                    binding.etVisitorName.setText(name)
+                    binding.etVisitorCompany.setText(company)
 
                     showProgress(false)
                     binding.tvCameraHint.visibility = View.GONE
                     binding.btnStartSession.isEnabled = true
-
-                    // Change capture to retake
                     binding.btnCapture.text = getString(R.string.retake)
 
-                    // Auto-start session if we got a valid name and orchestrator is configured
-                    if (info.name.isNotBlank() && prefs.orchestratorUrl.isNotBlank()) {
-                        Log.d(TAG, "Auto-starting session for: ${info.name}")
+                    if (name.isNotBlank() && prefs.orchestratorUrl.isNotBlank()) {
+                        Log.d(TAG, "Auto-starting session for: $name")
                         toast(getString(R.string.auto_starting_session))
                         startSession()
                     }
