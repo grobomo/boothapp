@@ -1,5 +1,9 @@
 node_modules/
 .env
 *.log
+*.db
 .DS_Store
 continuous-claude.log
+management/uploads/*
+!management/uploads/.gitkeep
+management/data/*.db

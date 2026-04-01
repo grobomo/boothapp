@@ -1,7 +1,7 @@
-// V1-Helper content script
+// CaseyApp content script
 // Handles click interception, DOM path capture, and local storage buffering.
 
-console.log('V1-Helper content script loaded on:', window.location.hostname);
+console.log('CaseyApp content script loaded on:', window.location.hostname);
 
 // ─── DOM Path Builder ────────────────────────────────────────────────────────
 
@@ -256,7 +256,7 @@ if (window === window.top) {
     }).then(() => {
       uploadInProgress = false;
     }).catch((err) => {
-      console.warn('V1-Helper: upload failed:', err);
+      console.warn('CaseyApp: upload failed:', err);
       uploadInProgress = false;
     });
 
@@ -328,6 +328,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Default: pass-through for other message types
-  console.log('V1-Helper content received message:', message);
+  console.log('CaseyApp content received message:', message);
   sendResponse({ status: 'ok', url: window.location.href });
 });

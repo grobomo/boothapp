@@ -1,4 +1,4 @@
-// V1-Helper background service worker
+// CaseyApp background service worker
 // Handles screenshot capture on every click and periodic fallback screenshots.
 
 // ─── IndexedDB ────────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ async function captureAndStore({ clickIndex = null, timestamp = null, type = 'cl
     return filename;
   } catch (err) {
     // Tab may not be capturable (e.g. chrome:// pages) — fail silently
-    console.warn('V1-Helper screenshot failed:', err.message);
+    console.warn('CaseyApp screenshot failed:', err.message);
     return null;
   }
 }
@@ -379,7 +379,7 @@ async function uploadSessionData(sessionId, clickBuffer) {
   const BATCH_SIZE = 10;
   for (let i = 0; i < screenshots.length; i += BATCH_SIZE) {
     if (Date.now() > deadline) {
-      console.warn('V1-Helper: upload timeout reached, stopping at screenshot', i);
+      console.warn('CaseyApp: upload timeout reached, stopping at screenshot', i);
       break;
     }
     const batch = screenshots.slice(i, i + BATCH_SIZE);
@@ -412,7 +412,7 @@ chrome.runtime.onConnect.addListener((port) => {
 // ─── Message Handler ──────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('V1-Helper installed');
+  console.log('CaseyApp installed');
   startPeriodicScreenshots();
 });
 
@@ -471,12 +471,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'write_active_session') {
+    const { session_id, active } = message;
+    chrome.storage.local.get([
+      's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'
+    ]).then((config) => {
+      const { s3Bucket, s3Region, awsAccessKeyId, awsSecretAccessKey, awsSessionToken } = config;
+      if (!s3Bucket || !awsAccessKeyId || !awsSecretAccessKey) {
+        sendResponse({ status: 'error', error: 'S3 not configured' });
+        return;
+      }
+      const credentials = { awsAccessKeyId, awsSecretAccessKey, awsSessionToken };
+      const body = JSON.stringify({ active, session_id, stop_audio: false }, null, 2);
+      return s3Put(s3Bucket, 'active-session.json', s3Region, body, 'application/json', credentials);
+    }).then(() => {
+      sendResponse({ status: 'ok' });
+    }).catch((err) => {
+      sendResponse({ status: 'error', error: err.message });
+    });
+    return true;
+  }
+
   if (message.type === 'upload_session') {
     const { session_id, click_buffer } = message;
     uploadSessionData(session_id, click_buffer).then(() => {
       sendResponse({ status: 'ok' });
     }).catch((err) => {
-      console.error('V1-Helper upload failed:', err);
+      console.error('CaseyApp upload failed:', err);
       // Still clear local data even on error
       clearAllScreenshots().catch(() => {});
       chrome.storage.local.remove(['v1helper_clicks']).catch(() => {});

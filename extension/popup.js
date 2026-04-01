@@ -1,6 +1,7 @@
-// ─── V1-Helper Popup ──────────────────────────────────────────────────────────
+// ─── CaseyApp Popup ──────────────────────────────────────────────────────────
 
-const S3_KEYS = ['s3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
+const S3_KEYS = ['managementUrl', 's3Bucket', 's3Region', 'awsAccessKeyId', 'awsSecretAccessKey', 'awsSessionToken'];
+const PAIR_KEYS = ['demoPcId', 'eventId'];
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -124,7 +125,10 @@ loadSessionState();
 
 // ─── Load S3 Config ───────────────────────────────────────────────────────────
 
-chrome.storage.local.get(S3_KEYS, (config) => {
+chrome.storage.local.get([...S3_KEYS, ...PAIR_KEYS], (config) => {
+  if (config.managementUrl) document.getElementById('managementUrl').value = config.managementUrl;
+  if (config.demoPcId) document.getElementById('demoPcId').value = config.demoPcId;
+  if (config.eventId) document.getElementById('eventId').value = config.eventId;
   if (config.s3Bucket) document.getElementById('s3Bucket').value = config.s3Bucket;
   if (config.s3Region) document.getElementById('s3Region').value = config.s3Region;
   if (config.awsAccessKeyId) document.getElementById('awsAccessKeyId').value = config.awsAccessKeyId;
@@ -144,6 +148,9 @@ settingsBtn.addEventListener('click', () => {
 
 document.getElementById('s3SaveBtn').addEventListener('click', () => {
   const config = {
+    managementUrl: document.getElementById('managementUrl').value.trim(),
+    demoPcId: document.getElementById('demoPcId').value.trim(),
+    eventId: document.getElementById('eventId').value.trim(),
     s3Bucket: document.getElementById('s3Bucket').value.trim(),
     s3Region: document.getElementById('s3Region').value.trim(),
     awsAccessKeyId: document.getElementById('awsAccessKeyId').value.trim(),
@@ -166,6 +173,7 @@ document.getElementById('s3SaveBtn').addEventListener('click', () => {
 // ─── Pre-fill Demo ────────────────────────────────────────────────────────────
 
 document.getElementById('s3DemoBtn').addEventListener('click', () => {
+  document.getElementById('managementUrl').value = 'https://caseyapp.trendcyberrange.com';
   document.getElementById('s3Bucket').value = 'boothapp-sessions-752266476357';
   document.getElementById('s3Region').value = 'us-east-1';
 });
@@ -244,3 +252,61 @@ chrome.storage.onChanged.addListener((changes) => {
     }
   }
 });
+
+// ─── QR Pairing ───────────────────────────────────────────────────────────────
+
+const qrSection = document.getElementById('qrSection');
+const qrPairStatus = document.getElementById('qrPairStatus');
+const qrPlaceholder = document.getElementById('qrPlaceholder');
+const qrImageEl = document.getElementById('qrImage');
+const qrDeviceInfo = document.getElementById('qrDeviceInfo');
+const qrDeviceName = document.getElementById('qrDeviceName');
+
+let pairPollInterval = null;
+
+function loadQrPairing() {
+  chrome.storage.local.get([...S3_KEYS, ...PAIR_KEYS], (config) => {
+    if (!config.managementUrl || !config.demoPcId) {
+      qrSection.classList.add('hidden');
+      return;
+    }
+
+    qrSection.classList.remove('hidden');
+    const mgmtUrl = config.managementUrl.replace(/\/$/, '');
+
+    // Load QR image from management server
+    const qrUrl = `${mgmtUrl}/api/demo-pcs/${config.demoPcId}/qr-image`;
+    qrPlaceholder.style.display = 'none';
+    qrImageEl.style.display = 'block';
+    qrImageEl.innerHTML = `<img src="${qrUrl}" alt="Scan to pair" onerror="this.parentElement.style.display='none';document.getElementById('qrPlaceholder').style.display='block';document.getElementById('qrPlaceholder').textContent='Failed to load QR code'" />`;
+
+    // Start polling for pairing status
+    if (pairPollInterval) clearInterval(pairPollInterval);
+    pollPairStatus(mgmtUrl, config.demoPcId);
+    pairPollInterval = setInterval(() => pollPairStatus(mgmtUrl, config.demoPcId), 3000);
+  });
+}
+
+function pollPairStatus(mgmtUrl, demoPcId) {
+  fetch(`${mgmtUrl}/api/pair/status/${demoPcId}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.paired) {
+        qrPairStatus.textContent = 'Paired';
+        qrPairStatus.className = 'qr-status paired';
+        qrDeviceInfo.classList.remove('hidden');
+        qrDeviceName.textContent = data.device_name || data.device_id;
+      } else {
+        qrPairStatus.textContent = 'Waiting...';
+        qrPairStatus.className = 'qr-status';
+        qrDeviceInfo.classList.add('hidden');
+      }
+    })
+    .catch(() => {
+      qrPairStatus.textContent = 'Offline';
+      qrPairStatus.className = 'qr-status';
+    });
+}
+
+// Load QR pairing on popup open
+loadQrPairing();
