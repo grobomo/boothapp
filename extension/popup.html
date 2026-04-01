@@ -466,6 +466,88 @@
     .session-indicator.complete + .session-info .check-icon {
       display: inline;
     }
+
+    /* ── QR Pairing Section ── */
+
+    .qr-section {
+      padding: 12px 20px;
+      border-top: 1px solid #1e1e30;
+      background: #12121c;
+    }
+
+    .qr-section.hidden {
+      display: none;
+    }
+
+    .qr-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .qr-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
+    }
+
+    .qr-status {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .qr-status.paired {
+      color: #22c55e;
+    }
+
+    .qr-container {
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .qr-placeholder {
+      font-size: 12px;
+      color: #4b5563;
+      padding: 20px 0;
+    }
+
+    .qr-image {
+      display: none;
+    }
+
+    .qr-image img, .qr-image svg {
+      max-width: 180px;
+      max-height: 180px;
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .qr-device-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding-top: 8px;
+      border-top: 1px solid #1e1e30;
+      margin-top: 8px;
+    }
+
+    .qr-device-info.hidden {
+      display: none;
+    }
+
+    .qr-device-label {
+      color: #6b7280;
+    }
+
+    .qr-device-name {
+      color: #a78bfa;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -505,6 +587,22 @@
     </div>
   </div>
 
+  <!-- QR Pairing Section -->
+  <div class="qr-section hidden" id="qrSection">
+    <div class="qr-header">
+      <span class="qr-title">Mobile Pairing</span>
+      <span class="qr-status" id="qrPairStatus">Not paired</span>
+    </div>
+    <div class="qr-container" id="qrContainer">
+      <div class="qr-placeholder" id="qrPlaceholder">Configure settings to enable QR pairing</div>
+      <div class="qr-image" id="qrImage"></div>
+    </div>
+    <div class="qr-device-info hidden" id="qrDeviceInfo">
+      <span class="qr-device-label">Paired device:</span>
+      <span class="qr-device-name" id="qrDeviceName"></span>
+    </div>
+  </div>
+
   <!-- S3 Connection Status -->
   <div class="s3-status-bar">
     <div class="s3-dot disconnected" id="s3Dot"></div>
@@ -524,6 +622,14 @@
       <div class="s3-field">
         <label class="s3-label" for="managementUrl">Management Server</label>
         <input class="s3-input" id="managementUrl" type="text" placeholder="https://caseyapp.trendcyberrange.com" />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label" for="demoPcId">Demo PC ID</label>
+        <input class="s3-input" id="demoPcId" type="text" placeholder="1" />
+      </div>
+      <div class="s3-field">
+        <label class="s3-label" for="eventId">Event ID</label>
+        <input class="s3-input" id="eventId" type="text" placeholder="1" />
       </div>
       <div class="s3-field">
         <label class="s3-label" for="s3Bucket">S3 Bucket</label>

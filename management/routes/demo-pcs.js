@@ -64,7 +64,7 @@ router.get('/:id/qr-payload', (req, res) => {
     v: 2,
     managementUrl,
     eventId: event.id,
-    demoPcId: pc.name,
+    demoPcId: pc.id,
     badgeFields,
     eventName: event.name,
   };
@@ -101,7 +101,7 @@ router.get('/:id/qr-image', async (req, res) => {
     v: 2,
     managementUrl,
     eventId: event.id,
-    demoPcId: pc.name,
+    demoPcId: pc.id,
     badgeFields,
     eventName: event.name,
   });
