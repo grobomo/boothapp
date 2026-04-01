@@ -5,6 +5,9 @@
 var http = require("http");
 var fs = require("fs");
 var path = require("path");
+var tune = require("./tune-calc");
+
+var buildTuneData = tune.buildTuneData;
 
 var CONFIG_PATH = path.join(__dirname, "tune-config.json");
 var PORT = parseInt(process.env.DASHBOARD_PORT || "3200", 10);
@@ -32,29 +35,6 @@ function fetchJSON(url) {
       })
       .on("error", reject);
   });
-}
-
-function calcDesired(pendingTasks, ratios) {
-  var workers = Math.max(pendingTasks * ratios.workers_per_pending_task, ratios.min_workers);
-  var monitors = Math.max(Math.ceil(workers / ratios.workers_per_monitor), ratios.min_monitors);
-  var dispatchers = ratios.dispatchers;
-  return { workers: workers, monitors: monitors, dispatchers: dispatchers };
-}
-
-function statusColor(actual, desired, thresholds) {
-  if (actual === desired) return { color: "green", status: "MATCHED" };
-  var diff = Math.abs(desired - actual);
-  var pct = actual === 0 ? 100 : Math.round((diff / actual) * 100);
-  if (pct >= thresholds.critical_percent) return { color: "red", status: "CRITICAL" };
-  if (pct >= thresholds.drift_percent) return { color: "yellow", status: "DRIFT" };
-  return { color: "green", status: "MINOR" };
-}
-
-function actionText(actual, desired, role) {
-  var diff = desired - actual;
-  if (diff > 0) return "add " + diff + " " + role + "(s)";
-  if (diff < 0) return "remove " + Math.abs(diff) + " " + role + "(s)";
-  return "none";
 }
 
 function renderHTML(data) {
@@ -109,28 +89,6 @@ function renderHTML(data) {
     "</div>",
     "</body></html>",
   ].join("\n");
-}
-
-function buildTuneData(health, config) {
-  var pendingTasks = health.pending_tasks || (health.queue && health.queue.pending) || 0;
-  var actual = {
-    workers: (health.nodes && health.nodes.workers) || health.workers || 0,
-    monitors: (health.nodes && health.nodes.monitors) || health.monitors || 0,
-    dispatchers: (health.nodes && health.nodes.dispatchers) || health.dispatchers || 1,
-  };
-  var desired = calcDesired(pendingTasks, config.ratios);
-  var roles = ["workers", "monitors", "dispatchers"].map(function (role) {
-    var sc = statusColor(actual[role], desired[role], config.thresholds);
-    return {
-      role: role,
-      actual: actual[role],
-      desired: desired[role],
-      color: sc.color,
-      status: sc.status,
-      action: actionText(actual[role], desired[role], role),
-    };
-  });
-  return { pending_tasks: pendingTasks, roles: roles };
 }
 
 var server = http.createServer(function (req, res) {
